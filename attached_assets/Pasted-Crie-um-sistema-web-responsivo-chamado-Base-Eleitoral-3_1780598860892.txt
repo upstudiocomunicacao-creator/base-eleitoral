@@ -1,0 +1,304 @@
+Crie um sistema web responsivo chamado “Base Eleitoral 360”.
+
+Objetivo:
+Criar um dashboard/app moderno para monitoramento territorial de campanha eleitoral, com foco em candidato, coordenação, lideranças, apoiadores, prospecção de eleitores, zonas eleitorais, mapas e comparativos estratégicos.
+
+Estética:
+Interface moderna, leve, profissional e intuitiva.
+Visual inspirado em dashboards de tecnologia, apps de mobilidade, delivery e inteligência de dados.
+Usar cards, ícones, gráficos, menu lateral, filtros e layout limpo.
+Paleta sugerida:
+- Azul escuro para gestão e confiança
+- Verde para crescimento e áreas fortes
+- Amarelo para atenção
+- Vermelho para áreas críticas
+- Roxo/azul neon para tecnologia
+- Fundo claro com elementos em branco e cinza suave
+
+Stack:
+Use React com Vite ou Next.js, TailwindCSS e componentes modernos.
+Caso seja mais simples para o Replit, pode começar com React + Vite + Tailwind.
+Criar inicialmente com dados mockados/fictícios, mas preparar a estrutura para depois conectar banco de dados.
+
+Estrutura do menu lateral:
+1. Dashboard Geral
+2. Mapa de Força
+3. Lideranças
+4. Apoiadores / Pessoas
+5. Prospecção
+6. Mapa RJ
+7. Mapa Maricá
+8. Zonas Eleitorais
+9. Comparativo Eleitoral
+10. Agenda de Campo
+11. Demandas
+12. Relatórios
+13. Configurações
+
+Tela 1 — Dashboard Geral:
+Criar cards principais com:
+- Total de lideranças
+- Total de apoiadores cadastrados
+- Apoiadores estimados
+- Votos declarados
+- Votos validados
+- Índice médio de confiança
+- Municípios com atuação
+- Bairros cobertos em Maricá
+- Zonas eleitorais cadastradas
+- Regiões prioritárias
+
+Criar gráficos ou blocos visuais para:
+- Evolução semanal de cadastros
+- Ranking de lideranças por votos validados
+- Ranking de bairros por cobertura
+- Comparativo votos declarados x votos validados
+- Distribuição de apoiadores por status
+- Regiões prioritárias
+
+Tela 2 — Mapa de Força:
+Criar um fluxograma/infográfico interativo com a estrutura:
+
+Candidato
+↓
+Coordenação Geral
+↓
+Lideranças RJ / Lideranças Maricá / Lideranças Temáticas
+↓
+Apoiadores
+↓
+Prospecção de Eleitores
+↓
+Mapas e Inteligência
+↓
+Mapa RJ / Mapa Maricá / Mapa de Calor
+↓
+Comparativo Eleitoral
+↓
+Zonas, Seções, Eleitores e Metas
+
+Cada bloco do fluxograma deve ser visualmente bonito, em formato de card conectado por linhas. Cada bloco deve ser clicável e abrir um painel lateral ou modal com resumo de dados daquele módulo.
+
+Tela 3 — Lideranças:
+Criar uma tabela e formulário de cadastro com os campos:
+- Nome completo
+- Apelido político
+- Telefone/WhatsApp
+- E-mail
+- Tipo de liderança
+- Status
+- CEP
+- Rua
+- Número
+- Complemento
+- Bairro
+- Cidade
+- Estado
+- Região de atuação
+- Liderança superior
+- Responsável interno
+- Apoiadores cadastrados
+- Apoiadores estimados diretos
+- Apoiadores estimados indiretos
+- Votos declarados
+- Votos validados
+- Grau de confiança: baixo, médio, alto
+- Fonte da estimativa
+- Comprovação
+- Última atualização
+- Próxima ação
+- Observações
+
+Na tabela de lideranças, mostrar:
+- Nome
+- Bairro
+- Cidade
+- Apoiadores estimados
+- Votos declarados
+- Votos validados
+- Confiança
+- Status
+- Ações
+
+Tela 4 — Apoiadores / Pessoas:
+Criar formulário e tabela com:
+- Nome
+- Telefone/WhatsApp
+- E-mail
+- CEP
+- Rua
+- Número
+- Complemento
+- Bairro
+- Cidade
+- Estado
+- Liderança vinculada
+- Tipo de pessoa
+- Status político
+- Nível de confiança do cadastro
+- Nível de precisão geográfica
+- Observações
+- Data do último contato
+- Próxima ação
+- Responsável pelo contato
+
+Tipos de pessoa:
+- Apoiador confirmado
+- Simpatizante
+- Indeciso
+- Voluntário
+- Comerciante
+- Religioso
+- Liderança comunitária
+- Jovem
+- Servidor público
+- Empresário
+- Formador de opinião
+- Morador com demanda
+
+Status político:
+- Confirmado
+- Simpatizante
+- Indeciso
+- Precisa contato
+- Prioridade
+- Contrário
+- Não respondeu
+
+Tela 5 — Prospecção:
+Criar um funil visual com as etapas:
+Novo contato → Primeiro atendimento → Simpatizante → Apoiador confirmado → Multiplicador → Voto validado
+
+Cada etapa deve ter cards com pessoas fictícias e possibilidade visual de arrastar ou mudar status.
+Criar também indicadores:
+- Novos contatos
+- Em atendimento
+- Simpatizantes
+- Apoiadores confirmados
+- Multiplicadores
+- Votos validados
+
+Tela 6 — Mapa RJ:
+Criar uma tela visual de mapa inicialmente simulada, com cards por município.
+Mostrar:
+- Municípios com atuação
+- Municípios sem atuação
+- Lideranças por cidade
+- Apoiadores por cidade
+- Votos declarados por cidade
+- Votos validados por cidade
+- Ranking de cidades
+
+Preparar a estrutura para depois integrar Mapbox.
+
+Tela 7 — Mapa Maricá:
+Criar uma tela visual de mapa inicialmente simulada, com bairros de Maricá.
+Mostrar:
+- Centro
+- Araçatiba
+- Flamengo
+- Mumbuca
+- Itapeba
+- Parque Nanci
+- Barra de Maricá
+- Jacaroá
+- São José do Imbassaí
+- Cordeirinho
+- Jaconé
+- Caju
+- Espraiado
+- Guaratiba
+- Inoã
+- Bosque Fundo
+- Santa Paula
+- Itaipuaçu
+- Jardim Atlântico
+- Recanto
+- Barroco
+
+Para cada bairro, mostrar:
+- Lideranças
+- Apoiadores
+- Votos declarados
+- Votos validados
+- Cobertura
+- Prioridade
+
+Tela 8 — Zonas Eleitorais:
+Criar CRUD com:
+- Zona eleitoral
+- Seção eleitoral
+- Local de votação
+- Endereço
+- Bairro
+- Cidade
+- Estado
+- Número de eleitores
+- Histórico de votação
+- Meta de votos
+- Votos estimados da campanha
+- Votos validados
+- Responsável pela região
+- Observações
+
+Tela 9 — Comparativo Eleitoral:
+Criar tabela e gráficos comparando:
+- Bairro
+- Eleitores
+- Apoiadores cadastrados
+- Votos validados
+- Cobertura
+- Meta
+- Distância até a meta
+- Prioridade
+
+Exemplo de dados:
+Centro: 12000 eleitores, 600 apoiadores, 420 votos validados, cobertura 5%, prioridade manter
+Itaipuaçu: 28000 eleitores, 350 apoiadores, 180 votos validados, cobertura 1.25%, prioridade alta
+Inoã: 18000 eleitores, 220 apoiadores, 130 votos validados, cobertura 1.22%, prioridade alta
+São José: 10000 eleitores, 500 apoiadores, 350 votos validados, cobertura 5%, prioridade expandir
+
+Tela 10 — Agenda de Campo:
+Criar calendário/lista com:
+- Reuniões
+- Visitas
+- Caminhadas
+- Eventos
+- Responsável
+- Bairro
+- Status
+- Data
+- Observações
+
+Tela 11 — Demandas:
+Criar módulo para registrar demandas da população:
+- Pessoa vinculada
+- Bairro
+- Tipo de demanda
+- Prioridade
+- Status
+- Responsável
+- Observações
+- Data de retorno
+
+Tela 12 — Relatórios:
+Criar cards de relatórios:
+- Relatório por liderança
+- Relatório por bairro
+- Relatório por município
+- Relatório por zona eleitoral
+- Relatório de crescimento semanal
+- Relatório de votos estimados
+- Relatório de votos validados
+- Exportação PDF
+- Exportação Excel
+
+Requisitos:
+- Interface responsiva para desktop, tablet e celular
+- Código limpo e organizado
+- Usar dados fictícios iniciais
+- Preparar estrutura para futura conexão com Supabase/PostgreSQL
+- Preparar estrutura para futura integração com Mapbox
+- Navegação funcional entre telas
+- Componentes reutilizáveis
+- Visual premium e profissional

@@ -3,20 +3,36 @@ info:
   # Do not change the title, if the title changes, the import paths will be broken
   title: Api
   version: 0.1.0
-  description: API specification
+  description: Base Eleitoral 360 API
 servers:
   - url: /api
     description: Base API path
 tags:
   - name: health
     description: Health operations
+  - name: dashboard
+    description: Dashboard stats
+  - name: liderancas
+    description: Leadership management
+  - name: apoiadores
+    description: Supporters management
+  - name: prospeccao
+    description: Prospection pipeline
+  - name: zonas
+    description: Electoral zones
+  - name: agenda
+    description: Field agenda
+  - name: demandas
+    description: Demands management
+  - name: mapas
+    description: Map data
+
 paths:
   /healthz:
     get:
       operationId: healthCheck
       tags: [health]
       summary: Health check
-      description: Returns server health status
       responses:
         "200":
           description: Healthy
@@ -24,6 +40,540 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/HealthStatus"
+
+  # ─── Dashboard ───────────────────────────────────────────────────────────────
+  /dashboard/stats:
+    get:
+      operationId: getDashboardStats
+      tags: [dashboard]
+      summary: Get overall dashboard statistics
+      responses:
+        "200":
+          description: Dashboard stats
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DashboardStats"
+
+  /dashboard/evolucao:
+    get:
+      operationId: getDashboardEvolucao
+      tags: [dashboard]
+      summary: Weekly registration evolution
+      responses:
+        "200":
+          description: Weekly data
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/EvolucaoSemanal"
+
+  /dashboard/ranking-liderancas:
+    get:
+      operationId: getDashboardRankingLiderancas
+      tags: [dashboard]
+      summary: Leadership ranking by validated votes
+      responses:
+        "200":
+          description: Ranking
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/RankingItem"
+
+  /dashboard/ranking-bairros:
+    get:
+      operationId: getDashboardRankingBairros
+      tags: [dashboard]
+      summary: Neighborhood ranking by coverage
+      responses:
+        "200":
+          description: Ranking
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/RankingItem"
+
+  # ─── Lideranças ──────────────────────────────────────────────────────────────
+  /liderancas:
+    get:
+      operationId: listLiderancas
+      tags: [liderancas]
+      summary: List all leaderships
+      responses:
+        "200":
+          description: List of leaderships
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Lideranca"
+    post:
+      operationId: createLideranca
+      tags: [liderancas]
+      summary: Create a leadership
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/LiderancaInput"
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Lideranca"
+
+  /liderancas/{id}:
+    get:
+      operationId: getLideranca
+      tags: [liderancas]
+      summary: Get a leadership by ID
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Leadership
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Lideranca"
+    patch:
+      operationId: updateLideranca
+      tags: [liderancas]
+      summary: Update a leadership
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/LiderancaUpdate"
+      responses:
+        "200":
+          description: Updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Lideranca"
+    delete:
+      operationId: deleteLideranca
+      tags: [liderancas]
+      summary: Delete a leadership
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "204":
+          description: Deleted
+
+  # ─── Apoiadores ──────────────────────────────────────────────────────────────
+  /apoiadores:
+    get:
+      operationId: listApoiadores
+      tags: [apoiadores]
+      summary: List all supporters
+      responses:
+        "200":
+          description: List of supporters
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Apoiador"
+    post:
+      operationId: createApoiador
+      tags: [apoiadores]
+      summary: Create a supporter
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ApoiadorInput"
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Apoiador"
+
+  /apoiadores/{id}:
+    get:
+      operationId: getApoiador
+      tags: [apoiadores]
+      summary: Get a supporter by ID
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Supporter
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Apoiador"
+    patch:
+      operationId: updateApoiador
+      tags: [apoiadores]
+      summary: Update a supporter
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ApoiadorUpdate"
+      responses:
+        "200":
+          description: Updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Apoiador"
+    delete:
+      operationId: deleteApoiador
+      tags: [apoiadores]
+      summary: Delete a supporter
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "204":
+          description: Deleted
+
+  # ─── Prospecção ──────────────────────────────────────────────────────────────
+  /prospeccao:
+    get:
+      operationId: listProspeccao
+      tags: [prospeccao]
+      summary: List prospects by pipeline stage
+      responses:
+        "200":
+          description: Prospect pipeline
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ProspeccaoPipeline"
+
+  /prospeccao/{id}/status:
+    patch:
+      operationId: updateProspeccaoStatus
+      tags: [prospeccao]
+      summary: Update prospect pipeline stage
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ProspeccaoStatusUpdate"
+      responses:
+        "200":
+          description: Updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Prospecto"
+
+  # ─── Zonas Eleitorais ────────────────────────────────────────────────────────
+  /zonas:
+    get:
+      operationId: listZonas
+      tags: [zonas]
+      summary: List electoral zones
+      responses:
+        "200":
+          description: List of zones
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/ZonaEleitoral"
+    post:
+      operationId: createZona
+      tags: [zonas]
+      summary: Create an electoral zone
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ZonaEleitoralInput"
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ZonaEleitoral"
+
+  /zonas/{id}:
+    patch:
+      operationId: updateZona
+      tags: [zonas]
+      summary: Update an electoral zone
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ZonaEleitoralUpdate"
+      responses:
+        "200":
+          description: Updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ZonaEleitoral"
+    delete:
+      operationId: deleteZona
+      tags: [zonas]
+      summary: Delete an electoral zone
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "204":
+          description: Deleted
+
+  # ─── Agenda de Campo ─────────────────────────────────────────────────────────
+  /agenda:
+    get:
+      operationId: listAgenda
+      tags: [agenda]
+      summary: List field events
+      responses:
+        "200":
+          description: Events
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/EventoAgenda"
+    post:
+      operationId: createEvento
+      tags: [agenda]
+      summary: Create a field event
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/EventoAgendaInput"
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EventoAgenda"
+
+  /agenda/{id}:
+    patch:
+      operationId: updateEvento
+      tags: [agenda]
+      summary: Update a field event
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/EventoAgendaUpdate"
+      responses:
+        "200":
+          description: Updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EventoAgenda"
+    delete:
+      operationId: deleteEvento
+      tags: [agenda]
+      summary: Delete a field event
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "204":
+          description: Deleted
+
+  # ─── Demandas ────────────────────────────────────────────────────────────────
+  /demandas:
+    get:
+      operationId: listDemandas
+      tags: [demandas]
+      summary: List population demands
+      responses:
+        "200":
+          description: Demands
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Demanda"
+    post:
+      operationId: createDemanda
+      tags: [demandas]
+      summary: Create a demand
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/DemandaInput"
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Demanda"
+
+  /demandas/{id}:
+    patch:
+      operationId: updateDemanda
+      tags: [demandas]
+      summary: Update a demand
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/DemandaUpdate"
+      responses:
+        "200":
+          description: Updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Demanda"
+    delete:
+      operationId: deleteDemanda
+      tags: [demandas]
+      summary: Delete a demand
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "204":
+          description: Deleted
+
+  # ─── Mapas ───────────────────────────────────────────────────────────────────
+  /mapas/rj:
+    get:
+      operationId: getMapaRJ
+      tags: [mapas]
+      summary: Get municipality data for RJ state
+      responses:
+        "200":
+          description: Municipalities
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/MunicipioRJ"
+
+  /mapas/marica:
+    get:
+      operationId: getMapaMarica
+      tags: [mapas]
+      summary: Get neighborhood data for Maricá
+      responses:
+        "200":
+          description: Neighborhoods
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/BairroMarica"
+
+  /mapas/comparativo:
+    get:
+      operationId: getComparativo
+      tags: [mapas]
+      summary: Get electoral comparative data by neighborhood
+      responses:
+        "200":
+          description: Comparative data
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/ComparativoEleitoral"
+
 components:
   schemas:
     HealthStatus:
@@ -34,3 +584,725 @@ components:
       required:
         - status
 
+    # ─── Dashboard ─────────────────────────────────────────────────────────────
+    DashboardStats:
+      type: object
+      required:
+        - totalLiderancas
+        - totalApoiadores
+        - apoiadoresEstimados
+        - votosDeclarados
+        - votosValidados
+        - indiceConfianca
+        - municipiosAtuacao
+        - bairrosCobertos
+        - zonasEleitorais
+        - regioesPrioritarias
+      properties:
+        totalLiderancas:
+          type: integer
+        totalApoiadores:
+          type: integer
+        apoiadoresEstimados:
+          type: integer
+        votosDeclarados:
+          type: integer
+        votosValidados:
+          type: integer
+        indiceConfianca:
+          type: number
+        municipiosAtuacao:
+          type: integer
+        bairrosCobertos:
+          type: integer
+        zonasEleitorais:
+          type: integer
+        regioesPrioritarias:
+          type: integer
+
+    EvolucaoSemanal:
+      type: object
+      required: [semana, cadastros, liderancas, apoiadores]
+      properties:
+        semana:
+          type: string
+        cadastros:
+          type: integer
+        liderancas:
+          type: integer
+        apoiadores:
+          type: integer
+
+    RankingItem:
+      type: object
+      required: [nome, valor, secundario]
+      properties:
+        nome:
+          type: string
+        valor:
+          type: integer
+        secundario:
+          type: ["integer", "null"]
+
+    # ─── Lideranças ────────────────────────────────────────────────────────────
+    Lideranca:
+      type: object
+      required: [id, nome, bairro, cidade, estado, tipoLideranca, status, grauConfianca]
+      properties:
+        id:
+          type: integer
+        nome:
+          type: string
+        apelido:
+          type: ["string", "null"]
+        telefone:
+          type: ["string", "null"]
+        email:
+          type: ["string", "null"]
+        tipoLideranca:
+          type: string
+        status:
+          type: string
+        cep:
+          type: ["string", "null"]
+        rua:
+          type: ["string", "null"]
+        numero:
+          type: ["string", "null"]
+        complemento:
+          type: ["string", "null"]
+        bairro:
+          type: string
+        cidade:
+          type: string
+        estado:
+          type: string
+        regiaoAtuacao:
+          type: ["string", "null"]
+        liderancaSuperior:
+          type: ["string", "null"]
+        responsavelInterno:
+          type: ["string", "null"]
+        apoiadoresCadastrados:
+          type: integer
+        apoiadoresEstimadosDiretos:
+          type: integer
+        apoiadoresEstimadosIndiretos:
+          type: integer
+        votosDeclarados:
+          type: integer
+        votosValidados:
+          type: integer
+        grauConfianca:
+          type: string
+        fonteEstimativa:
+          type: ["string", "null"]
+        comprovacao:
+          type: ["string", "null"]
+        ultimaAtualizacao:
+          type: ["string", "null"]
+        proximaAcao:
+          type: ["string", "null"]
+        observacoes:
+          type: ["string", "null"]
+
+    LiderancaInput:
+      type: object
+      required: [nome, bairro, cidade, estado, tipoLideranca, status, grauConfianca]
+      properties:
+        nome:
+          type: string
+        apelido:
+          type: string
+        telefone:
+          type: string
+        email:
+          type: string
+        tipoLideranca:
+          type: string
+        status:
+          type: string
+        cep:
+          type: string
+        rua:
+          type: string
+        numero:
+          type: string
+        complemento:
+          type: string
+        bairro:
+          type: string
+        cidade:
+          type: string
+        estado:
+          type: string
+        regiaoAtuacao:
+          type: string
+        liderancaSuperior:
+          type: string
+        responsavelInterno:
+          type: string
+        apoiadoresCadastrados:
+          type: integer
+        apoiadoresEstimadosDiretos:
+          type: integer
+        apoiadoresEstimadosIndiretos:
+          type: integer
+        votosDeclarados:
+          type: integer
+        votosValidados:
+          type: integer
+        grauConfianca:
+          type: string
+        fonteEstimativa:
+          type: string
+        comprovacao:
+          type: string
+        proximaAcao:
+          type: string
+        observacoes:
+          type: string
+
+    LiderancaUpdate:
+      type: object
+      properties:
+        nome:
+          type: string
+        apelido:
+          type: string
+        telefone:
+          type: string
+        email:
+          type: string
+        tipoLideranca:
+          type: string
+        status:
+          type: string
+        cep:
+          type: string
+        rua:
+          type: string
+        numero:
+          type: string
+        complemento:
+          type: string
+        bairro:
+          type: string
+        cidade:
+          type: string
+        estado:
+          type: string
+        regiaoAtuacao:
+          type: string
+        liderancaSuperior:
+          type: string
+        responsavelInterno:
+          type: string
+        apoiadoresCadastrados:
+          type: integer
+        apoiadoresEstimadosDiretos:
+          type: integer
+        apoiadoresEstimadosIndiretos:
+          type: integer
+        votosDeclarados:
+          type: integer
+        votosValidados:
+          type: integer
+        grauConfianca:
+          type: string
+        fonteEstimativa:
+          type: string
+        comprovacao:
+          type: string
+        proximaAcao:
+          type: string
+        observacoes:
+          type: string
+
+    # ─── Apoiadores ────────────────────────────────────────────────────────────
+    Apoiador:
+      type: object
+      required: [id, nome, bairro, cidade, estado, tipoPessoa, statusPolitico, nivelConfianca]
+      properties:
+        id:
+          type: integer
+        nome:
+          type: string
+        telefone:
+          type: ["string", "null"]
+        email:
+          type: ["string", "null"]
+        cep:
+          type: ["string", "null"]
+        rua:
+          type: ["string", "null"]
+        numero:
+          type: ["string", "null"]
+        complemento:
+          type: ["string", "null"]
+        bairro:
+          type: string
+        cidade:
+          type: string
+        estado:
+          type: string
+        liderancaVinculada:
+          type: ["string", "null"]
+        tipoPessoa:
+          type: string
+        statusPolitico:
+          type: string
+        nivelConfianca:
+          type: string
+        nivelPrecisaoGeografica:
+          type: ["string", "null"]
+        observacoes:
+          type: ["string", "null"]
+        dataUltimoContato:
+          type: ["string", "null"]
+        proximaAcao:
+          type: ["string", "null"]
+        responsavelContato:
+          type: ["string", "null"]
+
+    ApoiadorInput:
+      type: object
+      required: [nome, bairro, cidade, estado, tipoPessoa, statusPolitico, nivelConfianca]
+      properties:
+        nome:
+          type: string
+        telefone:
+          type: string
+        email:
+          type: string
+        cep:
+          type: string
+        rua:
+          type: string
+        numero:
+          type: string
+        complemento:
+          type: string
+        bairro:
+          type: string
+        cidade:
+          type: string
+        estado:
+          type: string
+        liderancaVinculada:
+          type: string
+        tipoPessoa:
+          type: string
+        statusPolitico:
+          type: string
+        nivelConfianca:
+          type: string
+        nivelPrecisaoGeografica:
+          type: string
+        observacoes:
+          type: string
+        dataUltimoContato:
+          type: string
+        proximaAcao:
+          type: string
+        responsavelContato:
+          type: string
+
+    ApoiadorUpdate:
+      type: object
+      properties:
+        nome:
+          type: string
+        telefone:
+          type: string
+        email:
+          type: string
+        cep:
+          type: string
+        rua:
+          type: string
+        numero:
+          type: string
+        complemento:
+          type: string
+        bairro:
+          type: string
+        cidade:
+          type: string
+        estado:
+          type: string
+        liderancaVinculada:
+          type: string
+        tipoPessoa:
+          type: string
+        statusPolitico:
+          type: string
+        nivelConfianca:
+          type: string
+        nivelPrecisaoGeografica:
+          type: string
+        observacoes:
+          type: string
+        dataUltimoContato:
+          type: string
+        proximaAcao:
+          type: string
+        responsavelContato:
+          type: string
+
+    # ─── Prospecção ────────────────────────────────────────────────────────────
+    Prospecto:
+      type: object
+      required: [id, nome, etapa, bairro]
+      properties:
+        id:
+          type: integer
+        nome:
+          type: string
+        telefone:
+          type: ["string", "null"]
+        bairro:
+          type: string
+        cidade:
+          type: ["string", "null"]
+        etapa:
+          type: string
+        responsavel:
+          type: ["string", "null"]
+        dataContato:
+          type: ["string", "null"]
+        observacoes:
+          type: ["string", "null"]
+
+    ProspeccaoPipeline:
+      type: object
+      required: [novoContato, primeiroAtendimento, simpatizante, apoiadorConfirmado, multiplicador, votoValidado]
+      properties:
+        novoContato:
+          type: array
+          items:
+            $ref: "#/components/schemas/Prospecto"
+        primeiroAtendimento:
+          type: array
+          items:
+            $ref: "#/components/schemas/Prospecto"
+        simpatizante:
+          type: array
+          items:
+            $ref: "#/components/schemas/Prospecto"
+        apoiadorConfirmado:
+          type: array
+          items:
+            $ref: "#/components/schemas/Prospecto"
+        multiplicador:
+          type: array
+          items:
+            $ref: "#/components/schemas/Prospecto"
+        votoValidado:
+          type: array
+          items:
+            $ref: "#/components/schemas/Prospecto"
+
+    ProspeccaoStatusUpdate:
+      type: object
+      required: [etapa]
+      properties:
+        etapa:
+          type: string
+
+    # ─── Zonas Eleitorais ──────────────────────────────────────────────────────
+    ZonaEleitoral:
+      type: object
+      required: [id, zona, bairro, cidade, estado, totalEleitores]
+      properties:
+        id:
+          type: integer
+        zona:
+          type: string
+        secao:
+          type: ["string", "null"]
+        localVotacao:
+          type: ["string", "null"]
+        endereco:
+          type: ["string", "null"]
+        bairro:
+          type: string
+        cidade:
+          type: string
+        estado:
+          type: string
+        totalEleitores:
+          type: integer
+        historicoVotacao:
+          type: ["string", "null"]
+        metaVotos:
+          type: ["integer", "null"]
+        votosEstimados:
+          type: ["integer", "null"]
+        votosValidados:
+          type: ["integer", "null"]
+        responsavel:
+          type: ["string", "null"]
+        observacoes:
+          type: ["string", "null"]
+
+    ZonaEleitoralInput:
+      type: object
+      required: [zona, bairro, cidade, estado, totalEleitores]
+      properties:
+        zona:
+          type: string
+        secao:
+          type: string
+        localVotacao:
+          type: string
+        endereco:
+          type: string
+        bairro:
+          type: string
+        cidade:
+          type: string
+        estado:
+          type: string
+        totalEleitores:
+          type: integer
+        historicoVotacao:
+          type: string
+        metaVotos:
+          type: integer
+        votosEstimados:
+          type: integer
+        votosValidados:
+          type: integer
+        responsavel:
+          type: string
+        observacoes:
+          type: string
+
+    ZonaEleitoralUpdate:
+      type: object
+      properties:
+        zona:
+          type: string
+        secao:
+          type: string
+        localVotacao:
+          type: string
+        endereco:
+          type: string
+        bairro:
+          type: string
+        cidade:
+          type: string
+        estado:
+          type: string
+        totalEleitores:
+          type: integer
+        historicoVotacao:
+          type: string
+        metaVotos:
+          type: integer
+        votosEstimados:
+          type: integer
+        votosValidados:
+          type: integer
+        responsavel:
+          type: string
+        observacoes:
+          type: string
+
+    # ─── Agenda ────────────────────────────────────────────────────────────────
+    EventoAgenda:
+      type: object
+      required: [id, titulo, tipo, data, bairro, status]
+      properties:
+        id:
+          type: integer
+        titulo:
+          type: string
+        tipo:
+          type: string
+        data:
+          type: string
+        horario:
+          type: ["string", "null"]
+        bairro:
+          type: string
+        cidade:
+          type: ["string", "null"]
+        responsavel:
+          type: ["string", "null"]
+        status:
+          type: string
+        observacoes:
+          type: ["string", "null"]
+
+    EventoAgendaInput:
+      type: object
+      required: [titulo, tipo, data, bairro, status]
+      properties:
+        titulo:
+          type: string
+        tipo:
+          type: string
+        data:
+          type: string
+        horario:
+          type: string
+        bairro:
+          type: string
+        cidade:
+          type: string
+        responsavel:
+          type: string
+        status:
+          type: string
+        observacoes:
+          type: string
+
+    EventoAgendaUpdate:
+      type: object
+      properties:
+        titulo:
+          type: string
+        tipo:
+          type: string
+        data:
+          type: string
+        horario:
+          type: string
+        bairro:
+          type: string
+        cidade:
+          type: string
+        responsavel:
+          type: string
+        status:
+          type: string
+        observacoes:
+          type: string
+
+    # ─── Demandas ──────────────────────────────────────────────────────────────
+    Demanda:
+      type: object
+      required: [id, bairro, tipoDemanda, prioridade, status]
+      properties:
+        id:
+          type: integer
+        pessoaVinculada:
+          type: ["string", "null"]
+        bairro:
+          type: string
+        tipoDemanda:
+          type: string
+        prioridade:
+          type: string
+        status:
+          type: string
+        responsavel:
+          type: ["string", "null"]
+        observacoes:
+          type: ["string", "null"]
+        dataRetorno:
+          type: ["string", "null"]
+
+    DemandaInput:
+      type: object
+      required: [bairro, tipoDemanda, prioridade, status]
+      properties:
+        pessoaVinculada:
+          type: string
+        bairro:
+          type: string
+        tipoDemanda:
+          type: string
+        prioridade:
+          type: string
+        status:
+          type: string
+        responsavel:
+          type: string
+        observacoes:
+          type: string
+        dataRetorno:
+          type: string
+
+    DemandaUpdate:
+      type: object
+      properties:
+        pessoaVinculada:
+          type: string
+        bairro:
+          type: string
+        tipoDemanda:
+          type: string
+        prioridade:
+          type: string
+        status:
+          type: string
+        responsavel:
+          type: string
+        observacoes:
+          type: string
+        dataRetorno:
+          type: string
+
+    # ─── Mapas ─────────────────────────────────────────────────────────────────
+    MunicipioRJ:
+      type: object
+      required: [nome, comAtuacao, liderancas, apoiadores, votosDeclarados, votosValidados]
+      properties:
+        nome:
+          type: string
+        comAtuacao:
+          type: boolean
+        liderancas:
+          type: integer
+        apoiadores:
+          type: integer
+        votosDeclarados:
+          type: integer
+        votosValidados:
+          type: integer
+        ranking:
+          type: ["integer", "null"]
+
+    BairroMarica:
+      type: object
+      required: [nome, liderancas, apoiadores, votosDeclarados, votosValidados, cobertura, prioridade]
+      properties:
+        nome:
+          type: string
+        liderancas:
+          type: integer
+        apoiadores:
+          type: integer
+        votosDeclarados:
+          type: integer
+        votosValidados:
+          type: integer
+        cobertura:
+          type: number
+        prioridade:
+          type: string
+
+    ComparativoEleitoral:
+      type: object
+      required: [bairro, eleitores, apoiadoresCadastrados, votosValidados, cobertura, meta, distanciaMeta, prioridade]
+      properties:
+        bairro:
+          type: string
+        eleitores:
+          type: integer
+        apoiadoresCadastrados:
+          type: integer
+        votosValidados:
+          type: integer
+        cobertura:
+          type: number
+        meta:
+          type: integer
+        distanciaMeta:
+          type: integer
+        prioridade:
+          type: string

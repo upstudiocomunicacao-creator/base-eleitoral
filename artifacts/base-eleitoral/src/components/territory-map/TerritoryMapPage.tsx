@@ -30,6 +30,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import type { MapDataFilters } from "@/services/mapData";
 import { cityTerritories, enrichTerritory, formatPercent, heatModes, stateTerritories } from "./territoryData";
 import type { EnrichedTerritoryRecord, HeatMode, MapViewMode, TerritoryPriority, TerritoryScope, TerritoryStatus } from "./types";
 
@@ -92,6 +93,7 @@ export function TerritoryMapPage({ scope }: { scope: TerritoryScope }) {
   const filtered = useMemo(() => records.filter((item) => matches(item, filters)), [records, filters]);
   const summary = useMemo(() => buildSummary(filtered, scope), [filtered, scope]);
   const rankings = useMemo(() => buildRankingGroups(filtered, scope), [filtered, scope]);
+  const realMapFilters = useMemo(() => buildRealMapFilters(filters, scope), [filters, scope]);
 
   const openDetails = (record: EnrichedTerritoryRecord) => {
     setSelected(record);
@@ -133,6 +135,7 @@ export function TerritoryMapPage({ scope }: { scope: TerritoryScope }) {
         <div className="space-y-4">
           <RealMapContainer
             scope={scope}
+            filters={realMapFilters}
             fallback={(
               <div className="space-y-4">
                 <MapLayerToggle
@@ -177,6 +180,21 @@ export function TerritoryMapPage({ scope }: { scope: TerritoryScope }) {
       />
     </div>
   );
+}
+
+function buildRealMapFilters(filters: Filters, scope: TerritoryScope): MapDataFilters {
+  const active = (value: string) => value && value !== all ? value : undefined;
+  const mapFilters: MapDataFilters = {
+    city: scope === "state" ? active(filters.area) : "Maricá",
+    neighborhood: scope === "city" ? active(filters.area) : undefined,
+    status: active(filters.status),
+    priority: active(filters.priority),
+    responsible: active(filters.responsible),
+    precision: active(filters.precision),
+    period: active(filters.period),
+  };
+
+  return Object.fromEntries(Object.entries(mapFilters).filter(([, value]) => value !== undefined)) as MapDataFilters;
 }
 
 function TerritoryStatsCards({ scope, summary }: { scope: TerritoryScope; summary: ReturnType<typeof buildSummary> }) {

@@ -9,12 +9,12 @@ import {
   getMaricaMapData,
   getRJMapData,
   type MapData,
+  type MapDataFilters,
   type MapHeatmapLayerType,
   type MapPoint,
   type MapPointType,
   type MapScope,
 } from "@/services/mapData";
-import { filterMapPoints } from "@/utils/mapFilters";
 import { getHeatmapLayerLabel, getPointLayerLabel } from "@/utils/mapLayers";
 import { MapboxMap } from "./MapboxMap";
 import { MapDetailDrawer } from "./MapDetailDrawer";
@@ -24,11 +24,12 @@ import { MapLegend } from "./MapLegend";
 type Props = {
   scope: MapScope;
   fallback: ReactNode;
+  filters?: MapDataFilters;
 };
 
 const allPointTypes: MapPointType[] = ["leaders", "supporters", "electoral_zones", "demands", "field_agenda"];
 
-export function RealMapContainer({ scope, fallback }: Props) {
+export function RealMapContainer({ scope, fallback, filters = {} }: Props) {
   const [mode, setMode] = useState<RealMapMode>("pins");
   const [heatmapLayer, setHeatmapLayer] = useState<MapHeatmapLayerType>(scope === "city" ? "supporters" : "validated_votes");
   const [visibleTypes, setVisibleTypes] = useState<MapPointType[]>(allPointTypes);
@@ -37,6 +38,7 @@ export function RealMapContainer({ scope, fallback }: Props) {
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const filterKey = useMemo(() => JSON.stringify(filters), [filters]);
 
   useEffect(() => {
     if (!isMapboxConfigured || mode === "mock") return;
@@ -46,7 +48,8 @@ export function RealMapContainer({ scope, fallback }: Props) {
       setLoading(true);
       setError(null);
       try {
-        const response = scope === "city" ? await getMaricaMapData() : await getRJMapData();
+        const activeFilters = JSON.parse(filterKey) as MapDataFilters;
+        const response = scope === "city" ? await getMaricaMapData(activeFilters) : await getRJMapData(activeFilters);
         if (!cancelled) setData(response);
       } catch (err) {
         if (!cancelled) {
@@ -61,11 +64,11 @@ export function RealMapContainer({ scope, fallback }: Props) {
     return () => {
       cancelled = true;
     };
-  }, [mode, scope]);
+  }, [filterKey, mode, scope]);
 
   const visiblePoints = useMemo(() => {
     if (!data) return [];
-    return filterMapPoints(data.points, {}).filter((point) => visibleTypes.includes(point.type));
+    return data.points.filter((point) => visibleTypes.includes(point.type));
   }, [data, visibleTypes]);
 
   const summary = data?.summary;

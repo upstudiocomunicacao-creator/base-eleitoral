@@ -1,4 +1,4 @@
-import { Component, type ErrorInfo, type ReactNode, useEffect, useMemo, useState } from "react";
+﻿import { Component, type ErrorInfo, type ReactNode, useEffect, useMemo, useState } from "react";
 import { AlertTriangle, Database, Loader2, MapPin, Navigation, Route, Zap } from "lucide-react";
 import { Link } from "wouter";
 import { EmptyState } from "@/components/common/EmptyState";
@@ -39,6 +39,7 @@ export function RealMapContainer({ scope, fallback, filters = {} }: Props) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const filterKey = useMemo(() => JSON.stringify(filters), [filters]);
+  const activeFilterCount = useMemo(() => countActiveFilters(filters, scope), [filterKey, scope]);
 
   useEffect(() => {
     if (!isMapboxConfigured || mode === "mock") return;
@@ -142,6 +143,11 @@ export function RealMapContainer({ scope, fallback, filters = {} }: Props) {
               </p>
             </div>
             <div className="flex flex-wrap gap-2">
+              {activeFilterCount ? (
+                <span className="inline-flex h-9 items-center rounded-lg border border-blue-100 bg-blue-50 px-3 text-xs font-extrabold uppercase tracking-[0.08em] text-blue-700">
+                  {activeFilterCount} {activeFilterCount === 1 ? "filtro ativo" : "filtros ativos"}
+                </span>
+              ) : null}
               <Link href="/geocodificacao">
                 <Button variant="outline"><MapPin className="h-4 w-4" /> Geocodificar registros</Button>
               </Link>
@@ -181,7 +187,7 @@ export function RealMapContainer({ scope, fallback, filters = {} }: Props) {
               <div className="flex min-h-[420px] items-center justify-center rounded-xl border border-dashed border-slate-300 bg-slate-50">
                 <EmptyState
                   title="Nenhum registro com coordenadas encontrado"
-                  description="Gere latitude e longitude no módulo de geocodificação para liberar o mapa real."
+                  description={activeFilterCount ? "Nenhum ponto encontrado para os filtros atuais. Ajuste os filtros territoriais ou limpe a seleção." : "Gere latitude e longitude no módulo de geocodificação para liberar o mapa real."}
                   icon={MapPin}
                 />
               </div>
@@ -202,6 +208,14 @@ export function RealMapContainer({ scope, fallback, filters = {} }: Props) {
       </div>
     </MapRuntimeErrorBoundary>
   );
+}
+
+function countActiveFilters(filters: MapDataFilters, scope: MapScope) {
+  return Object.entries(filters).filter(([key, value]) => {
+    if (!value || value === "todos") return false;
+    if (scope === "city" && key === "city" && value === "Maricá") return false;
+    return true;
+  }).length;
 }
 
 function RealMapSummary({ summary, mode, heatmapLayer }: { summary: MapData["summary"] | undefined; mode: RealMapMode; heatmapLayer: MapHeatmapLayerType }) {
@@ -324,3 +338,4 @@ class MapRuntimeErrorBoundary extends Component<{ fallback: ReactNode; children:
     return this.props.children;
   }
 }
+

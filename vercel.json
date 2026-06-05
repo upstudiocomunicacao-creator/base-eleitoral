@@ -1,5 +1,5 @@
 {
-  "installCommand": "corepack pnpm install",
+  "installCommand": "corepack pnpm install --frozen-lockfile",
   "buildCommand": "corepack pnpm --filter @workspace/base-eleitoral run build",
   "outputDirectory": "artifacts/base-eleitoral/dist/public",
   "rewrites": [

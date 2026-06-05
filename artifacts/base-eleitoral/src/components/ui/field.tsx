@@ -25,7 +25,7 @@ function FieldLegend({
   className,
   variant = "legend",
   ...props
-}: React.ComponentProps<"legend"> & { variant?: "legend" | "label" }) {
+}: React.ComponentProps<"legend"> & { variant: "legend" | "label" }) {
   return (
     <legend
       data-slot="field-legend"
@@ -158,7 +158,7 @@ function FieldSeparator({
   className,
   ...props
 }: React.ComponentProps<"div"> & {
-  children?: React.ReactNode
+  children: React.ReactNode
 }) {
   return (
     <div
@@ -200,7 +200,7 @@ function FieldError({
       return null
     }
 
-    if (errors?.length === 1 && errors[0]?.message) {
+    if (errors.length === 1 && errors[0]?.message) {
       return errors[0].message
     }
 

@@ -11,6 +11,15 @@ out-tsc
 # dependencies
 node_modules
 
+# environment variables and local logs
+.env
+.env.*
+!.env.example
+artifacts/base-eleitoral/.env
+artifacts/base-eleitoral/.env.*
+!artifacts/base-eleitoral/.env.example
+artifacts/base-eleitoral/dev-*.log
+
 # IDEs and editors
 /.idea
 .project
@@ -35,6 +44,7 @@ node_modules
 npm-debug.log
 yarn-error.log
 testem.log
+artifacts/base-eleitoral/.vite-dev.*
 /typings
 
 # System Files

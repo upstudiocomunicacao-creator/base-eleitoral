@@ -1,0 +1,11 @@
+{
+  "installCommand": "corepack pnpm install",
+  "buildCommand": "corepack pnpm --filter @workspace/base-eleitoral run build",
+  "outputDirectory": "artifacts/base-eleitoral/dist/public",
+  "rewrites": [
+    {
+      "source": "/(.*)",
+      "destination": "/index.html"
+    }
+  ]
+}

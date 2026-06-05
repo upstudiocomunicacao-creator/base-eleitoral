@@ -1,3 +1,5 @@
+import { getApiFallbackResponse, getApiMutationResponse, getMockResponse } from "./mock-api";
+
 export type CustomFetchOptions = RequestInit & {
   responseType?: "json" | "text" | "blob" | "auto";
 };
@@ -76,6 +78,16 @@ function resolveUrl(input: RequestInfo | URL): string {
   if (typeof input === "string") return input;
   if (isUrl(input)) return input.toString();
   return input.url;
+}
+
+function shouldUseMockFallback(method: string, url: string): boolean {
+  if (method !== "GET") return false;
+  return getMockResponse(url) !== undefined;
+}
+
+async function getMockFallback<T>(method: string, url: string): Promise<T | undefined> {
+  if (!shouldUseMockFallback(method, url)) return undefined;
+  return (await getApiFallbackResponse(url)) as T | undefined;
 }
 
 function mergeHeaders(...sources: Array<HeadersInit | undefined>): Headers {
@@ -360,12 +372,38 @@ export async function customFetch<T = unknown>(
 
   const requestInfo = { method, url: resolveUrl(input) };
 
-  const response = await fetch(input, { ...init, method, headers });
+  if (method !== "GET" && method !== "HEAD") {
+    const mutation = await getApiMutationResponse(requestInfo.url, method, init.body);
+    if (mutation.handled) return mutation.data as T;
+  }
+
+  let response: Response;
+
+  try {
+    response = await fetch(input, { ...init, method, headers });
+  } catch (cause) {
+    const mock = await getMockFallback<T>(method, requestInfo.url);
+    if (mock !== undefined) return mock;
+    throw cause;
+  }
 
   if (!response.ok) {
+    const mock = await getMockFallback<T>(method, requestInfo.url);
+    if (mock !== undefined) return mock;
+
     const errorData = await parseErrorBody(response, method);
     throw new ApiError(response, errorData, requestInfo);
   }
 
-  return (await parseSuccessBody(response, responseType, requestInfo)) as T;
+  const mock = await getMockFallback<T>(method, requestInfo.url);
+  if (mock !== undefined && getMediaType(response.headers) === "text/html") {
+    return mock;
+  }
+
+  try {
+    return (await parseSuccessBody(response, responseType, requestInfo)) as T;
+  } catch (cause) {
+    if (mock !== undefined) return mock;
+    throw cause;
+  }
 }

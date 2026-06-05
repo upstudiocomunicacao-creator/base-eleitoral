@@ -51,7 +51,7 @@ export async function getMapPoints(filters: MapDataFilters = {}): Promise<MapPoi
   const points: MapPoint[] = [
     ...dataset.leaders.map((record) => toPoint("leaders", record, record.full_name, record.leader_type, record.status, getLeaderPriority(record), record.internal_responsible ?? "")),
     ...dataset.supporters.map((record) => toPoint("supporters", record, record.full_name, record.person_type, record.political_status, record.political_status, record.internal_responsible ?? "")),
-    ...dataset.electoralZones.map((record) => toPoint("electoral_zones", record, record.voting_place, `Zona ${record.zone_number}${record.section_number ? ` Â· SeÃ§Ã£o ${record.section_number}` : ""}`, record.status, record.priority, record.regional_responsible ?? "")),
+    ...dataset.electoralZones.map((record) => toPoint("electoral_zones", record, record.voting_place, `Zona ${record.zone_number}${record.section_number ? ` · Seção ${record.section_number}` : ""}`, record.status, record.priority, record.regional_responsible ?? "")),
     ...dataset.demands.map((record) => toPoint("demands", record, record.title, record.category, record.status, record.priority, record.internal_responsible ?? "")),
     ...dataset.fieldAgenda.map((record) => toPoint("field_agenda", record, record.title, record.action_type, record.status, record.priority, record.internal_responsible ?? "")),
   ].filter((point): point is MapPoint => Boolean(point));
@@ -124,7 +124,7 @@ export async function getMapSummary(filters: MapDataFilters = {}) {
 }
 
 function buildMapSummary(points: MapPoint[], withoutCoordinates: Array<{ id: string; type: MapPointType; title: string; city: string; neighborhood: string }>) {
-  const byNeighborhood = countBy(points, (point) => point.neighborhood || "NÃ£o definido");
+  const byNeighborhood = countBy(points, (point) => point.neighborhood || "Não definido");
   const strongest = Object.entries(byNeighborhood).sort((a, b) => b[1] - a[1])[0]?.[0] ?? "-";
   const opportunity = points
     .filter((point) => point.type === "electoral_zones")
@@ -164,10 +164,10 @@ function toPoint(
     neighborhood: String(record.neighborhood ?? ""),
     city: String(record.city ?? ""),
     state: String(record.state ?? "RJ"),
-    status: status || "NÃ£o definido",
-    priority: priority || "NÃ£o definida",
-    responsible: responsible || "NÃ£o definido",
-    geographicPrecision: String(record.geographic_precision ?? "NÃ£o definida"),
+    status: status || "Não definido",
+    priority: priority || "Não definida",
+    responsible: responsible || "Não definido",
+    geographicPrecision: String(record.geographic_precision ?? "Não definida"),
     geocodingSource: String(record.geocoding_source ?? "manual"),
     weight: 0.5,
     sourceTable: type,
@@ -233,7 +233,7 @@ function shouldUsePointForHeatmap(point: MapPoint, layerType: MapHeatmapLayerTyp
 }
 
 function getLeaderPriority(record: { validated_votes: number; declared_votes: number; confidence_level: string }) {
-  if (record.declared_votes > 0 && record.validated_votes / record.declared_votes < 0.3) return "AtenÃ§Ã£o";
+  if (record.declared_votes > 0 && record.validated_votes / record.declared_votes < 0.3) return "Atenção";
   return record.confidence_level;
 }
 

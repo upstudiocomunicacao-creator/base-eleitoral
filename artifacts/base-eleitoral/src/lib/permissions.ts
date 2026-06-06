@@ -26,6 +26,7 @@ export const MODULES = [
   "relatorios",
   "importacao_dados",
   "geocodificacao",
+  "diagnostico",
   "configuracoes",
 ] as const;
 

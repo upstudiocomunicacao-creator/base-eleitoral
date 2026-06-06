@@ -1,6 +1,7 @@
 import { ReactNode, useState } from "react";
 import { Link, useLocation } from "wouter";
 import {
+  Activity,
   BarChart3,
   Calendar,
   ChevronRight,
@@ -40,6 +41,7 @@ const navItems = [
   { href: "/relatorios", label: "Relatórios", icon: FileText, group: "Sistema", module: "relatorios" },
   { href: "/importacao", label: "Importação", icon: UploadCloud, group: "Sistema", module: "importacao_dados" },
   { href: "/geocodificacao", label: "Geocodificação", icon: MapPinned, group: "Sistema", module: "geocodificacao" },
+  { href: "/diagnostico", label: "Diagnóstico", icon: Activity, group: "Sistema", module: "diagnostico" },
   { href: "/configuracoes", label: "Configurações", icon: Settings, group: "Sistema", module: "configuracoes" },
 ] as const;
 

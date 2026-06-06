@@ -23,6 +23,7 @@ import Demandas from "./pages/Demandas";
 import Relatorios from "./pages/Relatorios";
 import Importacao from "./pages/Importacao";
 import Geocodificacao from "./pages/Geocodificacao";
+import Diagnostico from "./pages/Diagnostico";
 import Configuracoes from "./pages/Configuracoes";
 
 const queryClient = new QueryClient({
@@ -59,6 +60,7 @@ function Router() {
               <Route path="/relatorios" component={Relatorios} />
               <Route path="/importacao" component={Importacao} />
               <Route path="/geocodificacao" component={Geocodificacao} />
+              <Route path="/diagnostico" component={Diagnostico} />
               <Route path="/configuracoes" component={Configuracoes} />
               <Route component={NotFound} />
             </Switch>

@@ -225,18 +225,18 @@ function MapFilters({ scope, filters, setFilters, options }: { scope: TerritoryS
         <CardTitle className="flex items-center gap-2 text-base"><SlidersHorizontal className="h-4 w-4 text-blue-600" /> Filtros territoriais</CardTitle>
       </CardHeader>
       <CardContent className="grid gap-3 p-4 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-5">
-        <FilterSelect label={isState ? "Munic\u00edpio" : "Bairro"} value={filters.area} options={options.area} onChange={(value) => update("area", value)} />
-        <FilterSelect label="Regi\u00e3o" value={filters.region} options={options.region} onChange={(value) => update("region", value)} />
+        <FilterSelect label={isState ? "Município" : "Bairro"} value={filters.area} options={options.area} onChange={(value) => update("area", value)} />
+        <FilterSelect label="Região" value={filters.region} options={options.region} onChange={(value) => update("region", value)} />
         <FilterSelect label="Status da campanha" value={filters.status} options={options.status} onChange={(value) => update("status", value)} />
         <FilterSelect label="Prioridade" value={filters.priority} options={options.priority} onChange={(value) => update("priority", value)} />
-        <FilterSelect label="Faixa de lideran\u00e7as" value={filters.leaders} options={["Sem lideran\u00e7a", "1 a 3", "4 ou mais"]} onChange={(value) => update("leaders", value)} />
-        <FilterSelect label="Faixa de apoiadores" value={filters.supporters} options={["At\u00e9 150", "151 a 400", "Acima de 400"]} onChange={(value) => update("supporters", value)} />
-        <FilterSelect label="Faixa de votos" value={filters.votes} options={["At\u00e9 100", "101 a 300", "Acima de 300"]} onChange={(value) => update("votes", value)} />
-        <FilterSelect label={isState ? "Respons\u00e1vel regional" : "Respons\u00e1vel interno"} value={filters.responsible} options={options.responsible} onChange={(value) => update("responsible", value)} />
-        <FilterSelect label="Per\u00edodo" value={filters.period} options={["Semana atual", "\u00daltimos 30 dias", "Ciclo completo"]} onChange={(value) => update("period", value)} />
+        <FilterSelect label="Faixa de lideranças" value={filters.leaders} options={["Sem liderança", "1 a 3", "4 ou mais"]} onChange={(value) => update("leaders", value)} />
+        <FilterSelect label="Faixa de apoiadores" value={filters.supporters} options={["Até 150", "151 a 400", "Acima de 400"]} onChange={(value) => update("supporters", value)} />
+        <FilterSelect label="Faixa de votos" value={filters.votes} options={["Até 100", "101 a 300", "Acima de 300"]} onChange={(value) => update("votes", value)} />
+        <FilterSelect label={isState ? "Responsável regional" : "Responsável interno"} value={filters.responsible} options={options.responsible} onChange={(value) => update("responsible", value)} />
+        <FilterSelect label="Período" value={filters.period} options={["Semana atual", "Últimos 30 dias", "Ciclo completo"]} onChange={(value) => update("period", value)} />
         {!isState ? <FilterSelect label="Zona eleitoral" value={filters.zone} options={options.zone} onChange={(value) => update("zone", value)} /> : null}
-        {!isState ? <FilterSelect label="Se\u00e7\u00e3o eleitoral" value={filters.section} options={options.section} onChange={(value) => update("section", value)} /> : null}
-        {!isState ? <FilterSelect label="Precis\u00e3o geogr\u00e1fica" value={filters.precision} options={options.precision} onChange={(value) => update("precision", value)} /> : null}
+        {!isState ? <FilterSelect label="Seção eleitoral" value={filters.section} options={options.section} onChange={(value) => update("section", value)} /> : null}
+        {!isState ? <FilterSelect label="Precisão geográfica" value={filters.precision} options={options.precision} onChange={(value) => update("precision", value)} /> : null}
         <div className="flex items-end">
           <Button className="w-full" variant="outline" onClick={() => setFilters(emptyFilters)}><Search className="h-4 w-4" /> Limpar filtros</Button>
         </div>

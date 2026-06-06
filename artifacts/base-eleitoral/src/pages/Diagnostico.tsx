@@ -22,7 +22,8 @@ import { useAuth } from "@/hooks/useAuth";
 import { getSupabaseClient, isSupabaseConfigured } from "@/lib/supabaseClient";
 import { hasPermission } from "@/lib/permissions";
 import { DEFAULT_CAMPAIGN_ID } from "@/services/leaders";
-import { geocodeAddress, getGeocodingProvider, getGeocodingProviderLabel } from "@/services/geocoding";
+import { geocodeAddress, getGeocodingProvider, getGeocodingProviderLabel, getGeocodingStats } from "@/services/geocoding";
+import { getMaricaMapData, getRJMapData } from "@/services/mapData";
 
 type DiagnosticStatus = "pendente" | "ok" | "erro";
 
@@ -131,6 +132,23 @@ export default function Diagnostico() {
         state: "RJ",
       });
       return `Provider atual: ${providerLabel}. Resultado: ${coordinates.latitude.toFixed(5)}, ${coordinates.longitude.toFixed(5)} com ${Math.round(coordinates.geocoding_confidence * 100)}% de confiança.`;
+    });
+
+    await runCheck(add, "geocoding-coverage", "Mapas", "Cobertura de coordenadas", async () => {
+      const stats = await getGeocodingStats();
+      const totalKnown = stats.total || 0;
+      const readiness = totalKnown ? Math.round((stats.withCoordinates / totalKnown) * 100) : 100;
+      return `${stats.withCoordinates}/${totalKnown} registros com latitude/longitude (${readiness}%). Pendentes: ${stats.pending}. Falhas: ${stats.failed}.`;
+    });
+
+    await runCheck(add, "map-rj-readiness", "Mapas", "Mapa RJ real", async () => {
+      const mapData = await getRJMapData();
+      return `${mapData.points.length} ponto(s) carregados no RJ. ${mapData.withoutCoordinates.length} registro(s) ainda sem coordenadas.`;
+    });
+
+    await runCheck(add, "map-marica-readiness", "Mapas", "Mapa Maricá real", async () => {
+      const mapData = await getMaricaMapData();
+      return `${mapData.points.length} ponto(s) carregados em Maricá. ${mapData.withoutCoordinates.length} registro(s) ainda sem coordenadas.`;
     });
 
     setLastRun(new Date().toLocaleString("pt-BR"));

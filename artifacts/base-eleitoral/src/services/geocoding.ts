@@ -119,8 +119,15 @@ async function geocodeAddressWithMapbox(record: AddressLike): Promise<Coordinate
   }
 
   const feature = payload.features?.[0];
-  const [longitude, latitude] = feature?.center ?? [];
-  if (!Number.isFinite(latitude) || !Number.isFinite(longitude)) {
+  const center = feature?.center;
+  const longitude = center?.[0];
+  const latitude = center?.[1];
+  if (
+    typeof latitude !== "number" ||
+    typeof longitude !== "number" ||
+    !Number.isFinite(latitude) ||
+    !Number.isFinite(longitude)
+  ) {
     throw new Error("Mapbox não encontrou coordenadas para este endereço.");
   }
 

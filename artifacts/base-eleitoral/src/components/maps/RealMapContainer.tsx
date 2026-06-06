@@ -1,5 +1,5 @@
 ﻿import { Component, type ErrorInfo, type ReactNode, useEffect, useMemo, useState } from "react";
-import { AlertTriangle, Database, Loader2, MapPin, Navigation, Route, Zap } from "lucide-react";
+import { AlertTriangle, Database, Loader2, MapPin, Navigation, Route, Zap, type LucideIcon } from "lucide-react";
 import { Link } from "wouter";
 import { EmptyState } from "@/components/common/EmptyState";
 import { Button } from "@/components/ui/button";
@@ -85,7 +85,7 @@ export function RealMapContainer({ scope, fallback, filters = {} }: Props) {
       <div className="space-y-3">
         <MapboxNotice
           title="Mapbox ainda não configurado"
-          description="Exibindo o mapa estratégico simulado. Configure VITE_MAPBOX_ACCESS_TOKEN para ativar pins, clusters e mapa de calor real."
+          description="Exibindo a visualização estratégica. Configure VITE_MAPBOX_ACCESS_TOKEN para ativar pins, clusters e mapa de calor real."
           tone="amber"
         />
         {fallback}
@@ -97,8 +97,8 @@ export function RealMapContainer({ scope, fallback, filters = {} }: Props) {
     return (
       <div className="space-y-3">
         <MapboxNotice
-          title="Modo mock estratégico ativo"
-          description="Você está vendo o mapa estratégico simulado. Use Pins reais, Mapa de calor ou Clusters para visualizar o mapa Mapbox."
+          title="Visual estratégico ativo"
+          description="Você está vendo a leitura territorial estratégica. Use Pins reais, Mapa de calor ou Clusters para visualizar o mapa Mapbox."
           tone="blue"
         />
         <MapLayerControls
@@ -119,7 +119,7 @@ export function RealMapContainer({ scope, fallback, filters = {} }: Props) {
       <div className="space-y-3">
         <MapboxNotice
           title="Não foi possível carregar o mapa real"
-          description={`${error} Exibindo o mapa simulado como fallback.`}
+          description={`${error} Exibindo a visualização estratégica como fallback.`}
           tone="red"
         />
         {fallback}
@@ -219,24 +219,24 @@ function countActiveFilters(filters: MapDataFilters, scope: MapScope) {
 }
 
 function RealMapSummary({ summary, mode, heatmapLayer }: { summary: MapData["summary"] | undefined; mode: RealMapMode; heatmapLayer: MapHeatmapLayerType }) {
-  const cards = [
-    ["Pontos no mapa", summary?.totalPoints ?? 0, MapPin],
-    ["Lideranças", summary?.leaders ?? 0, Database],
-    ["Apoiadores", summary?.supporters ?? 0, Database],
-    ["Zonas", summary?.zones ?? 0, Route],
-    ["Demandas", summary?.demands ?? 0, AlertTriangle],
-    ["Sem coordenadas", summary?.withoutCoordinates ?? 0, AlertTriangle],
-    ["Região forte", summary?.strongestRegion ?? "-", Zap],
-    ["Oportunidade", summary?.opportunityRegion ?? "-", Zap],
+  const cards: Array<{ label: string; value: string | number; icon: LucideIcon }> = [
+    { label: "Pontos no mapa", value: summary?.totalPoints ?? 0, icon: MapPin },
+    { label: "Lideranças", value: summary?.leaders ?? 0, icon: Database },
+    { label: "Apoiadores", value: summary?.supporters ?? 0, icon: Database },
+    { label: "Zonas", value: summary?.zones ?? 0, icon: Route },
+    { label: "Demandas", value: summary?.demands ?? 0, icon: AlertTriangle },
+    { label: "Sem coordenadas", value: summary?.withoutCoordinates ?? 0, icon: AlertTriangle },
+    { label: "Região forte", value: summary?.strongestRegion ?? "-", icon: Zap },
+    { label: "Oportunidade", value: summary?.opportunityRegion ?? "-", icon: Zap },
   ];
 
   return (
     <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-      {cards.map(([label, value, Icon]) => (
-        <div key={label as string} className="rounded-xl border border-slate-100 bg-white p-4 shadow-sm">
+      {cards.map(({ label, value, icon: Icon }) => (
+        <div key={label} className="rounded-xl border border-slate-100 bg-white p-4 shadow-sm">
           <div className="flex items-center justify-between gap-3">
             <div>
-              <div className="text-xs font-bold uppercase tracking-[0.08em] text-slate-400">{label as string}</div>
+              <div className="text-xs font-bold uppercase tracking-[0.08em] text-slate-400">{label}</div>
               <div className="mt-1 text-xl font-extrabold text-slate-950">{String(value)}</div>
             </div>
             <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-blue-50 text-blue-600">
@@ -362,7 +362,7 @@ class MapRuntimeErrorBoundary extends Component<{ fallback: ReactNode; children:
         <div className="space-y-3">
           <MapboxNotice
             title="Mapa real pausado"
-            description={`${this.state.message} Exibindo o mapa estratégico simulado enquanto ajustamos os dados.`}
+            description={`${this.state.message} Exibindo a visualização estratégica enquanto ajustamos os dados.`}
             tone="red"
           />
           {this.props.fallback}

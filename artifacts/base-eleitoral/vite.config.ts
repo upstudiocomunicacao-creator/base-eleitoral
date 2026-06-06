@@ -49,8 +49,11 @@ export default defineConfig({
       output: {
         manualChunks: {
           charts: ["recharts"],
+          exports: ["jspdf", "xlsx"],
+          maps: ["mapbox-gl"],
           motion: ["framer-motion"],
           react: ["react", "react-dom", "@tanstack/react-query", "wouter"],
+          supabase: ["@supabase/supabase-js"],
           ui: [
             "@radix-ui/react-dialog",
             "@radix-ui/react-dropdown-menu",

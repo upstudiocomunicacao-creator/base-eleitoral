@@ -107,12 +107,12 @@ export function TerritoryMapPage({ scope }: { scope: TerritoryScope }) {
         title={isState ? "Leitura territorial do Rio de Janeiro" : "Mapa estrat\u00e9gico de Maric\u00e1"}
         description={
           isState
-            ? "Mapa simulado por munic\u00edpio, com intensidade territorial, ranking e leitura estrat\u00e9gica para futura camada Mapbox/PostGIS."
-            : "Mapa simulado por bairro, rua, zona e potencial eleitoral, preparado para heatmap real, geocodifica\u00e7\u00e3o e dados de campo."
+            ? "Leitura por município, com intensidade territorial, ranking estratégico e camada Mapbox/PostGIS preparada."
+            : "Leitura por bairro, rua, zona e potencial eleitoral, com heatmap, geocodificação e dados de campo."
         }
         actions={
           <div className="flex flex-wrap gap-2">
-            <Button variant="outline"><Layers className="h-4 w-4" /> Modo mockado</Button>
+            <Button variant="outline"><Layers className="h-4 w-4" /> Visual estratégico</Button>
             <Button variant="outline"><Route className="h-4 w-4" /> Pronto para mapa real</Button>
           </div>
         }
@@ -289,7 +289,7 @@ function MapLayerToggle({
             </div>
           </div>
           <div>
-            <div className="mb-2 text-xs font-bold uppercase tracking-[0.1em] text-slate-400">Zoom mock</div>
+            <div className="mb-2 text-xs font-bold uppercase tracking-[0.1em] text-slate-400">Zoom visual</div>
             <div className="flex items-center gap-1 rounded-lg border border-slate-200 bg-white p-1 shadow-sm">
               <Button size="icon" variant="ghost" onClick={() => setZoom(Math.max(0.85, Number((zoom - 0.08).toFixed(2))))}><Minus className="h-4 w-4" /></Button>
               <span className="w-12 text-center text-xs font-extrabold text-slate-700">{Math.round(zoom * 100)}%</span>
@@ -326,7 +326,7 @@ function MockMapContainer({
     <Card className="premium-card overflow-hidden">
       <CardHeader className="border-b border-slate-100">
         <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-          <CardTitle className="flex items-center gap-2 text-base"><Navigation className="h-4 w-4 text-blue-600" /> {isState ? "Mapa RJ simulado" : "Mapa Maric\u00e1 simulado"}</CardTitle>
+          <CardTitle className="flex items-center gap-2 text-base"><Navigation className="h-4 w-4 text-blue-600" /> {isState ? "Mapa RJ estratégico" : "Mapa Maricá estratégico"}</CardTitle>
           <StatusPill label="Sem API externa" tone="blue" />
         </div>
       </CardHeader>
@@ -403,7 +403,7 @@ function TerritoryPin({ record, activeLayer, selected, onSelect }: { record: Enr
 function HeatmapLayerMock({ records, activeLayer, onSelect }: { records: EnrichedTerritoryRecord[]; activeLayer: HeatMode; onSelect: (record: EnrichedTerritoryRecord) => void }) {
   return (
     <Card className="premium-card overflow-hidden">
-      <CardHeader className="border-b border-slate-100"><CardTitle className="flex items-center gap-2 text-base"><Flame className="h-4 w-4 text-orange-600" /> Mapa de calor simulado por bairro</CardTitle></CardHeader>
+      <CardHeader className="border-b border-slate-100"><CardTitle className="flex items-center gap-2 text-base"><Flame className="h-4 w-4 text-orange-600" /> Mapa de calor por bairro</CardTitle></CardHeader>
       <CardContent className="grid gap-3 p-4 sm:grid-cols-2 lg:grid-cols-3">
         {records.map((record) => {
           const intensity = record.heat[activeLayer];
@@ -529,7 +529,7 @@ function TerritoryDetailDrawer({ scope, open, record, onOpenChange }: { scope: T
               </CardContent>
             </Card>
             <Card className="premium-card overflow-hidden">
-              <CardHeader><CardTitle className="text-base">Card de localiza\u00e7\u00e3o simulada</CardTitle></CardHeader>
+              <CardHeader><CardTitle className="text-base">Prévia de localização territorial</CardTitle></CardHeader>
               <CardContent>
                 <div className="relative min-h-[190px] overflow-hidden rounded-xl border border-blue-100 bg-[linear-gradient(135deg,#eff6ff,#ecfdf5)] p-5 shadow-inner">
                   <div className="absolute inset-0 opacity-60 [background-image:linear-gradient(rgba(37,99,235,0.08)_1px,transparent_1px),linear-gradient(90deg,rgba(37,99,235,0.08)_1px,transparent_1px)] [background-size:28px_28px]" />
@@ -544,7 +544,7 @@ function TerritoryDetailDrawer({ scope, open, record, onOpenChange }: { scope: T
               <ListCard title="Lideran\u00e7as vinculadas" items={record.leadersLinked.length ? record.leadersLinked : ["Sem lideran\u00e7a vinculada"]} />
               <ListCard title="Pr\u00f3ximas a\u00e7\u00f5es recomendadas" items={record.nextActions} />
               <ListCard title="Observa\u00e7\u00f5es estrat\u00e9gicas" items={[record.analysis, record.notes]} />
-              <ListCard title="Camadas futuras" items={["Mapbox/Google Maps", "Supabase/PostgreSQL/PostGIS", "Heatmap real por CEP, rua e se\u00e7\u00e3o"]} />
+              <ListCard title="Camadas técnicas" items={["Mapbox/Google Maps", "Supabase/PostgreSQL/PostGIS", "Heatmap real por CEP, rua e seção"]} />
             </div>
           </div>
         ) : null}

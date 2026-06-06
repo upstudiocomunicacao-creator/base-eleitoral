@@ -33,7 +33,7 @@ export function MapLayerControls({
             ["pins", "Pins reais", MapPin],
             ["heatmap", "Mapa de calor", Radar],
             ["cluster", "Clusters", Layers],
-            ["mock", "Simulado", Layers],
+            ["mock", "Estratégico", Layers],
           ].map(([key, label, Icon]) => (
             <Button key={key as string} size="sm" variant={mode === key ? "default" : "outline"} onClick={() => setMode(key as RealMapMode)}>
               <Icon className="h-3.5 w-3.5" /> {label as string}

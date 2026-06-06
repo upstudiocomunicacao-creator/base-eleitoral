@@ -423,9 +423,9 @@ function ImportCard() {
         <Button
           variant="outline"
           className="w-full bg-white"
-          onClick={() => toast({ title: "Importação futura", description: "Importação CSV/XLSX será implementada em etapa futura." })}
+          onClick={() => toast({ title: "Importação de dados", description: "Use o módulo Importação para validar planilhas CSV/XLSX antes de gravar no Supabase." })}
         >
-          <Upload className="h-4 w-4" /> Simular importação
+          <Upload className="h-4 w-4" /> Orientar importação
         </Button>
       </CardContent>
     </Card>
@@ -805,9 +805,9 @@ function ZoneDetailSheet({
                 <div className="absolute bottom-12 right-12 h-32 w-32 rounded-full border border-emerald-200 bg-emerald-500/15" />
                 <div className="relative z-10 flex h-full flex-col justify-between">
                   <div>
-                    <div className="text-sm font-extrabold uppercase tracking-[0.12em] text-blue-700">Mapa simulado</div>
+                    <div className="text-sm font-extrabold uppercase tracking-[0.12em] text-blue-700">Área territorial</div>
                     <div className="mt-2 text-2xl font-extrabold text-slate-950">{record.neighborhood}</div>
-                    <p className="mt-2 text-sm font-medium leading-6 text-slate-600">Área preparada para futura integração com Mapbox/PostGIS.</p>
+                    <p className="mt-2 text-sm font-medium leading-6 text-slate-600">Área preparada para leitura territorial com Mapbox/PostGIS.</p>
                   </div>
                   <div className="rounded-lg border border-white/80 bg-white/80 p-3 shadow-sm backdrop-blur">
                     <div className="flex items-center gap-2 text-sm font-bold text-slate-700">

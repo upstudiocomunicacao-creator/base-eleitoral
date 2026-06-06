@@ -99,7 +99,7 @@ function complete(records: Seed[]): TerritoryRecord[] {
     ...record,
     weeklyGrowth: Math.max(1, Math.round(record.validatedVotes / (record.type === "Munic\u00edpio" ? 80 : 30))),
     areas: record.type === "Munic\u00edpio" ? record.leadersLinked.length ? record.leadersLinked : [record.name] : [record.name, record.region],
-    notes: record.type === "Munic\u00edpio" ? "Registro estadual mockado, pronto para geocodifica\u00e7\u00e3o municipal e camada PostGIS." : "Registro municipal mockado para futura leitura por bairro, rua, CEP e heatmap real.",
+    notes: record.type === "Município" ? "Registro estadual preparado para geocodificação municipal e camada PostGIS." : "Registro municipal preparado para leitura por bairro, rua, CEP e heatmap real.",
   }));
 }
 

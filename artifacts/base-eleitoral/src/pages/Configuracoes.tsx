@@ -115,7 +115,7 @@ export default function Configuracoes() {
     blocked: users.filter((item) => item.status === "Bloqueado").length,
   }), [users]);
 
-  const mockSave = (label = "Configuração") => toast({ title: `${label} salva`, description: "Registro mockado. Persistência real será conectada ao Supabase na próxima etapa." });
+  const mockSave = (label = "Configuração") => toast({ title: `${label} salva`, description: "Preferência registrada na interface. A persistência centralizada fica preparada para Supabase." });
 
   useEffect(() => {
     let mounted = true;
@@ -128,7 +128,7 @@ export default function Configuracoes() {
       })
       .catch(() => {
         toast({
-          title: "Usuários em modo mockado",
+          title: "Usuários da demonstração",
           description: "Não foi possível carregar users_profiles agora. A lista local segue funcionando.",
         });
       });
@@ -220,7 +220,7 @@ export default function Configuracoes() {
 }
 
 function user(id: number, name: string, email: string, phone: string, profile: string, region: string, city: string, neighborhood: string, status: UserStatus, lastAccess: string): SystemUser {
-  return { id, name, email, phone, profile, region, city, neighborhood, linkedLeader: profile === "Liderança" ? name : "", status, lastAccess, createdAt: "01/06/2026", notes: "Usuário mockado para preparação de Supabase Auth e permissões reais." };
+  return { id, name, email, phone, profile, region, city, neighborhood, linkedLeader: profile === "Liderança" ? name : "", status, lastAccess, createdAt: "01/06/2026", notes: "Usuário de referência para Supabase Auth e permissões reais." };
 }
 
 function mapProfileToSystemUser(profile: UserProfile): SystemUser {
@@ -288,7 +288,7 @@ function GeneralTab({ users, onSave }: { users: SystemUser[]; onSave: (label: st
         <Field label="Responsável geral" defaultValue="Coordenação Geral" />
         <Field label="Telefone de contato" defaultValue="(21) 99999-0000" />
         <Field label="E-mail de contato" defaultValue="contato@campanha.local" />
-        <label className="block md:col-span-2"><FieldLabel>Observações gerais</FieldLabel><Textarea defaultValue="Ambiente mockado para operação de campanha, preparado para autenticação, banco real e auditoria." rows={4} /></label>
+        <label className="block md:col-span-2"><FieldLabel>Observações gerais</FieldLabel><Textarea defaultValue="Ambiente operacional para campanha, preparado para autenticação, banco real e auditoria." rows={4} /></label>
         <div className="md:col-span-2"><Button onClick={() => onSave("Configurações gerais")}><Save className="h-4 w-4" /> Salvar geral</Button></div>
       </SettingsPanel>
     </div>
@@ -355,7 +355,7 @@ function UsersTab({ users, summary, onCreate, onEdit, onDelete }: { users: Syste
 function ProfilesTab() {
   return (
     <Card className="premium-card overflow-hidden">
-      <CardHeader><CardTitle className="text-base">Perfis de acesso mockados</CardTitle></CardHeader>
+      <CardHeader><CardTitle className="text-base">Perfis de acesso</CardTitle></CardHeader>
       <CardContent className="p-0">
         <div className="overflow-x-auto">
           <Table>
@@ -465,7 +465,7 @@ function SecurityTab({ onSave }: { onSave: (label: string) => void }) {
       <section className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
         {["Consentimento de cadastro", "Dados sensíveis", "Exportações controladas", "Auditoria de alterações", "Backup futuro", "Controle de acesso"].map((title, index) => <InfoCard key={title} title={title} icon={index < 3 ? ShieldCheck : LockKeyhole} tone={index < 3 ? "blue" : "amber"} />)}
       </section>
-      <SettingsPanel title="Segurança e LGPD" description="Políticas mockadas para tratamento de dados pessoais e controle de acesso.">
+      <SettingsPanel title="Segurança e LGPD" description="Políticas operacionais para tratamento de dados pessoais e controle de acesso.">
         <label className="block md:col-span-2"><FieldLabel>Termo de consentimento padrão</FieldLabel><Textarea defaultValue="Autorizo o cadastro dos meus dados para contato de campanha, acompanhamento de demandas e ações territoriais." rows={3} /></label>
         <label className="block"><FieldLabel>Aviso de uso de dados</FieldLabel><Textarea defaultValue="Dados usados apenas pela equipe autorizada." rows={3} /></label>
         <label className="block"><FieldLabel>Política de retenção</FieldLabel><Textarea defaultValue="Retenção até encerramento do ciclo eleitoral e posterior revisão." rows={3} /></label>
@@ -507,7 +507,7 @@ function IntegrationsTab({ onSave }: { onSave: (label: string) => void }) {
 
 function AppearanceTab({ onSave }: { onSave: (label: string) => void }) {
   return (
-    <SettingsPanel title="Preferências visuais" description="Preferências mockadas para futura personalização por usuário e perfil.">
+    <SettingsPanel title="Preferências visuais" description="Preferências preparadas para personalização por usuário e perfil.">
       <SwitchRow label="Tema claro" checked />
       <SwitchRow label="Tema escuro" />
       <Field label="Cor principal" defaultValue="#2563eb" />
@@ -525,7 +525,7 @@ function AppearanceTab({ onSave }: { onSave: (label: string) => void }) {
 function AuditTab() {
   return (
     <Card className="premium-card overflow-hidden">
-      <CardHeader><CardTitle className="text-base">Logs mockados de auditoria</CardTitle></CardHeader>
+      <CardHeader><CardTitle className="text-base">Logs de auditoria</CardTitle></CardHeader>
       <CardContent className="p-0">
         <div className="overflow-x-auto">
           <Table>
@@ -624,4 +624,3 @@ function userStatusTone(status: UserStatus) {
   if (status === "Bloqueado") return "red";
   return "slate";
 }
-

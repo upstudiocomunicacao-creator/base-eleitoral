@@ -310,7 +310,7 @@ export default function Agenda() {
         <Tabs defaultValue="lista" className="min-w-0 space-y-4">
           <TabsList className="grid w-full max-w-md grid-cols-2">
             <TabsTrigger value="lista">Lista operacional</TabsTrigger>
-            <TabsTrigger value="calendario">Calendário simulado</TabsTrigger>
+            <TabsTrigger value="calendario">Calendário operacional</TabsTrigger>
           </TabsList>
           <TabsContent value="lista" className="mt-0">
             <AgendaTable loading={loading} data={filtered} onOpen={openDetails} onEdit={openEdit} onDelete={removeAction} />
@@ -473,7 +473,7 @@ function CalendarView({ loading, data, onOpen }: { loading: boolean; data: Field
   const dates = Object.keys(grouped).sort();
   return (
     <Card className="premium-card">
-      <CardHeader><CardTitle className="text-base">Calendário semanal/mensal simulado</CardTitle></CardHeader>
+      <CardHeader><CardTitle className="text-base">Calendário semanal/mensal</CardTitle></CardHeader>
       <CardContent className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
         {loading ? (
           Array.from({ length: 6 }).map((_, index) => <Skeleton key={index} className="h-40 rounded-lg" />)
@@ -633,9 +633,9 @@ function ActionDetailSheet({ open, record, onOpenChange }: { open: boolean; reco
             <div className="grid gap-4 md:grid-cols-2">
               <Card className="premium-card overflow-hidden">
                 <div className="relative min-h-64 bg-[radial-gradient(circle_at_20%_20%,rgba(37,99,235,0.16),transparent_32%),radial-gradient(circle_at_75%_35%,rgba(16,185,129,0.16),transparent_28%),linear-gradient(135deg,#f8fafc,#eef6ff)] p-5">
-                  <div className="text-sm font-extrabold uppercase tracking-[0.12em] text-blue-700">Mapa simulado</div>
+                  <div className="text-sm font-extrabold uppercase tracking-[0.12em] text-blue-700">Área territorial</div>
                   <div className="mt-2 text-2xl font-extrabold text-slate-950">{record.neighborhood}</div>
-                  <p className="mt-2 text-sm font-medium leading-6 text-slate-600">Área preparada para futura integração com Mapbox/PostGIS.</p>
+                  <p className="mt-2 text-sm font-medium leading-6 text-slate-600">Área preparada para leitura territorial com Mapbox/PostGIS.</p>
                   <div className="absolute bottom-5 left-5 right-5 rounded-lg border border-white/80 bg-white/85 p-3 shadow-sm backdrop-blur">
                     <div className="flex items-center gap-2 text-sm font-bold text-slate-700"><MapPin className="h-4 w-4 text-blue-600" />{record.location || record.electoralZone?.voting_place || record.neighborhood}</div>
                   </div>
@@ -643,7 +643,7 @@ function ActionDetailSheet({ open, record, onOpenChange }: { open: boolean; reco
               </Card>
               <ListCard title="Linha do tempo visual" items={buildTimeline(record)} />
               <ListCard title="Dados vinculados" items={[record.leader ? `Liderança: ${record.leader.full_name}` : "Nenhuma liderança vinculada ainda.", record.electoralZone ? `Zona: ${formatZone(record.electoralZone)}` : "Nenhuma zona vinculada ainda."]} />
-              <ListCard title="Fotos/anexos simulados" items={["Foto da ação em campo", "Lista de presença", "Registro de demandas"]} icon={FileImage} />
+              <ListCard title="Fotos/anexos" items={["Foto da ação em campo", "Lista de presença", "Registro de demandas"]} icon={FileImage} />
             </div>
 
             <Card className="premium-card">

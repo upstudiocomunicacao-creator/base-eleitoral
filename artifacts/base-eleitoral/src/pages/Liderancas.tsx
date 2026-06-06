@@ -625,7 +625,7 @@ function LeadershipDetailSheet({ open, record, onOpenChange }: { open: boolean; 
               ]} />
             </DetailCard>
 
-            <DetailCard title="Mapa/área de atuação simulada">
+            <DetailCard title="Mapa/área de atuação">
               <div className="relative h-56 overflow-hidden rounded-lg border border-blue-100 bg-[linear-gradient(135deg,#eff6ff_0%,#ecfeff_45%,#f0fdf4_100%)]">
                 <div className="absolute left-8 top-8 h-28 w-28 rounded-full border border-blue-300 bg-blue-400/15" />
                 <div className="absolute bottom-8 right-10 h-24 w-24 rounded-full border border-emerald-300 bg-emerald-400/20" />
@@ -770,7 +770,7 @@ function InfoGrid({ items }: { items: Array<[string, ReactNode]> }) {
 function DetailList({ title }: { title: string }) {
   return (
     <DetailCard title={title}>
-      <EmptyState title="Nenhum dado vinculado ainda." description="Esse relacionamento será conectado em uma próxima etapa." icon={Users} />
+      <EmptyState title="Nenhum dado vinculado ainda." description="Esse relacionamento está preparado para ser exibido quando houver registros vinculados." icon={Users} />
     </DetailCard>
   );
 }

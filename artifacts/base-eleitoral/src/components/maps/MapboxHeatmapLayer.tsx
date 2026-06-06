@@ -1,8 +1,19 @@
 import { useEffect, useMemo } from "react";
 import mapboxgl from "mapbox-gl";
-import type { FeatureCollection, Point } from "geojson";
 import type { MapHeatmapLayerType, MapPoint } from "@/services/mapData";
 import { calculateHeatmapWeight } from "@/utils/heatmapWeights";
+
+type GeoJsonFeatureCollection = {
+  type: "FeatureCollection";
+  features: Array<{
+    type: "Feature";
+    geometry: {
+      type: "Point";
+      coordinates: [number, number];
+    };
+    properties: Record<string, unknown>;
+  }>;
+};
 
 type Props = {
   map: mapboxgl.Map | null;
@@ -16,7 +27,7 @@ const heatLayerId = "base-eleitoral-heatmap-layer";
 const circleLayerId = "base-eleitoral-heatmap-circles";
 
 export function MapboxHeatmapLayer({ map, points, layerType, visible }: Props) {
-  const geojson = useMemo<FeatureCollection<Point>>(() => ({
+  const geojson = useMemo<GeoJsonFeatureCollection>(() => ({
     type: "FeatureCollection",
     features: points.map((point) => ({
       type: "Feature",
@@ -34,9 +45,9 @@ export function MapboxHeatmapLayer({ map, points, layerType, visible }: Props) {
 
     const addLayer = () => {
       if (!map.getSource(sourceId)) {
-        map.addSource(sourceId, { type: "geojson", data: geojson });
+        map.addSource(sourceId, { type: "geojson", data: geojson as never });
       } else {
-        (map.getSource(sourceId) as mapboxgl.GeoJSONSource).setData(geojson);
+        (map.getSource(sourceId) as mapboxgl.GeoJSONSource).setData(geojson as never);
       }
 
       if (!map.getLayer(heatLayerId)) {

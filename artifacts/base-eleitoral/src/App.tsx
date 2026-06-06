@@ -1,5 +1,7 @@
+import { lazy, Suspense } from "react";
 import { Switch, Route, Router as WouterRouter } from "wouter";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { Loader2 } from "lucide-react";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { AuthProvider } from "@/contexts/AuthContext";
@@ -9,22 +11,22 @@ import { ResetPasswordPage } from "@/components/auth/ResetPasswordPage";
 import { AppLayout } from "@/components/layout/AppLayout";
 import NotFound from "@/pages/not-found";
 
-import Dashboard from "./pages/Dashboard";
-import MapaForca from "./pages/MapaForca";
-import Liderancas from "./pages/Liderancas";
-import Apoiadores from "./pages/Apoiadores";
-import Prospeccao from "./pages/Prospeccao";
-import MapaRJ from "./pages/MapaRJ";
-import MapaMarica from "./pages/MapaMarica";
-import Zonas from "./pages/Zonas";
-import Comparativo from "./pages/Comparativo";
-import Agenda from "./pages/Agenda";
-import Demandas from "./pages/Demandas";
-import Relatorios from "./pages/Relatorios";
-import Importacao from "./pages/Importacao";
-import Geocodificacao from "./pages/Geocodificacao";
-import Diagnostico from "./pages/Diagnostico";
-import Configuracoes from "./pages/Configuracoes";
+const Dashboard = lazy(() => import("./pages/Dashboard"));
+const MapaForca = lazy(() => import("./pages/MapaForca"));
+const Liderancas = lazy(() => import("./pages/Liderancas"));
+const Apoiadores = lazy(() => import("./pages/Apoiadores"));
+const Prospeccao = lazy(() => import("./pages/Prospeccao"));
+const MapaRJ = lazy(() => import("./pages/MapaRJ"));
+const MapaMarica = lazy(() => import("./pages/MapaMarica"));
+const Zonas = lazy(() => import("./pages/Zonas"));
+const Comparativo = lazy(() => import("./pages/Comparativo"));
+const Agenda = lazy(() => import("./pages/Agenda"));
+const Demandas = lazy(() => import("./pages/Demandas"));
+const Relatorios = lazy(() => import("./pages/Relatorios"));
+const Importacao = lazy(() => import("./pages/Importacao"));
+const Geocodificacao = lazy(() => import("./pages/Geocodificacao"));
+const Diagnostico = lazy(() => import("./pages/Diagnostico"));
+const Configuracoes = lazy(() => import("./pages/Configuracoes"));
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -71,13 +73,26 @@ function Router() {
   );
 }
 
+function PageLoading() {
+  return (
+    <div className="flex min-h-[420px] items-center justify-center">
+      <div className="flex items-center gap-2 rounded-full border border-slate-200 bg-white px-4 py-2 text-sm font-bold text-slate-700 shadow-sm">
+        <Loader2 className="h-4 w-4 animate-spin text-blue-600" />
+        Carregando módulo
+      </div>
+    </div>
+  );
+}
+
 function App() {
   return (
     <QueryClientProvider client={queryClient}>
       <TooltipProvider>
         <AuthProvider>
           <WouterRouter base={import.meta.env.BASE_URL.replace(/\/$/, "")}>
-            <Router />
+            <Suspense fallback={<PageLoading />}>
+              <Router />
+            </Suspense>
           </WouterRouter>
         </AuthProvider>
         <Toaster />

@@ -665,7 +665,7 @@ function PersonDetailSheet({ open, record, onOpenChange }: { open: boolean; reco
               ]} />
             </DetailCard>
 
-            <DetailCard title="Card de localização simulada">
+            <DetailCard title="Card de localização">
               <div className="relative h-56 overflow-hidden rounded-lg border border-emerald-100 bg-[linear-gradient(135deg,#ecfdf5_0%,#eff6ff_50%,#f8fafc_100%)]">
                 <div className="absolute left-8 top-8 h-28 w-28 rounded-full border border-emerald-300 bg-emerald-400/15" />
                 <div className="absolute bottom-8 right-10 h-24 w-24 rounded-full border border-blue-300 bg-blue-400/20" />
@@ -779,7 +779,7 @@ function InfoGrid({ items }: { items: Array<[string, ReactNode]> }) {
 }
 
 function DetailList({ title }: { title: string }) {
-  return <DetailCard title={title}><EmptyState title="Nenhum dado vinculado ainda." description="Esse relacionamento será conectado em uma próxima etapa." icon={Users} /></DetailCard>;
+  return <DetailCard title={title}><EmptyState title="Nenhum dado vinculado ainda." description="Esse relacionamento está preparado para ser exibido quando houver registros vinculados." icon={Users} /></DetailCard>;
 }
 
 function TimelineItem({ label, value }: { label: string; value: string }) {

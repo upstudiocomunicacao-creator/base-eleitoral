@@ -683,7 +683,7 @@ function InfoGrid({ items }: { items: Array<[string, string]> }) {
 }
 
 function DetailList({ title }: { title: string }) {
-  return <DetailCard title={title}><EmptyState title="Nenhum dado vinculado ainda." description="Esse relacionamento será conectado em uma próxima etapa." icon={Users} /></DetailCard>;
+  return <DetailCard title={title}><EmptyState title="Nenhum dado vinculado ainda." description="Esse relacionamento está preparado para ser exibido quando houver registros vinculados." icon={Users} /></DetailCard>;
 }
 
 function TimelineItem({ label, value }: { label: string; value: string }) {

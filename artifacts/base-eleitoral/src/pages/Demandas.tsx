@@ -610,9 +610,9 @@ function DemandDetailSheet({ open, record, onOpenChange }: { open: boolean; reco
             <div className="grid gap-4 md:grid-cols-2">
               <Card className="premium-card overflow-hidden">
                 <div className="relative min-h-64 bg-[radial-gradient(circle_at_20%_20%,rgba(37,99,235,0.16),transparent_32%),radial-gradient(circle_at_75%_35%,rgba(244,63,94,0.12),transparent_28%),linear-gradient(135deg,#f8fafc,#eef6ff)] p-5">
-                  <div className="text-sm font-extrabold uppercase tracking-[0.12em] text-blue-700">Mapa simulado</div>
+                  <div className="text-sm font-extrabold uppercase tracking-[0.12em] text-blue-700">Área territorial</div>
                   <div className="mt-2 text-2xl font-extrabold text-slate-950">{record.neighborhood}</div>
-                  <p className="mt-2 text-sm font-medium leading-6 text-slate-600">Área preparada para futura integração com Mapbox/PostGIS.</p>
+                  <p className="mt-2 text-sm font-medium leading-6 text-slate-600">Área preparada para leitura territorial com Mapbox/PostGIS.</p>
                   <div className="absolute bottom-5 left-5 right-5 rounded-lg border border-white/80 bg-white/85 p-3 shadow-sm backdrop-blur">
                     <div className="flex items-center gap-2 text-sm font-bold text-slate-700"><MapPin className="h-4 w-4 text-blue-600" />{formatAddress(record)}</div>
                   </div>

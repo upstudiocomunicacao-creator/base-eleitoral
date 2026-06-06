@@ -1,8 +1,23 @@
 import { useEffect, useMemo } from "react";
 import mapboxgl from "mapbox-gl";
-import type { Feature, FeatureCollection, Point } from "geojson";
 import type { MapPoint } from "@/services/mapData";
 import { getPointLayerColor } from "@/utils/mapLayers";
+
+type GeoJsonPoint = {
+  type: "Point";
+  coordinates: [number, number];
+};
+
+type GeoJsonFeature<TProperties extends Record<string, unknown> = Record<string, unknown>> = {
+  type: "Feature";
+  geometry: GeoJsonPoint;
+  properties: TProperties;
+};
+
+type GeoJsonFeatureCollection<TProperties extends Record<string, unknown> = Record<string, unknown>> = {
+  type: "FeatureCollection";
+  features: Array<GeoJsonFeature<TProperties>>;
+};
 
 type Props = {
   map: mapboxgl.Map | null;
@@ -17,7 +32,7 @@ const clusterCountLayerId = "base-eleitoral-cluster-count";
 const unclusteredLayerId = "base-eleitoral-unclustered";
 
 export function MapboxClusterLayer({ map, points, visible, onSelect }: Props) {
-  const geojson = useMemo<FeatureCollection<Point>>(() => ({
+  const geojson = useMemo<GeoJsonFeatureCollection>(() => ({
     type: "FeatureCollection",
     features: points.map((point) => ({
       type: "Feature",
@@ -38,13 +53,13 @@ export function MapboxClusterLayer({ map, points, visible, onSelect }: Props) {
       if (!map.getSource(sourceId)) {
         map.addSource(sourceId, {
           type: "geojson",
-          data: geojson,
+          data: geojson as never,
           cluster: true,
           clusterMaxZoom: 14,
           clusterRadius: 48,
         });
       } else {
-        (map.getSource(sourceId) as mapboxgl.GeoJSONSource).setData(geojson);
+        (map.getSource(sourceId) as mapboxgl.GeoJSONSource).setData(geojson as never);
       }
 
       if (!map.getLayer(clustersLayerId)) {
@@ -103,13 +118,13 @@ export function MapboxClusterLayer({ map, points, visible, onSelect }: Props) {
       if (!source || clusterId === undefined) return;
       source.getClusterExpansionZoom(clusterId, (error, zoom) => {
         if (error || zoom == null) return;
-        const coordinates = (features[0].geometry as Point).coordinates as [number, number];
+        const coordinates = (features[0].geometry as GeoJsonPoint).coordinates;
         map.easeTo({ center: coordinates, zoom });
       });
     };
 
     const handlePointClick = (event: mapboxgl.MapMouseEvent) => {
-      const feature = map.queryRenderedFeatures(event.point, { layers: [unclusteredLayerId] })[0] as Feature<Point> | undefined;
+      const feature = map.queryRenderedFeatures(event.point, { layers: [unclusteredLayerId] })[0] as unknown as GeoJsonFeature<{ id?: string }> | undefined;
       const id = feature?.properties?.id;
       const point = points.find((item) => item.id === id);
       if (point) onSelect(point);

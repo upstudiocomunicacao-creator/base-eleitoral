@@ -22,6 +22,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { getSupabaseClient, isSupabaseConfigured } from "@/lib/supabaseClient";
 import { hasPermission } from "@/lib/permissions";
 import { DEFAULT_CAMPAIGN_ID } from "@/services/leaders";
+import { geocodeAddress, getGeocodingProvider, getGeocodingProviderLabel } from "@/services/geocoding";
 
 type DiagnosticStatus = "pendente" | "ok" | "erro";
 
@@ -119,8 +120,17 @@ export default function Diagnostico() {
     });
 
     await runCheck(add, "geocoding", "Mapas", "Geocodificação", async () => {
-      const provider = import.meta.env.VITE_GEOCODING_PROVIDER ?? "mock";
-      return `Provider atual: ${provider}.`;
+      const provider = getGeocodingProvider();
+      const providerLabel = getGeocodingProviderLabel();
+      if (provider !== "mapbox") return `Provider atual: ${providerLabel}. Sem consulta externa.`;
+      const coordinates = await geocodeAddress({
+        street: "Rua Álvares de Castro",
+        number: "103",
+        neighborhood: "Centro",
+        city: "Maricá",
+        state: "RJ",
+      });
+      return `Provider atual: ${providerLabel}. Resultado: ${coordinates.latitude.toFixed(5)}, ${coordinates.longitude.toFixed(5)} com ${Math.round(coordinates.geocoding_confidence * 100)}% de confiança.`;
     });
 
     setLastRun(new Date().toLocaleString("pt-BR"));

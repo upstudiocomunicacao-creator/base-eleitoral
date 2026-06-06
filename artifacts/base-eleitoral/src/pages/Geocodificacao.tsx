@@ -4,15 +4,24 @@ import { PageHeader } from "@/components/common/PageHeader";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { GeocodingPanel } from "@/components/geocoding/GeocodingPanel";
+import { getGeocodingProvider, getGeocodingProviderLabel } from "@/services/geocoding";
 
 export default function Geocodificacao() {
+  const provider = getGeocodingProvider();
+  const providerLabel = getGeocodingProviderLabel();
+  const isRealProvider = provider === "mapbox";
+
   return (
     <div className="space-y-6">
       <PageHeader
         eyebrow="Geocodificação"
         title="Preparação para Mapas Reais"
         description="Transforme endereços em latitude/longitude com geocodificação aproximada e estrutura pronta para Mapbox ou Google Maps."
-        actions={<div className="rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1.5 text-xs font-bold text-emerald-700"><MapPinned className="mr-1 inline h-3.5 w-3.5" /> Provider mock ativo</div>}
+        actions={
+          <div className={`rounded-full border px-3 py-1.5 text-xs font-bold ${isRealProvider ? "border-emerald-200 bg-emerald-50 text-emerald-700" : "border-amber-200 bg-amber-50 text-amber-700"}`}>
+            <MapPinned className="mr-1 inline h-3.5 w-3.5" /> Provider {providerLabel} ativo
+          </div>
+        }
       />
       <GeocodingErrorBoundary>
         <GeocodingPanel />

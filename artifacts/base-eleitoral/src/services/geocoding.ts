@@ -1,10 +1,12 @@
 import { getSupabaseClient, isSupabaseConfigured } from "@/lib/supabaseClient";
+import { isMapboxConfigured, mapboxAccessToken } from "@/lib/mapbox";
 import { buildFullAddress, buildShortAddress, type AddressLike } from "@/utils/address";
 import { detectGeographicPrecision, precisionConfidence } from "@/utils/geographicPrecision";
 
 export type GeocodingTableName = "leaders" | "supporters" | "electoral_zones" | "field_agenda" | "demands";
 export type GeocodingStatus = "pending" | "success" | "approximate" | "failed" | "manual" | "skipped";
 export type GeocodingSource = "manual" | "mock" | "mapbox" | "google" | "cep" | "bairro" | "cidade";
+export type GeocodingProvider = "mock" | "mapbox" | "google";
 
 export type Coordinates = {
   latitude: number;
@@ -40,6 +42,15 @@ export type BulkGeocodingResult = {
   errors: string[];
 };
 
+type MapboxGeocodingResponse = {
+  message?: string;
+  features?: Array<{
+    center?: [number, number];
+    relevance?: number;
+    place_name?: string;
+  }>;
+};
+
 const tableLabels: Record<GeocodingTableName, string> = {
   leaders: "Liderança",
   supporters: "Apoiador",
@@ -54,13 +65,77 @@ export function isGeocodingSupabaseReady() {
 
 export { buildFullAddress, detectGeographicPrecision };
 
+export function getGeocodingProvider(): GeocodingProvider {
+  const provider = String(import.meta.env.VITE_GEOCODING_PROVIDER || "mock").toLowerCase();
+  if (provider === "mapbox" || provider === "google" || provider === "mock") return provider;
+  return "mock";
+}
+
+export function getGeocodingProviderLabel() {
+  const provider = getGeocodingProvider();
+  if (provider === "mapbox") return "Mapbox real";
+  if (provider === "google") return "Google Maps";
+  return "Mock";
+}
+
+export function isRealGeocodingReady() {
+  const provider = getGeocodingProvider();
+  return provider === "mapbox" ? isMapboxConfigured : provider === "google";
+}
+
 export async function geocodeAddress(record: AddressLike): Promise<Coordinates> {
-  const provider = import.meta.env.VITE_GEOCODING_PROVIDER || "mock";
+  const provider = getGeocodingProvider();
   if (provider === "mock") return mockGeocodeAddress(buildFullAddress(record), record.neighborhood ?? "", record.city ?? "", record.state ?? "RJ");
-  if (provider === "mapbox" || provider === "google") {
+  if (provider === "mapbox") return geocodeAddressWithMapbox(record);
+  if (provider === "google") {
     throw new Error("Provider ainda não configurado. Use VITE_GEOCODING_PROVIDER=mock por enquanto.");
   }
   throw new Error(`Provider de geocodificação inválido: ${provider}`);
+}
+
+async function geocodeAddressWithMapbox(record: AddressLike): Promise<Coordinates> {
+  if (!isMapboxConfigured) throw new Error("VITE_MAPBOX_ACCESS_TOKEN não configurado.");
+
+  const fullAddress = buildFullAddress(record);
+  const fallbackAddress = [record.neighborhood, record.city, record.state ?? "RJ", "Brasil"].filter(Boolean).join(", ");
+  const query = fullAddress || fallbackAddress;
+  if (!query) throw new Error("Endereço insuficiente para geocodificação.");
+
+  const params = new URLSearchParams({
+    access_token: mapboxAccessToken,
+    country: "br",
+    language: "pt",
+    limit: "1",
+    proximity: "-42.8186,-22.9196",
+  });
+
+  const response = await fetch(`https://api.mapbox.com/geocoding/v5/mapbox.places/${encodeURIComponent(query)}.json?${params.toString()}`);
+  const payload = await response.json() as MapboxGeocodingResponse;
+
+  if (!response.ok) {
+    throw new Error(payload.message || `Mapbox retornou erro ${response.status}.`);
+  }
+
+  const feature = payload.features?.[0];
+  const [longitude, latitude] = feature?.center ?? [];
+  if (!Number.isFinite(latitude) || !Number.isFinite(longitude)) {
+    throw new Error("Mapbox não encontrou coordenadas para este endereço.");
+  }
+
+  const precision = detectGeographicPrecision(record);
+  const relevance = clamp(Number(feature?.relevance ?? 0.75), 0.35, 1);
+  const confidence = Math.min(1, Math.max(precisionConfidence(precision), relevance));
+  const status: GeocodingStatus = confidence >= 0.82 && precision !== "Baixa" && precision !== "Muito baixa" ? "success" : "approximate";
+
+  return {
+    latitude: Number(latitude.toFixed(6)),
+    longitude: Number(longitude.toFixed(6)),
+    geocoding_status: status,
+    geocoding_source: "mapbox",
+    geocoding_confidence: Number(confidence.toFixed(2)),
+    geographic_precision: precision,
+    geocoding_error: null,
+  };
 }
 
 export function mockGeocodeAddress(_address: string, neighborhood: string, city: string, state = "RJ"): Coordinates {
@@ -280,6 +355,10 @@ function numberOrNull(value: unknown) {
 
 function normalize(value: unknown) {
   return String(value ?? "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().trim();
+}
+
+function clamp(value: number, min: number, max: number) {
+  return Math.min(max, Math.max(min, value));
 }
 
 function isMissingGeocodingColumnError(error: { message?: string; details?: string; hint?: string }) {

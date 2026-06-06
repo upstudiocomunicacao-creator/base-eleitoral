@@ -67,8 +67,10 @@ export { buildFullAddress, detectGeographicPrecision };
 
 export function getGeocodingProvider(): GeocodingProvider {
   const provider = String(import.meta.env.VITE_GEOCODING_PROVIDER || "mock").toLowerCase();
-  if (provider === "mapbox" || provider === "google" || provider === "mock") return provider;
-  return "mock";
+  if (provider === "mapbox") return "mapbox";
+  if (provider === "google") return "google";
+  if (provider === "mock") return isMapboxConfigured ? "mapbox" : "mock";
+  return isMapboxConfigured ? "mapbox" : "mock";
 }
 
 export function getGeocodingProviderLabel() {

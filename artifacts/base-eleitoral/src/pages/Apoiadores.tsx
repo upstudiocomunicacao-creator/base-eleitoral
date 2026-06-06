@@ -1,4 +1,4 @@
-import { FormEvent, MouseEventHandler, ReactNode, useEffect, useMemo, useState } from "react";
+﻿import { FormEvent, MouseEventHandler, ReactNode, useEffect, useMemo, useState } from "react";
 import {
   AlertCircle,
   AlertTriangle,
@@ -1004,3 +1004,4 @@ function getErrorMessage(error: unknown) {
   if (typeof error === "object" && error && "message" in error) return String(error.message);
   return "Erro inesperado ao acessar o Supabase.";
 }
+

@@ -15,7 +15,7 @@ import {
   type MapPointType,
   type MapScope,
 } from "@/services/mapData";
-import { getHeatmapLayerLabel, getPointLayerLabel } from "@/utils/mapLayers";
+import { getHeatmapLayerLabel, getPointLayerColor, getPointLayerLabel } from "@/utils/mapLayers";
 import { MapboxMap } from "./MapboxMap";
 import { MapDetailDrawer } from "./MapDetailDrawer";
 import { MapLayerControls, type RealMapMode } from "./MapLayerControls";
@@ -255,24 +255,48 @@ function RealMapSummary({ summary, mode, heatmapLayer }: { summary: MapData["sum
 
 function WithoutCoordinatesCard({ data }: { data: MapData }) {
   const items = data.withoutCoordinates.slice(0, 6);
+  const grouped = groupMissingCoordinates(data.withoutCoordinates);
+  const totalKnown = data.summary.totalPoints + data.withoutCoordinates.length;
+  const readiness = totalKnown ? Math.round((data.summary.totalPoints / totalKnown) * 100) : 100;
 
   return (
     <Card className="border-amber-200 bg-amber-50 shadow-sm">
       <CardHeader className="pb-3">
-        <CardTitle className="flex items-center gap-2 text-sm text-amber-950">
-          <AlertTriangle className="h-4 w-4" />
-          {data.withoutCoordinates.length} registros sem coordenadas
-        </CardTitle>
+        <div className="flex items-start justify-between gap-3">
+          <CardTitle className="flex items-center gap-2 text-sm text-amber-950">
+            <AlertTriangle className="h-4 w-4" />
+            {data.withoutCoordinates.length} registros sem coordenadas
+          </CardTitle>
+          <span className="rounded-full border border-amber-200 bg-white px-2 py-1 text-[11px] font-black text-amber-900">
+            {readiness}% pronto
+          </span>
+        </div>
       </CardHeader>
       <CardContent className="space-y-3">
         {items.length ? (
-          <div className="space-y-2">
-            {items.map((item) => (
-              <div key={`${item.type}-${item.id}`} className="rounded-lg bg-white/80 px-3 py-2 shadow-sm">
-                <div className="truncate text-sm font-bold text-slate-800">{item.title}</div>
-                <div className="text-xs font-semibold text-slate-500">{getPointLayerLabel(item.type)} · {item.neighborhood || item.city || "Sem território"}</div>
-              </div>
-            ))}
+          <div className="space-y-3">
+            <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-1">
+              {grouped.map((item) => (
+                <div key={item.type} className="flex items-center justify-between rounded-lg bg-white/85 px-3 py-2 shadow-sm">
+                  <div className="flex items-center gap-2">
+                    <span className="h-2.5 w-2.5 rounded-full" style={{ background: getPointLayerColor(item.type) }} />
+                    <span className="text-xs font-extrabold text-slate-700">{getPointLayerLabel(item.type)}</span>
+                  </div>
+                  <span className="text-sm font-black text-amber-950">{item.count}</span>
+                </div>
+              ))}
+            </div>
+            <div className="space-y-2">
+              {items.map((item) => (
+                <div key={`${item.type}-${item.id}`} className="rounded-lg bg-white/80 px-3 py-2 shadow-sm">
+                  <div className="truncate text-sm font-bold text-slate-800">{item.title}</div>
+                  <div className="text-xs font-semibold text-slate-500">{getPointLayerLabel(item.type)} · {item.neighborhood || item.city || "Sem território"}</div>
+                </div>
+              ))}
+            </div>
+            {data.withoutCoordinates.length > items.length ? (
+              <p className="text-xs font-bold text-amber-800">Mais {data.withoutCoordinates.length - items.length} registro(s) aguardando geocodificação.</p>
+            ) : null}
           </div>
         ) : (
           <p className="text-sm font-semibold text-amber-800">Todos os registros carregados possuem latitude e longitude.</p>
@@ -283,6 +307,17 @@ function WithoutCoordinatesCard({ data }: { data: MapData }) {
       </CardContent>
     </Card>
   );
+}
+
+function groupMissingCoordinates(items: MapData["withoutCoordinates"]) {
+  const counts = items.reduce<Record<MapPointType, number>>((acc, item) => {
+    acc[item.type] = (acc[item.type] ?? 0) + 1;
+    return acc;
+  }, {} as Record<MapPointType, number>);
+
+  return (Object.entries(counts) as Array<[MapPointType, number]>)
+    .map(([type, count]) => ({ type, count }))
+    .sort((a, b) => b.count - a.count);
 }
 
 function MapboxNotice({ title, description, tone }: { title: string; description: string; tone: "amber" | "blue" | "red" }) {

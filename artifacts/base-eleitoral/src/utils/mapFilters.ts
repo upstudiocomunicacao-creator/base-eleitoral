@@ -10,6 +10,8 @@ export function filterMapPoints(points: MapPoint[], filters: MapDataFilters) {
     if (!matches(filters.responsible, point.responsible)) return false;
     if (!matches(filters.precision, point.geographicPrecision)) return false;
     if (!matches(filters.geocodingSource, point.geocodingSource)) return false;
+    if (!matches(filters.zone, point.originalRecord.zone_number)) return false;
+    if (!matches(filters.section, point.originalRecord.section_number)) return false;
     return true;
   });
 }
@@ -26,7 +28,7 @@ export function buildMapFilterOptions(points: MapPoint[]) {
   };
 }
 
-function matches(filter: string | undefined, value: string | undefined) {
+function matches(filter: string | undefined, value: unknown) {
   return !filter || filter === "todos" || normalize(filter) === normalize(value);
 }
 

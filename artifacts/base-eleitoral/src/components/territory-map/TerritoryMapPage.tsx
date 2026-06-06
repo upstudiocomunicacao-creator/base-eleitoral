@@ -192,6 +192,8 @@ function buildRealMapFilters(filters: Filters, scope: TerritoryScope): MapDataFi
     responsible: active(filters.responsible),
     precision: active(filters.precision),
     period: active(filters.period),
+    zone: scope === "city" ? active(filters.zone) : undefined,
+    section: scope === "city" ? active(filters.section) : undefined,
   };
 
   return Object.fromEntries(Object.entries(mapFilters).filter(([, value]) => value !== undefined)) as MapDataFilters;

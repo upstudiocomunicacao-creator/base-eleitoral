@@ -18,6 +18,8 @@ export type MapDataFilters = {
   precision?: string;
   geocodingSource?: string;
   period?: string;
+  zone?: string;
+  section?: string;
 };
 
 export type MapPoint = {

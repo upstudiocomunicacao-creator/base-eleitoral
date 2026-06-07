@@ -22,6 +22,8 @@ export function ForceMapPage() {
 
       <ForceMapStats nodes={nodes} levels={forceMapLevels} />
 
+      <OperationalRules />
+
       <section className="rounded-lg border border-white/70 bg-white/80 p-4 shadow-[0_18px_50px_rgba(15,23,42,0.08)] backdrop-blur-sm sm:p-6">
         <div className="hidden overflow-x-auto md:block">
           <DesktopFlow levels={forceMapLevels} selectedNodeId={selectedNodeId} onSelect={setSelectedNodeId} />
@@ -39,6 +41,41 @@ export function ForceMapPage() {
           if (!open) setSelectedNodeId(null);
         }}
       />
+    </div>
+  );
+}
+
+function OperationalRules() {
+  const rules = [
+    {
+      title: "Território obrigatório",
+      text: "RJ é analisado por cidade. Maricá é analisada por bairro e distrito.",
+    },
+    {
+      title: "Papel no organograma",
+      text: "Cada cadastro entra como coordenação geral, coordenação RJ, coordenação Maricá ou liderança.",
+    },
+    {
+      title: "Estimativa mensal",
+      text: "Apoio estimado, votos mínimos e votos máximos são atualizados mês a mês.",
+    },
+    {
+      title: "Centro de custos",
+      text: "Custo base, teto e eventual extra permitem comparar eficiência por território.",
+    },
+  ];
+
+  return (
+    <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
+      {rules.map((rule, index) => (
+        <div key={rule.title} className="rounded-lg border border-blue-100 bg-white/85 p-4 shadow-sm">
+          <div className="flex items-center gap-2">
+            <div className="flex h-7 w-7 items-center justify-center rounded-md bg-blue-600 text-xs font-extrabold text-white">{index + 1}</div>
+            <div className="text-sm font-extrabold text-slate-950">{rule.title}</div>
+          </div>
+          <p className="mt-2 text-xs font-semibold leading-5 text-slate-500">{rule.text}</p>
+        </div>
+      ))}
     </div>
   );
 }

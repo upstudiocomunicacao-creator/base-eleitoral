@@ -1,7 +1,6 @@
 import { FormEvent, ReactNode, useEffect, useMemo, useState } from "react";
 import {
   AlertTriangle,
-  CheckCircle2,
   Edit,
   Eye,
   Loader2,
@@ -40,8 +39,8 @@ const rjCityOptions = [...rjCities] as string[];
 const maricaNeighborhoodOptions = [...maricaNeighborhoods] as string[];
 const leaderTypeOptions = [
   "Coordenação Geral",
-  "Coordenador RJ",
-  "Coordenador Maricá",
+  "Coordenação RJ",
+  "Coordenação Maricá",
   "Liderança RJ",
   "Liderança Maricá",
 ];
@@ -273,7 +272,7 @@ export default function Liderancas() {
       <PageHeader
         eyebrow="Base Territorial"
         title="Cadastros Territoriais"
-        description={`${filtered.length} cadastros no recorte atual - coordenação geral, coordenadores e lideranças reais do Supabase.`}
+        description={`${filtered.length} cadastros no recorte atual - coordenação geral, coordenações RJ/Maricá e lideranças reais do Supabase.`}
         actions={
           <div className="flex flex-wrap gap-2">
             <Button variant="outline" onClick={() => void loadLeaders()} disabled={loading}>
@@ -290,16 +289,24 @@ export default function Liderancas() {
 
       {error ? <ConnectionWarning message={error} /> : null}
 
-      <div className="grid grid-cols-2 gap-4 md:grid-cols-4 xl:grid-cols-8">
+      <div className="grid grid-cols-2 gap-4 md:grid-cols-3 xl:grid-cols-9">
         <MetricCard label="Total" value={filtered.length} icon={Users} tone="blue" loading={loading} />
-        <MetricCard label="Ativas" value={summary.active} icon={CheckCircle2} tone="emerald" loading={loading} />
+        <MetricCard label="Coord. RJ" value={summary.coordinatorsRJ} icon={MapPinned} tone="indigo" loading={loading} />
+        <MetricCard label="Coord. Maricá" value={summary.coordinatorsMarica} icon={MapPinned} tone="emerald" loading={loading} />
+        <MetricCard label="Lideranças" value={summary.leaders} icon={Users} tone="cyan" loading={loading} />
         <MetricCard label="Apoio estimado" value={summary.estimated} icon={TrendingUp} tone="violet" loading={loading} />
         <MetricCard label="Declarados" value={summary.declared} icon={UserRound} tone="amber" loading={loading} />
         <MetricCard label="Validados" value={summary.validated} icon={ShieldCheck} tone="green" loading={loading} />
-        <MetricCard label="Confiança" value={summary.confidence} icon={ShieldCheck} tone="cyan" loading={loading} />
-        <MetricCard label="Territórios" value={summary.neighborhoods} icon={MapPinned} tone="indigo" loading={loading} />
+        <MetricCard label="Territórios" value={summary.territories} icon={MapPinned} tone="indigo" loading={loading} />
         <MetricCard label="Atenção" value={summary.attention} icon={AlertTriangle} tone="red" loading={loading} />
       </div>
+
+      <Card className="border-emerald-100 bg-emerald-50/80 shadow-sm">
+        <CardContent className="flex flex-col gap-2 p-4 text-sm font-semibold leading-6 text-emerald-950 sm:flex-row sm:items-center sm:justify-between">
+          <span>Modelo enxuto ativo: apoiadores não são cadastrados como pessoas nesta versão.</span>
+          <span className="text-emerald-800">O apoio estimado entra como número manual para análise de votos, mapas e custos.</span>
+        </CardContent>
+      </Card>
 
       <FiltersPanel filters={filters} setFilters={setFilters} options={filterOptions} />
 
@@ -557,7 +564,7 @@ function LeadershipFormSheet({
         <SheetHeader className="bg-gradient-to-br from-slate-950 to-blue-950 p-6 pb-8 text-white">
           <SheetTitle className="text-2xl font-extrabold text-white">{record?.id ? "Editar cadastro" : "Novo cadastro"}</SheetTitle>
           <SheetDescription className="text-sm font-medium leading-6 text-white/80">
-            Registre coordenação geral, coordenadores e lideranças com território, apoio estimado e votos acompanháveis.
+            Registre coordenação geral, coordenações por cidade/bairro e lideranças com território, apoio estimado e votos acompanháveis.
           </SheetDescription>
         </SheetHeader>
 
@@ -931,14 +938,12 @@ function normalizeTerritory(form: LeaderFormState) {
 
 function normalizeLeadershipTypeForTerritory(type: string, isMarica: boolean) {
   if (type === "Coordenação Geral") return type;
-  if (type === "Coordenação RJ") return "Coordenador RJ";
-  if (type === "Coordenação Maricá") return "Coordenador Maricá";
-  if (isMarica && type === "Coordenador RJ") return "Coordenador Maricá";
-  if (isMarica && type === "Liderança RJ") return "Liderança Maricá";
-  if (!isMarica && type === "Coordenador Maricá") return "Coordenador RJ";
-  if (!isMarica && type === "Liderança Maricá") return "Liderança RJ";
-  if (!leaderTypeOptions.includes(type)) return isMarica ? "Liderança Maricá" : "Liderança RJ";
-  return type;
+  const normalizedType = normalize(type);
+
+  if (normalizedType.includes("coord")) return isMarica ? "Coordenação Maricá" : "Coordenação RJ";
+  if (normalizedType.includes("lider")) return isMarica ? "Liderança Maricá" : "Liderança RJ";
+
+  return isMarica ? "Liderança Maricá" : "Liderança RJ";
 }
 
 function validateForm(form: LeaderFormState) {
@@ -958,14 +963,20 @@ function validateForm(form: LeaderFormState) {
 }
 
 function buildSummary(items: Leader[]) {
-  const active = items.filter((item) => normalize(item.status).includes("ativa") || normalize(item.status).includes("ativo")).length;
   const estimated = items.reduce((total, item) => total + getPotentialTotal(item), 0);
   const declared = items.reduce((total, item) => total + item.declared_votes, 0);
   const validated = items.reduce((total, item) => total + item.validated_votes, 0);
-  const confidence = getAverageConfidence(items);
-  const neighborhoods = new Set(items.map((item) => item.neighborhood).filter(Boolean)).size;
+  const territories = new Set(items.map((item) => (normalize(item.city) === "marica" ? item.neighborhood : item.city)).filter(Boolean)).size;
   const attention = items.filter((item) => ["Crítico", "Atenção"].includes(getAttentionLevel(item))).length;
-  return { active, estimated, declared, validated, confidence, neighborhoods, attention };
+  const coordinatorsRJ = items.filter((item) => isCoordinator(item) && normalize(item.city) !== "marica").length;
+  const coordinatorsMarica = items.filter((item) => isCoordinator(item) && normalize(item.city) === "marica").length;
+  const leaders = items.filter((item) => normalize(item.leader_type).includes("lider")).length;
+
+  return { coordinatorsRJ, coordinatorsMarica, leaders, estimated, declared, validated, territories, attention };
+}
+
+function isCoordinator(leader: Leader) {
+  return normalize(leader.leader_type).includes("coord");
 }
 
 function getPotentialTotal(leader: Leader) {
@@ -990,15 +1001,6 @@ function getAttentionLevel(leader: Leader): AttentionLevel {
   if (weakProof || rate < 60) return "Atenção";
   if (confidence === "alto" && validated >= 250) return "Forte";
   return "Estável";
-}
-
-function getAverageConfidence(items: Leader[]) {
-  if (!items.length) return "0,0";
-  const score = items.reduce((total, item) => {
-    const confidence = normalize(item.confidence_level);
-    return total + (confidence === "alto" ? 10 : confidence === "medio" ? 6 : 3);
-  }, 0);
-  return (score / items.length).toFixed(1).replace(".", ",");
 }
 
 function getInitials(name: string) {

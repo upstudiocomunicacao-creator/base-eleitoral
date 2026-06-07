@@ -219,7 +219,10 @@ export default function Operacional() {
       setDataMessage("Centro de custos mensal salvo com sucesso.");
       toast({ title: "Mês salvo", description: "Votos e custos foram atualizados no Supabase." });
     } catch (error) {
-      toast({ title: "Não foi possível salvar", description: "Confira se o SQL leader-monthly-metrics.sql já foi rodado no Supabase.", variant: "destructive" });
+      const description = error instanceof Error
+        ? error.message
+        : "Confira se o SQL supabase/refresh-leader-monthly-metrics.sql já foi rodado no Supabase.";
+      toast({ title: "Não foi possível salvar", description, variant: "destructive" });
     } finally {
       setSavingMonthly(false);
     }
@@ -1001,3 +1004,4 @@ function normalizeText(value: string) {
 function currency(value: number) {
   return value.toLocaleString("pt-BR", { style: "currency", currency: "BRL", maximumFractionDigits: 0 });
 }
+

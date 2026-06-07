@@ -22,6 +22,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { getSupabaseClient, isSupabaseConfigured } from "@/lib/supabaseClient";
 import { hasPermission } from "@/lib/permissions";
 import { DEFAULT_CAMPAIGN_ID } from "@/services/leaders";
+import { getLeaderMonthlyMetricsSetupMessage, isLeaderMonthlyMetricsSchemaError } from "@/services/leaderMonthlyMetrics";
 import { geocodeAddress, getGeocodingProvider, getGeocodingProviderLabel, getGeocodingStats } from "@/services/geocoding";
 import { getMaricaMapData, getRJMapData } from "@/services/mapData";
 
@@ -345,6 +346,7 @@ async function runOperationalCrud() {
       extra_cost: 200,
       notes: "Registro temporário criado pelo diagnóstico.",
     }).select("*").single();
+    if (isLeaderMonthlyMetricsSchemaError(metricError)) throw new Error(getLeaderMonthlyMetricsSetupMessage());
     if (metricError) throw metricError;
 
     const { error: updateLeaderError } = await supabase.from("leaders").update({ status: "Ativa", validated_votes: 12 }).eq("id", leader.id);

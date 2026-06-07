@@ -17,6 +17,7 @@ export async function listLeaderMonthlyMetrics(campaignId = DEFAULT_CAMPAIGN_ID)
     .eq("campaign_id", campaignId)
     .order("month_ref", { ascending: true });
 
+  if (isLeaderMonthlyMetricsSchemaError(error)) return [];
   if (error) throw error;
   return data ?? [];
 }
@@ -30,6 +31,7 @@ export async function upsertLeaderMonthlyMetric(payload: LeaderMonthlyMetricInse
     .select("*")
     .single();
 
+  if (isLeaderMonthlyMetricsSchemaError(error)) throw new Error(getLeaderMonthlyMetricsSetupMessage());
   if (error) throw error;
   return data;
 }
@@ -43,8 +45,20 @@ export async function updateLeaderMonthlyMetric(id: string, payload: LeaderMonth
     .select("*")
     .single();
 
+  if (isLeaderMonthlyMetricsSchemaError(error)) throw new Error(getLeaderMonthlyMetricsSetupMessage());
   if (error) throw error;
   return data;
+}
+
+export function isLeaderMonthlyMetricsSchemaError(error: unknown) {
+  if (!error || typeof error !== "object") return false;
+  const message = "message" in error ? String((error as { message?: unknown }).message ?? "") : "";
+  const code = "code" in error ? String((error as { code?: unknown }).code ?? "") : "";
+  return code === "PGRST205" || (message.includes("leader_monthly_metrics") && message.includes("schema cache"));
+}
+
+export function getLeaderMonthlyMetricsSetupMessage() {
+  return "A tabela mensal leader_monthly_metrics ainda não está ativa na API do Supabase. Rode supabase/refresh-leader-monthly-metrics.sql no SQL Editor e tente novamente.";
 }
 
 function normalizeMetricPayload<T extends LeaderMonthlyMetricInsert | LeaderMonthlyMetricUpdate>(payload: T): T {

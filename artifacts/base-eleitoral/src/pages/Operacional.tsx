@@ -33,6 +33,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { toast } from "@/hooks/use-toast";
 import {
   computeOperationalSummary,
   getMaricaDistrictForNeighborhood,
@@ -55,7 +56,7 @@ import {
   type OperationalScope,
 } from "@/services/operational";
 import { isLeadersSupabaseReady, listLeaders } from "@/services/leaders";
-import { listLeaderMonthlyMetrics } from "@/services/leaderMonthlyMetrics";
+import { listLeaderMonthlyMetrics, upsertLeaderMonthlyMetric } from "@/services/leaderMonthlyMetrics";
 import type { Leader, LeaderMonthlyMetric } from "@/types/database";
 
 const statusTone: Record<string, string> = {
@@ -65,11 +66,21 @@ const statusTone: Record<string, string> = {
   Pendente: "border-rose-200 bg-rose-50 text-rose-700",
 };
 
+type MonthlyMetricDraft = {
+  estimatedSupporters: number;
+  minVotes: number;
+  maxVotes: number;
+  baseCost: number;
+  ceilingCost: number;
+  extraCost: number;
+};
+
 export default function Operacional() {
   const [month, setMonth] = useState(operationalMonths[0]);
   const [scope, setScope] = useState<OperationalScope>("marica");
   const [actors, setActors] = useState<ForceActor[]>(operationalActors);
   const [loadingRealData, setLoadingRealData] = useState(false);
+  const [savingMonthly, setSavingMonthly] = useState(false);
   const [dataMessage, setDataMessage] = useState("Dados mockados de referência");
   const [draft, setDraft] = useState({
     name: "",
@@ -155,6 +166,53 @@ export default function Operacional() {
       ...current,
     ]);
     setDraft((current) => ({ ...current, name: "", phone: "", estimatedSupporters: "0", minVotes: "0", maxVotes: "0", baseCost: "0", ceilingCost: "0", extraCost: "0" }));
+  }
+
+  async function saveMonthlyMetric(actorId: string, values: MonthlyMetricDraft) {
+    const actor = actors.find((item) => item.id === actorId);
+    if (!actor) return;
+
+    if (actor.id.startsWith("local-")) {
+      toast({ title: "Cadastro local", description: "Cadastros temporários precisam ser criados em Lideranças antes de salvar custos mensais." });
+      return;
+    }
+
+    setSavingMonthly(true);
+    try {
+      const saved = await upsertLeaderMonthlyMetric({
+        leader_id: actor.id,
+        month_ref: monthToDate(month),
+        estimated_supporters: values.estimatedSupporters,
+        min_votes: values.minVotes,
+        max_votes: values.maxVotes,
+        base_cost: values.baseCost,
+        ceiling_cost: values.ceilingCost,
+        extra_cost: values.extraCost,
+      });
+
+      setActors((current) => current.map((item) => {
+        if (item.id !== actor.id) return item;
+        return {
+          ...item,
+          monthly: item.monthly.map((row) => row.month === month ? {
+            ...row,
+            estimatedSupporters: saved.estimated_supporters,
+            minVotes: saved.min_votes,
+            maxVotes: saved.max_votes,
+            baseCost: Number(saved.base_cost),
+            ceilingCost: Number(saved.ceiling_cost),
+            extraCost: Number(saved.extra_cost),
+          } : row),
+        };
+      }));
+
+      setDataMessage("Centro de custos mensal salvo com sucesso.");
+      toast({ title: "Mês salvo", description: "Votos e custos foram atualizados no Supabase." });
+    } catch (error) {
+      toast({ title: "Não foi possível salvar", description: "Confira se o SQL leader-monthly-metrics.sql já foi rodado no Supabase.", variant: "destructive" });
+    } finally {
+      setSavingMonthly(false);
+    }
   }
 
   return (
@@ -270,7 +328,10 @@ export default function Operacional() {
         </TabsContent>
 
         <TabsContent value="custos">
-          <CostsTable actors={actors} month={month} />
+          <div className="grid gap-5 xl:grid-cols-[380px_minmax(0,1fr)]">
+            <MonthlyCostEditor actors={actors} month={month} saving={savingMonthly} onSave={saveMonthlyMetric} />
+            <CostsTable actors={actors} month={month} />
+          </div>
         </TabsContent>
       </Tabs>
     </div>
@@ -620,6 +681,86 @@ function MapRanking({ rows, scope }: { rows: Array<{ territory: string; maxVotes
   );
 }
 
+function MonthlyCostEditor({ actors, month, saving, onSave }: { actors: ForceActor[]; month: string; saving: boolean; onSave: (actorId: string, values: MonthlyMetricDraft) => void }) {
+  const firstActorId = actors[0]?.id ?? "";
+  const [selectedId, setSelectedId] = useState(firstActorId);
+  const selected = actors.find((item) => item.id === selectedId) ?? actors[0];
+  const monthly = selected ? getMonthly(selected, month) : null;
+  const [draft, setDraft] = useState<MonthlyMetricDraft>(() => toMonthlyDraft(monthly));
+
+  useEffect(() => {
+    if (!selectedId && firstActorId) setSelectedId(firstActorId);
+  }, [firstActorId, selectedId]);
+
+  useEffect(() => {
+    setDraft(toMonthlyDraft(monthly));
+  }, [selectedId, month, monthly]);
+
+  if (!selected || !monthly) {
+    return (
+      <Card className="premium-card">
+        <CardHeader>
+          <CardTitle>Editar mês</CardTitle>
+          <p className="text-sm font-medium text-slate-500">Cadastre lideranças para editar custos.</p>
+        </CardHeader>
+      </Card>
+    );
+  }
+
+  return (
+    <Card className="premium-card">
+      <CardHeader>
+        <CardTitle>Editar mês</CardTitle>
+        <p className="text-sm font-medium text-slate-500">{month} · votos, apoio estimado e centro de custos.</p>
+      </CardHeader>
+      <CardContent className="space-y-3">
+        <Field label="Cadastro">
+          <Select value={selected.id} onValueChange={setSelectedId}>
+            <SelectTrigger><SelectValue /></SelectTrigger>
+            <SelectContent className="max-h-80">
+              {actors.map((actor) => <SelectItem key={actor.id} value={actor.id}>{actor.name} · {actor.territory}</SelectItem>)}
+            </SelectContent>
+          </Select>
+        </Field>
+        <div className="rounded-lg border border-slate-100 bg-slate-50 px-3 py-2 text-xs font-bold text-slate-600">
+          {getRoleLabel(selected.role)} · {getTerritoryGroup(selected)}
+        </div>
+        <Field label="Apoio estimado">
+          <Input type="number" min={0} value={draft.estimatedSupporters} onChange={(event) => setDraft({ ...draft, estimatedSupporters: Number(event.target.value || 0) })} />
+        </Field>
+        <div className="grid grid-cols-2 gap-3">
+          <Field label="Votos mínimos">
+            <Input type="number" min={0} value={draft.minVotes} onChange={(event) => setDraft({ ...draft, minVotes: Number(event.target.value || 0) })} />
+          </Field>
+          <Field label="Votos máximos">
+            <Input type="number" min={0} value={draft.maxVotes} onChange={(event) => setDraft({ ...draft, maxVotes: Number(event.target.value || 0) })} />
+          </Field>
+          <Field label="Custo base">
+            <Input type="number" min={0} value={draft.baseCost} onChange={(event) => setDraft({ ...draft, baseCost: Number(event.target.value || 0) })} />
+          </Field>
+          <Field label="Custo teto">
+            <Input type="number" min={0} value={draft.ceilingCost} onChange={(event) => setDraft({ ...draft, ceilingCost: Number(event.target.value || 0) })} />
+          </Field>
+        </div>
+        <Field label="Custo extra eventual">
+          <Input type="number" min={0} value={draft.extraCost} onChange={(event) => setDraft({ ...draft, extraCost: Number(event.target.value || 0) })} />
+        </Field>
+        <div className="grid grid-cols-2 gap-3 rounded-xl border border-blue-100 bg-blue-50 p-3 text-center">
+          <MiniStat label="total base" value={currency(draft.baseCost + draft.extraCost)} />
+          <MiniStat label="total teto" value={currency(draft.ceilingCost + draft.extraCost)} />
+        </div>
+        <Button className="w-full" onClick={() => onSave(selected.id, draft)} disabled={saving}>
+          {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <CircleDollarSign className="h-4 w-4" />}
+          Salvar mês
+        </Button>
+        <p className="text-xs font-semibold leading-5 text-slate-500">
+          Para gravar no Supabase, rode antes o SQL de centro de custos mensal. Sem isso, a tela mantém a projeção local.
+        </p>
+      </CardContent>
+    </Card>
+  );
+}
+
 function CostsTable({ actors, month }: { actors: ForceActor[]; month: string }) {
   return (
     <Card className="premium-card overflow-hidden">
@@ -793,6 +934,24 @@ function leaderToOperationalActor(leader: Leader, monthlyMetrics: LeaderMonthlyM
       };
     }),
   };
+}
+
+function toMonthlyDraft(monthly: ReturnType<typeof getMonthly> | null): MonthlyMetricDraft {
+  return {
+    estimatedSupporters: monthly?.estimatedSupporters ?? 0,
+    minVotes: monthly?.minVotes ?? 0,
+    maxVotes: monthly?.maxVotes ?? 0,
+    baseCost: monthly?.baseCost ?? 0,
+    ceilingCost: monthly?.ceilingCost ?? 0,
+    extraCost: monthly?.extraCost ?? 0,
+  };
+}
+
+function monthToDate(month: string) {
+  const [label, year] = month.split("/");
+  const monthIndex = ["jan", "fev", "mar", "abr", "mai", "jun", "jul", "ago", "set", "out", "nov", "dez"].indexOf(normalizeText(label).slice(0, 3));
+  const fullYear = 2000 + Number(year || "26");
+  return `${fullYear}-${String(Math.max(monthIndex, 0) + 1).padStart(2, "0")}-01`;
 }
 
 function formatMetricMonth(value: string) {

@@ -57,7 +57,7 @@ export function ForceMapModal({ node, open, onOpenChange }: ForceMapModalProps) 
           </div>
 
           <div className="rounded-lg border border-slate-100 bg-white p-5 shadow-sm">
-            <div className="mb-4 text-xs font-bold uppercase tracking-[0.14em] text-slate-500">Resumo do módulo</div>
+            <div className="mb-4 text-xs font-bold uppercase tracking-[0.14em] text-slate-500">Resumo do bloco</div>
             <div className="grid gap-3 sm:grid-cols-2">
               {node.metrics.map((metric) => (
                 <div key={metric.label} className="rounded-lg border border-slate-100 bg-slate-50/70 p-3">
@@ -82,7 +82,7 @@ export function ForceMapModal({ node, open, onOpenChange }: ForceMapModalProps) 
           </div>
 
           <div className="rounded-lg border border-slate-200 bg-white p-4 text-sm font-medium leading-6 text-slate-600">
-            Dados fictícios por enquanto. A estrutura está preparada para trocar esta origem por serviços reais no futuro.
+            Este fluxo reflete a versão enxuta: coordenações, lideranças, votos estimados, centro de custos e leitura territorial por cidade ou bairro.
           </div>
         </div>
       </SheetContent>

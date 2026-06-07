@@ -17,7 +17,7 @@ export function ForceMapPage() {
       <PageHeader
         eyebrow="Inteligência Territorial"
         title="Mapa de Força"
-        description="Fluxograma estratégico da campanha, conectando candidato, coordenação, lideranças, apoiadores, prospecção, mapas, comparativos e metas eleitorais."
+        description="Organograma enxuto da campanha: candidato, coordenação geral, coordenações RJ e Maricá, lideranças, votos estimados, custos e leitura territorial."
       />
 
       <ForceMapStats nodes={nodes} levels={forceMapLevels} />

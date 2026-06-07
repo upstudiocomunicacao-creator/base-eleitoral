@@ -1,16 +1,52 @@
-import { useMemo, useState } from "react";
+import { AlertTriangle, RefreshCw } from "lucide-react";
+import { useEffect, useMemo, useState } from "react";
 import { PageHeader } from "@/components/common/PageHeader";
+import { Button } from "@/components/ui/button";
+import { listLeaderMonthlyMetrics } from "@/services/leaderMonthlyMetrics";
+import { isLeadersSupabaseReady, listLeaders } from "@/services/leaders";
 import { BranchConnector, FlowConnector } from "./FlowConnector";
 import { FlowNodeCard } from "./FlowNodeCard";
-import { forceMapLevels } from "./forceMapData";
+import { buildForceMapLevels, forceMapLevels } from "./forceMapData";
 import { ForceMapModal } from "./ForceMapModal";
 import { ForceMapStats } from "./ForceMapStats";
 import type { ForceNode } from "./types";
 
 export function ForceMapPage() {
-  const nodes = useMemo(() => forceMapLevels.flat(), []);
+  const [levels, setLevels] = useState(forceMapLevels);
+  const [loading, setLoading] = useState(false);
+  const [sourceLabel, setSourceLabel] = useState("Modelo operacional");
+  const [error, setError] = useState<string | null>(null);
+  const nodes = useMemo(() => levels.flat(), [levels]);
   const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null);
   const selectedNode = nodes.find((node) => node.id === selectedNodeId);
+
+  async function loadForceData() {
+    setError(null);
+
+    if (!isLeadersSupabaseReady()) {
+      setSourceLabel("Modelo demonstrativo");
+      setLevels(forceMapLevels);
+      setError("Supabase não está configurado. O organograma está usando dados demonstrativos.");
+      return;
+    }
+
+    setLoading(true);
+    try {
+      const [leaders, monthlyMetrics] = await Promise.all([listLeaders(), listLeaderMonthlyMetrics()]);
+      setLevels(buildForceMapLevels({ leaders, monthlyMetrics }));
+      setSourceLabel(leaders.length ? "Dados reais do Supabase" : "Sem cadastros reais ainda");
+    } catch (err) {
+      setLevels(forceMapLevels);
+      setSourceLabel("Modelo demonstrativo");
+      setError(err instanceof Error ? err.message : "Não foi possível carregar os dados reais do Mapa de Força.");
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  useEffect(() => {
+    void loadForceData();
+  }, []);
 
   return (
     <div className="space-y-6">
@@ -18,19 +54,29 @@ export function ForceMapPage() {
         eyebrow="Inteligência Territorial"
         title="Mapa de Força"
         description="Organograma enxuto da campanha: candidato, coordenação geral, coordenações RJ e Maricá, lideranças, votos estimados, custos e leitura territorial."
+        actions={
+          <div className="flex flex-wrap items-center gap-2">
+            <span className="rounded-full border border-blue-100 bg-blue-50 px-3 py-2 text-xs font-extrabold uppercase tracking-[0.08em] text-blue-700">{sourceLabel}</span>
+            <Button variant="outline" onClick={() => void loadForceData()} disabled={loading}>
+              <RefreshCw className={`h-4 w-4 ${loading ? "animate-spin" : ""}`} /> Atualizar
+            </Button>
+          </div>
+        }
       />
 
-      <ForceMapStats nodes={nodes} levels={forceMapLevels} />
+      {error ? <ForceMapWarning message={error} /> : null}
+
+      <ForceMapStats nodes={nodes} levels={levels} />
 
       <OperationalRules />
 
       <section className="rounded-lg border border-white/70 bg-white/80 p-4 shadow-[0_18px_50px_rgba(15,23,42,0.08)] backdrop-blur-sm sm:p-6">
         <div className="hidden overflow-x-auto md:block">
-          <DesktopFlow levels={forceMapLevels} selectedNodeId={selectedNodeId} onSelect={setSelectedNodeId} />
+          <DesktopFlow levels={levels} selectedNodeId={selectedNodeId} onSelect={setSelectedNodeId} />
         </div>
 
         <div className="md:hidden">
-          <MobileFlow levels={forceMapLevels} selectedNodeId={selectedNodeId} onSelect={setSelectedNodeId} />
+          <MobileFlow levels={levels} selectedNodeId={selectedNodeId} onSelect={setSelectedNodeId} />
         </div>
       </section>
 
@@ -41,6 +87,18 @@ export function ForceMapPage() {
           if (!open) setSelectedNodeId(null);
         }}
       />
+    </div>
+  );
+}
+
+function ForceMapWarning({ message }: { message: string }) {
+  return (
+    <div className="flex items-start gap-3 rounded-lg border border-amber-200 bg-amber-50 p-4 text-sm font-semibold leading-6 text-amber-950">
+      <AlertTriangle className="mt-0.5 h-5 w-5 shrink-0 text-amber-600" />
+      <div>
+        <div className="font-extrabold">Mapa de Força em modo demonstrativo</div>
+        <div className="text-amber-800">{message}</div>
+      </div>
     </div>
   );
 }

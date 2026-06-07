@@ -11,6 +11,7 @@ import {
   TrendingUp,
   Users,
 } from "lucide-react";
+import type { Leader, LeaderMonthlyMetric } from "@/types/database";
 import type { ForceNode } from "./types";
 
 export const forceMapLevels: ForceNode[][] = [
@@ -259,3 +260,233 @@ export const forceMapLevels: ForceNode[][] = [
     },
   ],
 ];
+
+type RuntimeForceMapData = {
+  leaders: Leader[];
+  monthlyMetrics: LeaderMonthlyMetric[];
+};
+
+export function buildForceMapLevels({ leaders, monthlyMetrics }: RuntimeForceMapData): ForceNode[][] {
+  if (!leaders.length) return forceMapLevels;
+
+  const latestMonth = getLatestMonth(monthlyMetrics);
+  const monthMetrics = latestMonth ? monthlyMetrics.filter((metric) => metric.month_ref === latestMonth) : [];
+  const hasMonthlyMetrics = monthMetrics.length > 0;
+  const totalSupporters = hasMonthlyMetrics
+    ? sum(monthMetrics, (metric) => metric.estimated_supporters)
+    : sum(leaders, getLeaderSupporters);
+  const minVotes = hasMonthlyMetrics ? sum(monthMetrics, (metric) => metric.min_votes) : sum(leaders, (leader) => leader.validated_votes ?? 0);
+  const maxVotes = hasMonthlyMetrics ? sum(monthMetrics, (metric) => metric.max_votes) : sum(leaders, (leader) => leader.declared_votes ?? 0);
+  const baseCost = sum(monthMetrics, (metric) => metric.base_cost);
+  const ceilingCost = sum(monthMetrics, (metric) => metric.ceiling_cost);
+  const extraCost = sum(monthMetrics, (metric) => metric.extra_cost);
+  const totalCost = ceilingCost + extraCost;
+  const coordinatorsRJ = leaders.filter((leader) => isCoordinator(leader) && !isMaricaLeader(leader)).length;
+  const coordinatorsMarica = leaders.filter((leader) => isCoordinator(leader) && isMaricaLeader(leader)).length;
+  const leadersRJ = leaders.filter((leader) => isLeadership(leader) && !isMaricaLeader(leader)).length;
+  const leadersMarica = leaders.filter((leader) => isLeadership(leader) && isMaricaLeader(leader)).length;
+  const rjCitiesWithAction = uniqueCount(leaders.filter((leader) => !isMaricaLeader(leader)).map((leader) => leader.city));
+  const maricaNeighborhoodsWithAction = uniqueCount(leaders.filter(isMaricaLeader).map((leader) => leader.neighborhood));
+  const regionsWithAction = uniqueCount(leaders.filter((leader) => !isMaricaLeader(leader)).map((leader) => leader.territory_region));
+  const districtsWithAction = uniqueCount(leaders.filter(isMaricaLeader).map((leader) => leader.territory_region));
+  const territories = rjCitiesWithAction + maricaNeighborhoodsWithAction;
+  const costPerMinVote = minVotes > 0 ? totalCost / minVotes : 0;
+
+  return forceMapLevels.map((level) =>
+    level.map((node) => {
+      switch (node.id) {
+        case "candidato":
+          return patchNode(node, {
+            metrics: [
+              { label: "Coordenações RJ", value: formatNumber(coordinatorsRJ) },
+              { label: "Coordenações Maricá", value: formatNumber(coordinatorsMarica) },
+              { label: "Lideranças", value: formatNumber(leadersRJ + leadersMarica) },
+              { label: "Apoio estimado", value: formatNumber(totalSupporters), helper: "Número auxiliar para conversão em voto, sem cadastro de pessoas." },
+              { label: "Votos mínimos", value: formatNumber(minVotes) },
+              { label: "Votos máximos", value: formatNumber(maxVotes) },
+            ],
+            insights: [
+              `Base real com ${formatNumber(leaders.length)} cadastros territoriais ativos no Supabase.`,
+              latestMonth ? `Leitura mensal baseada no recorte ${formatMonth(latestMonth)}.` : "Sem mês operacional preenchido; usando votos declarados e validados dos cadastros.",
+            ],
+            progress: { label: "Organização da força", value: clampProgress(territories, 25) },
+          });
+        case "coordenacao-geral":
+          return patchNode(node, {
+            count: formatNumber(coordinatorsRJ + coordinatorsMarica),
+            countLabel: "coordenações",
+            metrics: [
+              { label: "Coordenações RJ", value: formatNumber(coordinatorsRJ) },
+              { label: "Coordenações Maricá", value: formatNumber(coordinatorsMarica) },
+              { label: "Territórios cobertos", value: formatNumber(territories) },
+              { label: "Atualização", value: latestMonth ? formatMonth(latestMonth) : "Cadastro base" },
+            ],
+            progress: { label: "Governança operacional", value: clampProgress(coordinatorsRJ + coordinatorsMarica, 12) },
+          });
+        case "coordenacao-rj":
+          return patchNode(node, {
+            count: formatNumber(coordinatorsRJ),
+            countLabel: "coordenações RJ",
+            metrics: [
+              { label: "Municípios com atuação", value: formatNumber(rjCitiesWithAction) },
+              { label: "Regiões com atuação", value: formatNumber(regionsWithAction) },
+              { label: "Bairro fora de Maricá", value: "Todos" },
+              { label: "Mais de um por cidade", value: "Sim" },
+            ],
+            progress: { label: "Cobertura estadual atual", value: clampProgress(rjCitiesWithAction, 92) },
+          });
+        case "coordenacao-marica":
+          return patchNode(node, {
+            count: formatNumber(coordinatorsMarica),
+            countLabel: "coordenações Maricá",
+            metrics: [
+              { label: "Bairros com atuação", value: formatNumber(maricaNeighborhoodsWithAction) },
+              { label: "Distritos com atuação", value: formatNumber(districtsWithAction) },
+              { label: "Recorte principal", value: "Bairro" },
+              { label: "Mais de um por bairro", value: "Sim" },
+            ],
+            progress: { label: "Cobertura municipal atual", value: clampProgress(maricaNeighborhoodsWithAction, 50) },
+          });
+        case "liderancas-rj":
+          return patchNode(node, {
+            count: formatNumber(leadersRJ),
+            countLabel: "lideranças RJ",
+            metrics: [
+              { label: "Cidades atendidas", value: formatNumber(rjCitiesWithAction) },
+              { label: "Vínculo à coordenação", value: "Opcional" },
+              { label: "Bairro", value: "Todos" },
+              { label: "Estimativa de votos", value: latestMonth ? "Mensal" : "Cadastro" },
+            ],
+            progress: { label: "Base estadual cadastrada", value: clampProgress(leadersRJ, 30) },
+          });
+        case "liderancas-marica":
+          return patchNode(node, {
+            count: formatNumber(leadersMarica),
+            countLabel: "lideranças Maricá",
+            metrics: [
+              { label: "Bairros atendidos", value: formatNumber(maricaNeighborhoodsWithAction) },
+              { label: "Vínculo à coordenação", value: "Opcional" },
+              { label: "Distrito", value: "Automático" },
+              { label: "Apoio estimado", value: formatNumber(totalSupporters) },
+            ],
+            progress: { label: "Base municipal cadastrada", value: clampProgress(leadersMarica, 35) },
+          });
+        case "estimativas":
+          return patchNode(node, {
+            count: `${formatNumber(minVotes)} / ${formatNumber(maxVotes)}`,
+            countLabel: "votos min/máx",
+            metrics: [
+              { label: "Votos mínimos", value: formatNumber(minVotes) },
+              { label: "Votos máximos", value: formatNumber(maxVotes) },
+              { label: "Apoio estimado", value: formatNumber(totalSupporters) },
+              { label: "Atualização", value: latestMonth ? formatMonth(latestMonth) : "Sem mês definido" },
+            ],
+            progress: { label: "Preenchimento mensal", value: clampProgress(monthMetrics.length, leaders.length || 1) },
+          });
+        case "custos":
+          return patchNode(node, {
+            count: formatCurrency(totalCost),
+            countLabel: "teto + extras",
+            metrics: [
+              { label: "Custo base", value: formatCurrency(baseCost) },
+              { label: "Custo teto", value: formatCurrency(ceilingCost) },
+              { label: "Custo extra", value: formatCurrency(extraCost) },
+              { label: "Custo por voto mínimo", value: costPerMinVote ? formatCurrency(costPerMinVote) : "Sem votos" },
+            ],
+            progress: { label: "Centro de custos preenchido", value: clampProgress(monthMetrics.filter((metric) => metric.ceiling_cost > 0 || metric.base_cost > 0).length, leaders.length || 1) },
+          });
+        case "mapas":
+          return patchNode(node, {
+            count: formatNumber(territories),
+            countLabel: "territórios com dados",
+            metrics: [
+              { label: "Mapa RJ", value: `${formatNumber(rjCitiesWithAction)} cidades` },
+              { label: "Mapa Maricá", value: `${formatNumber(maricaNeighborhoodsWithAction)} bairros` },
+              { label: "Geocodificação", value: "Latitude/longitude" },
+              { label: "Mapbox", value: "Ativo" },
+            ],
+            progress: { label: "Dados prontos para mapa", value: clampProgress(leaders.filter((leader) => leader.latitude && leader.longitude).length, leaders.length || 1) },
+          });
+        case "analises":
+          return patchNode(node, {
+            count: costPerMinVote ? formatCurrency(costPerMinVote) : "KPI",
+            countLabel: "custo/voto mínimo",
+            metrics: [
+              { label: "Força territorial", value: formatNumber(territories) },
+              { label: "Conversão em voto", value: totalSupporters ? `${Math.round((minVotes / totalSupporters) * 100)}%` : "Sem apoio" },
+              { label: "Custo por voto", value: costPerMinVote ? formatCurrency(costPerMinVote) : "Sem custo" },
+              { label: "Prioridade territorial", value: "Calculada" },
+            ],
+          });
+        case "cadastro-minimo":
+          return patchNode(node, {
+            count: formatNumber(leaders.length),
+            countLabel: "cadastros reais",
+            metrics: [
+              { label: "Nome e telefone", value: "Obrigatórios" },
+              { label: "Cidade ou bairro", value: "Lista" },
+              { label: "Votos min/máx", value: hasMonthlyMetrics ? "Preenchidos" : "Pendente" },
+              { label: "Custo min/máx", value: hasMonthlyMetrics ? "Preenchidos" : "Pendente" },
+            ],
+          });
+        default:
+          return node;
+      }
+    }),
+  );
+}
+
+function patchNode(node: ForceNode, patch: Partial<ForceNode>): ForceNode {
+  return { ...node, ...patch };
+}
+
+function isCoordinator(leader: Leader) {
+  return normalize(leader.leader_type).includes("coord");
+}
+
+function isLeadership(leader: Leader) {
+  return normalize(leader.leader_type).includes("lider");
+}
+
+function isMaricaLeader(leader: Leader) {
+  return normalize(leader.city) === "marica";
+}
+
+function getLeaderSupporters(leader: Leader) {
+  return (leader.registered_supporters ?? 0) + (leader.estimated_direct_supporters ?? 0) + (leader.estimated_indirect_supporters ?? 0);
+}
+
+function getLatestMonth(metrics: LeaderMonthlyMetric[]) {
+  return metrics.map((metric) => metric.month_ref).filter(Boolean).sort((a, b) => b.localeCompare(a))[0] ?? null;
+}
+
+function uniqueCount(values: Array<string | null | undefined>) {
+  return new Set(values.filter(Boolean)).size;
+}
+
+function sum<T>(items: T[], getValue: (item: T) => number | null | undefined) {
+  return items.reduce((total, item) => total + Number(getValue(item) ?? 0), 0);
+}
+
+function clampProgress(value: number, total: number) {
+  if (!total) return 0;
+  return Math.max(0, Math.min(100, Math.round((value / total) * 100)));
+}
+
+function formatNumber(value: number) {
+  return Math.round(value).toLocaleString("pt-BR");
+}
+
+function formatCurrency(value: number) {
+  return value.toLocaleString("pt-BR", { style: "currency", currency: "BRL", maximumFractionDigits: 0 });
+}
+
+function formatMonth(value: string) {
+  const [year, month] = value.split("-");
+  if (!year || !month) return value;
+  return `${month}/${year}`;
+}
+
+function normalize(value: string | null | undefined) {
+  return String(value ?? "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
+}

@@ -172,6 +172,16 @@ export default function Operacional() {
     const actor = actors.find((item) => item.id === actorId);
     if (!actor) return;
 
+    if (values.maxVotes < values.minVotes) {
+      toast({ title: "Revise os votos", description: "O voto máximo não pode ser menor que o voto mínimo.", variant: "destructive" });
+      return;
+    }
+
+    if (values.ceilingCost < values.baseCost) {
+      toast({ title: "Revise os custos", description: "O custo teto não pode ser menor que o custo base.", variant: "destructive" });
+      return;
+    }
+
     if (actor.id.startsWith("local-")) {
       toast({ title: "Cadastro local", description: "Cadastros temporários precisam ser criados em Lideranças antes de salvar custos mensais." });
       return;
@@ -687,6 +697,11 @@ function MonthlyCostEditor({ actors, month, saving, onSave }: { actors: ForceAct
   const selected = actors.find((item) => item.id === selectedId) ?? actors[0];
   const monthly = selected ? getMonthly(selected, month) : null;
   const [draft, setDraft] = useState<MonthlyMetricDraft>(() => toMonthlyDraft(monthly));
+  const minTotal = draft.baseCost + draft.extraCost;
+  const maxTotal = draft.ceilingCost + draft.extraCost;
+  const costPerMinVote = draft.minVotes ? Math.round(minTotal / draft.minVotes) : 0;
+  const costPerMaxVote = draft.maxVotes ? Math.round(maxTotal / draft.maxVotes) : 0;
+  const hasInvalidRange = draft.maxVotes < draft.minVotes || draft.ceilingCost < draft.baseCost;
 
   useEffect(() => {
     if (!selectedId && firstActorId) setSelectedId(firstActorId);
@@ -746,10 +761,17 @@ function MonthlyCostEditor({ actors, month, saving, onSave }: { actors: ForceAct
           <Input type="number" min={0} value={draft.extraCost} onChange={(event) => setDraft({ ...draft, extraCost: Number(event.target.value || 0) })} />
         </Field>
         <div className="grid grid-cols-2 gap-3 rounded-xl border border-blue-100 bg-blue-50 p-3 text-center">
-          <MiniStat label="total base" value={currency(draft.baseCost + draft.extraCost)} />
-          <MiniStat label="total teto" value={currency(draft.ceilingCost + draft.extraCost)} />
+          <MiniStat label="total base" value={currency(minTotal)} />
+          <MiniStat label="total teto" value={currency(maxTotal)} />
+          <MiniStat label="R$/voto mín." value={costPerMinVote ? currency(costPerMinVote) : "-"} />
+          <MiniStat label="R$/voto máx." value={costPerMaxVote ? currency(costPerMaxVote) : "-"} />
         </div>
-        <Button className="w-full" onClick={() => onSave(selected.id, draft)} disabled={saving}>
+        {hasInvalidRange ? (
+          <div className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs font-bold leading-5 text-amber-800">
+            Confira os intervalos: voto máximo deve ser maior ou igual ao mínimo, e custo teto deve ser maior ou igual ao custo base.
+          </div>
+        ) : null}
+        <Button className="w-full" onClick={() => onSave(selected.id, draft)} disabled={saving || hasInvalidRange}>
           {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <CircleDollarSign className="h-4 w-4" />}
           Salvar mês
         </Button>

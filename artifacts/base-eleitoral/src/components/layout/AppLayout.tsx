@@ -25,23 +25,23 @@ import { canAccessModule, type PermissionModule } from "@/lib/permissions";
 import { useAuth } from "@/hooks/useAuth";
 
 const navItems = [
-  { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard, group: "Vis\u00e3o Geral", module: "dashboard" },
-  { href: "/operacional", label: "Modo Operacional", icon: ListChecks, group: "Vis\u00e3o Geral", module: "dashboard" },
-  { href: "/mapa-forca", label: "Mapa de For\u00e7a", icon: Network, group: "Vis\u00e3o Geral", module: "mapa_forca" },
-  { href: "/liderancas", label: "Lideran\u00e7as", icon: Users, group: "Base Territorial", module: "liderancas" },
+  { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard, group: "Visão Geral", module: "dashboard" },
+  { href: "/operacional", label: "Modo Operacional", icon: ListChecks, group: "Visão Geral", module: "dashboard" },
+  { href: "/mapa-forca", label: "Mapa de Força", icon: Network, group: "Visão Geral", module: "mapa_forca" },
+  { href: "/liderancas", label: "Lideranças", icon: Users, group: "Base Territorial", module: "liderancas" },
   { href: "/apoiadores", label: "Apoiadores", icon: UserPlus, group: "Base Territorial", module: "apoiadores" },
-  { href: "/prospeccao", label: "Prospec\u00e7\u00e3o", icon: Kanban, group: "Base Territorial", module: "prospeccao" },
+  { href: "/prospeccao", label: "Prospecção", icon: Kanban, group: "Base Territorial", module: "prospeccao" },
   { href: "/mapa-rj", label: "Mapa RJ", icon: Map, group: "Mapas", module: "mapa_rj" },
-  { href: "/mapa-marica", label: "Mapa Maric\u00e1", icon: MapPin, group: "Mapas", module: "mapa_marica" },
-  { href: "/comparativo", label: "Comparativo", icon: BarChart3, group: "Intelig\u00eancia", module: "comparativo" },
-  { href: "/relatorios", label: "Relat\u00f3rios", icon: FileText, group: "Sistema", module: "relatorios" },
-  { href: "/importacao", label: "Importa\u00e7\u00e3o", icon: UploadCloud, group: "Sistema", module: "importacao_dados" },
-  { href: "/geocodificacao", label: "Geocodifica\u00e7\u00e3o", icon: MapPinned, group: "Sistema", module: "geocodificacao" },
-  { href: "/diagnostico", label: "Diagn\u00f3stico", icon: Activity, group: "Sistema", module: "diagnostico" },
-  { href: "/configuracoes", label: "Configura\u00e7\u00f5es", icon: Settings, group: "Sistema", module: "configuracoes" },
+  { href: "/mapa-marica", label: "Mapa Maricá", icon: MapPin, group: "Mapas", module: "mapa_marica" },
+  { href: "/comparativo", label: "Comparativo", icon: BarChart3, group: "Inteligência", module: "comparativo" },
+  { href: "/relatorios", label: "Relatórios", icon: FileText, group: "Sistema", module: "relatorios" },
+  { href: "/importacao", label: "Importação", icon: UploadCloud, group: "Sistema", module: "importacao_dados" },
+  { href: "/geocodificacao", label: "Geocodificação", icon: MapPinned, group: "Sistema", module: "geocodificacao" },
+  { href: "/diagnostico", label: "Diagnóstico", icon: Activity, group: "Sistema", module: "diagnostico" },
+  { href: "/configuracoes", label: "Configurações", icon: Settings, group: "Sistema", module: "configuracoes" },
 ] as const;
 
-const groups = ["Vis\u00e3o Geral", "Base Territorial", "Mapas", "Intelig\u00eancia", "Sistema"];
+const groups = ["Visão Geral", "Base Territorial", "Mapas", "Inteligência", "Sistema"];
 
 export function AppLayout({ children }: { children: ReactNode }) {
   const [location] = useLocation();
@@ -60,14 +60,14 @@ export function AppLayout({ children }: { children: ReactNode }) {
           <div>
             <div className="text-base font-extrabold leading-none tracking-tight text-white">Base Eleitoral 360</div>
             <div className="mt-1 text-[10px] font-bold uppercase tracking-[0.18em] text-cyan-200/80">
-              Intelig\u00eancia territorial
+              Inteligência territorial
             </div>
           </div>
         </div>
 
         <div className="mt-4 rounded-lg border border-white/10 bg-white/[0.06] p-3">
           <div className="flex items-center justify-between text-[11px] font-semibold text-slate-300">
-            <span>Opera\u00e7\u00e3o</span>
+            <span>Operação</span>
             <span className="text-emerald-300">Ativa</span>
           </div>
           <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-white/10">

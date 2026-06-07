@@ -1,6 +1,6 @@
 export type OperationalScope = "rj" | "marica";
 export type ForceRole = "coord_rj" | "coord_marica" | "leader";
-export type ForceStatus = "Ativo" | "Aten\u00e7\u00e3o" | "Priorit\u00e1rio" | "Pendente";
+export type ForceStatus = "Ativo" | "Atenção" | "Prioritário" | "Pendente";
 
 export type MonthlyProjection = {
   month: string;
@@ -64,50 +64,50 @@ export const rjRegions = [
       "Cachoeiras de Macacu",
       "Duque de Caxias",
       "Guapimirim",
-      "Itabora\u00ed",
-      "Itagua\u00ed",
+      "Itaboraí",
+      "Itaguaí",
       "Japeri",
-      "Mag\u00e9",
-      "Maric\u00e1",
+      "Magé",
+      "Maricá",
       "Mesquita",
-      "Nil\u00f3polis",
-      "Niter\u00f3i",
-      "Nova Igua\u00e7u",
+      "Nilópolis",
+      "Niterói",
+      "Nova Iguaçu",
       "Paracambi",
-      "Petr\u00f3polis",
+      "Petrópolis",
       "Queimados",
       "Rio Bonito",
       "Rio de Janeiro",
-      "S\u00e3o Gon\u00e7alo",
-      "S\u00e3o Jo\u00e3o de Meriti",
-      "Serop\u00e9dica",
-      "Tangu\u00e1",
+      "São Gonçalo",
+      "São João de Meriti",
+      "Seropédica",
+      "Tanguá",
     ],
   },
   { name: "Costa Verde", cities: ["Angra dos Reis", "Mangaratiba", "Paraty"] },
   {
-    name: "M\u00e9dio Para\u00edba",
-    cities: ["Barra do Pira\u00ed", "Barra Mansa", "Itatiaia", "Pinheiral", "Pira\u00ed", "Porto Real", "Quatis", "Resende", "Rio Claro", "Valen\u00e7a", "Volta Redonda"],
+    name: "Médio Paraíba",
+    cities: ["Barra do Piraí", "Barra Mansa", "Itatiaia", "Pinheiral", "Piraí", "Porto Real", "Quatis", "Resende", "Rio Claro", "Valença", "Volta Redonda"],
   },
   {
     name: "Centro-Sul Fluminense",
-    cities: ["Areal", "Comendador Levy Gasparian", "Engenheiro Paulo de Frontin", "Mendes", "Miguel Pereira", "Para\u00edba do Sul", "Paty do Alferes", "Rio das Flores", "Sapucaia", "Tr\u00eas Rios", "Vassouras"],
+    cities: ["Areal", "Comendador Levy Gasparian", "Engenheiro Paulo de Frontin", "Mendes", "Miguel Pereira", "Paraíba do Sul", "Paty do Alferes", "Rio das Flores", "Sapucaia", "Três Rios", "Vassouras"],
   },
   {
     name: "Serrana",
-    cities: ["Bom Jardim", "Cantagalo", "Carmo", "Cordeiro", "Duas Barras", "Macuco", "Nova Friburgo", "Santa Maria Madalena", "S\u00e3o Jos\u00e9 do Vale do Rio Preto", "S\u00e3o Sebasti\u00e3o do Alto", "Sumidouro", "Teres\u00f3polis", "Trajano de Moraes"],
+    cities: ["Bom Jardim", "Cantagalo", "Carmo", "Cordeiro", "Duas Barras", "Macuco", "Nova Friburgo", "Santa Maria Madalena", "São José do Vale do Rio Preto", "São Sebastião do Alto", "Sumidouro", "Teresópolis", "Trajano de Moraes"],
   },
   {
-    name: "Baixadas Litor\u00e2neas",
-    cities: ["Araruama", "Arma\u00e7\u00e3o dos B\u00fazios", "Arraial do Cabo", "Cabo Frio", "Casimiro de Abreu", "Iguaba Grande", "Rio das Ostras", "S\u00e3o Pedro da Aldeia", "Saquarema", "Silva Jardim"],
+    name: "Baixadas Litorâneas",
+    cities: ["Araruama", "Armação dos Búzios", "Arraial do Cabo", "Cabo Frio", "Casimiro de Abreu", "Iguaba Grande", "Rio das Ostras", "São Pedro da Aldeia", "Saquarema", "Silva Jardim"],
   },
   {
     name: "Norte Fluminense",
-    cities: ["Campos dos Goytacazes", "Carapebus", "Cardoso Moreira", "Concei\u00e7\u00e3o de Macabu", "Maca\u00e9", "Quissam\u00e3", "S\u00e3o Fid\u00e9lis", "S\u00e3o Francisco de Itabapoana", "S\u00e3o Jo\u00e3o da Barra"],
+    cities: ["Campos dos Goytacazes", "Carapebus", "Cardoso Moreira", "Conceição de Macabu", "Macaé", "Quissamã", "São Fidélis", "São Francisco de Itabapoana", "São João da Barra"],
   },
   {
     name: "Noroeste Fluminense",
-    cities: ["Aperib\u00e9", "Bom Jesus do Itabapoana", "Cambuci", "Italva", "Itaocara", "Itaperuna", "Laje do Muria\u00e9", "Miracema", "Natividade", "Porci\u00fancula", "Santo Ant\u00f4nio de P\u00e1dua", "S\u00e3o Jos\u00e9 de Ub\u00e1", "Varre-Sai"],
+    cities: ["Aperibé", "Bom Jesus do Itabapoana", "Cambuci", "Italva", "Itaocara", "Itaperuna", "Laje do Muriaé", "Miracema", "Natividade", "Porciúncula", "Santo Antônio de Pádua", "São José de Ubá", "Varre-Sai"],
   },
 ] as const;
 
@@ -115,7 +115,7 @@ export const rjCities = rjRegions.flatMap((region) => region.cities);
 
 export const maricaDistricts = [
   {
-    name: "Sede / Maric\u00e1",
+    name: "Sede / Maricá",
     neighborhoods: [
       "Centro",
       "Flamengo",
@@ -123,12 +123,12 @@ export const maricaDistricts = [
       "Itapeba",
       "Parque Nanci",
       "Ponta Grossa",
-      "S\u00e3o Jos\u00e9 do Imbassa\u00ed",
-      "Ara\u00e7atiba",
-      "Jacaro\u00e1",
-      "Barra de Maric\u00e1",
+      "São José do Imbassaí",
+      "Araçatiba",
+      "Jacaroá",
+      "Barra de Maricá",
       "Zacarias",
-      "Restinga de Maric\u00e1",
+      "Restinga de Maricá",
       "Retiro",
       "Camburi",
       "Pindobas",
@@ -137,21 +137,21 @@ export const maricaDistricts = [
       "Pilar",
       "Lagarto",
       "Silvado",
-      "Condado de Maric\u00e1",
-      "Marqu\u00eas de Maric\u00e1",
+      "Condado de Maricá",
+      "Marquês de Maricá",
     ],
   },
   {
     name: "Ponta Negra",
-    neighborhoods: ["Ponta Negra", "Jacon\u00e9", "Cordeirinho", "Guaratiba", "Jardim Interlagos", "Jardim Balne\u00e1rio Bambu\u00ed", "Pindobal", "Caju", "Manoel Ribeiro", "Espraiado", "Vale da Figueira", "Bananal"],
+    neighborhoods: ["Ponta Negra", "Jaconé", "Cordeirinho", "Guaratiba", "Jardim Interlagos", "Jardim Balneário Bambuí", "Pindobal", "Caju", "Manoel Ribeiro", "Espraiado", "Vale da Figueira", "Bananal"],
   },
   {
-    name: "Ino\u00e3",
-    neighborhoods: ["Ino\u00e3", "Ch\u00e1caras de Ino\u00e3", "Calaboca", "SPAR", "Santa Paula", "Cassorotiba"],
+    name: "Inoã",
+    neighborhoods: ["Inoã", "Chácaras de Inoã", "Calaboca", "SPAR", "Santa Paula", "Cassorotiba"],
   },
   {
-    name: "Itaipua\u00e7u",
-    neighborhoods: ["Recanto de Itaipua\u00e7u", "Praia de Itaipua\u00e7u", "Morada das \u00c1guias", "Rinc\u00e3o Mimoso", "Barroco", "Jardim Atl\u00e2ntico Oeste", "Jardim Atl\u00e2ntico Central", "Jardim Atl\u00e2ntico Leste", "Cajueiros", "Itaocaia Valley"],
+    name: "Itaipuaçu",
+    neighborhoods: ["Recanto de Itaipuaçu", "Praia de Itaipuaçu", "Morada das Águias", "Rincão Mimoso", "Barroco", "Jardim Atlântico Oeste", "Jardim Atlântico Central", "Jardim Atlântico Leste", "Cajueiros", "Itaocaia Valley"],
   },
 ] as const;
 
@@ -162,32 +162,32 @@ export const minimalFields = [
   "Telefone/WhatsApp",
   "Tipo",
   "Cidade ou bairro",
-  "Regi\u00e3o/Distrito",
+  "Região/Distrito",
   "Status",
-  "Respons\u00e1vel/v\u00ednculo",
+  "Responsável/vínculo",
   "Latitude",
   "Longitude",
-  "Votos m\u00ednimos",
-  "Votos m\u00e1ximos",
-  "Custo m\u00ednimo",
-  "Custo m\u00e1ximo",
+  "Votos mínimos",
+  "Votos máximos",
+  "Custo mínimo",
+  "Custo máximo",
   "Custo extra",
 ];
 
 export const operationalActors: ForceActor[] = [
-  actor("rj-niteroi", "Coordena\u00e7\u00e3o Niter\u00f3i", "coord_rj", "rj", "Niter\u00f3i", 420, 720, 2800, 4500, 600, "Priorit\u00e1rio", -22.8832, -43.1034),
-  actor("rj-sg", "Coordena\u00e7\u00e3o S\u00e3o Gon\u00e7alo", "coord_rj", "rj", "S\u00e3o Gon\u00e7alo", 360, 640, 2600, 4300, 400, "Aten\u00e7\u00e3o", -22.8268, -43.0634),
-  actor("rj-itaborai", "Coordena\u00e7\u00e3o Itabora\u00ed", "coord_rj", "rj", "Itabora\u00ed", 180, 320, 1800, 3200, 250, "Pendente", -22.7448, -42.8599),
-  actor("rj-rio", "Coordena\u00e7\u00e3o Rio de Janeiro", "coord_rj", "rj", "Rio de Janeiro", 520, 980, 4200, 7200, 900, "Priorit\u00e1rio", -22.9068, -43.1729),
-  actor("marica-centro", "Coordena\u00e7\u00e3o Centro", "coord_marica", "marica", "Centro", 260, 430, 2100, 3600, 350, "Ativo", -22.9196, -42.8186),
-  actor("marica-itaipuacu", "Coordena\u00e7\u00e3o Itaipua\u00e7u", "coord_marica", "marica", "Recanto de Itaipua\u00e7u", 340, 620, 2600, 4300, 500, "Priorit\u00e1rio", -22.9553, -42.9861),
-  actor("marica-inoa", "Coordena\u00e7\u00e3o Ino\u00e3", "coord_marica", "marica", "Ino\u00e3", 190, 350, 1700, 3100, 200, "Aten\u00e7\u00e3o", -22.8777, -42.9103),
-  actor("marica-sji", "Coordena\u00e7\u00e3o S\u00e3o Jos\u00e9", "coord_marica", "marica", "S\u00e3o Jos\u00e9 do Imbassa\u00ed", 220, 390, 1900, 3300, 300, "Ativo", -22.8894, -42.7848),
-  leader("lider-centro-1", "Lideran\u00e7a Centro 01", "marica", "Centro", "marica-centro", 80, 140, 800, 1400, "Ativo", -22.917, -42.821),
-  leader("lider-itaipuacu-1", "Lideran\u00e7a Itaipua\u00e7u 01", "marica", "Recanto de Itaipua\u00e7u", "marica-itaipuacu", 120, 210, 900, 1700, "Priorit\u00e1rio", -22.959, -42.973),
-  leader("lider-inoa-1", "Lideran\u00e7a Ino\u00e3 01", "marica", "Ino\u00e3", "marica-inoa", 60, 130, 650, 1200, "Aten\u00e7\u00e3o", -22.882, -42.904),
-  leader("lider-niteroi-1", "Lideran\u00e7a Niter\u00f3i 01", "rj", "Niter\u00f3i", "rj-niteroi", 110, 180, 1000, 1800, "Ativo", -22.89, -43.11),
-  leader("lider-sg-1", "Lideran\u00e7a S\u00e3o Gon\u00e7alo 01", "rj", "S\u00e3o Gon\u00e7alo", "rj-sg", 90, 170, 900, 1600, "Aten\u00e7\u00e3o", -22.82, -43.06),
+  actor("rj-niteroi", "Coordenação Niterói", "coord_rj", "rj", "Niterói", 420, 720, 2800, 4500, 600, "Prioritário", -22.8832, -43.1034),
+  actor("rj-sg", "Coordenação São Gonçalo", "coord_rj", "rj", "São Gonçalo", 360, 640, 2600, 4300, 400, "Atenção", -22.8268, -43.0634),
+  actor("rj-itaborai", "Coordenação Itaboraí", "coord_rj", "rj", "Itaboraí", 180, 320, 1800, 3200, 250, "Pendente", -22.7448, -42.8599),
+  actor("rj-rio", "Coordenação Rio de Janeiro", "coord_rj", "rj", "Rio de Janeiro", 520, 980, 4200, 7200, 900, "Prioritário", -22.9068, -43.1729),
+  actor("marica-centro", "Coordenação Centro", "coord_marica", "marica", "Centro", 260, 430, 2100, 3600, 350, "Ativo", -22.9196, -42.8186),
+  actor("marica-itaipuacu", "Coordenação Itaipuaçu", "coord_marica", "marica", "Recanto de Itaipuaçu", 340, 620, 2600, 4300, 500, "Prioritário", -22.9553, -42.9861),
+  actor("marica-inoa", "Coordenação Inoã", "coord_marica", "marica", "Inoã", 190, 350, 1700, 3100, 200, "Atenção", -22.8777, -42.9103),
+  actor("marica-sji", "Coordenação São José", "coord_marica", "marica", "São José do Imbassaí", 220, 390, 1900, 3300, 300, "Ativo", -22.8894, -42.7848),
+  leader("lider-centro-1", "Liderança Centro 01", "marica", "Centro", "marica-centro", 80, 140, 800, 1400, "Ativo", -22.917, -42.821),
+  leader("lider-itaipuacu-1", "Liderança Itaipuaçu 01", "marica", "Recanto de Itaipuaçu", "marica-itaipuacu", 120, 210, 900, 1700, "Prioritário", -22.959, -42.973),
+  leader("lider-inoa-1", "Liderança Inoã 01", "marica", "Inoã", "marica-inoa", 60, 130, 650, 1200, "Atenção", -22.882, -42.904),
+  leader("lider-niteroi-1", "Liderança Niterói 01", "rj", "Niterói", "rj-niteroi", 110, 180, 1000, 1800, "Ativo", -22.89, -43.11),
+  leader("lider-sg-1", "Liderança São Gonçalo 01", "rj", "São Gonçalo", "rj-sg", 90, 170, 900, 1600, "Atenção", -22.82, -43.06),
 ];
 
 function actor(
@@ -214,7 +214,7 @@ function actor(
     role,
     scope,
     territory,
-    city: isMarica ? "Maric\u00e1" : territory,
+    city: isMarica ? "Maricá" : territory,
     neighborhood: isMarica ? territory : undefined,
     region: isMarica ? undefined : getRJRegionForCity(territory),
     district: isMarica ? getMaricaDistrictForNeighborhood(territory) : undefined,
@@ -249,7 +249,7 @@ function leader(
     role: "leader",
     scope,
     territory,
-    city: isMarica ? "Maric\u00e1" : territory,
+    city: isMarica ? "Maricá" : territory,
     neighborhood: isMarica ? territory : undefined,
     region: isMarica ? undefined : getRJRegionForCity(territory),
     district: isMarica ? getMaricaDistrictForNeighborhood(territory) : undefined,
@@ -257,7 +257,7 @@ function leader(
     status,
     latitude,
     longitude,
-    notes: "Lideran\u00e7a com v\u00ednculo opcional \u00e0 coordena\u00e7\u00e3o territorial.",
+    notes: "Liderança com vínculo opcional à coordenação territorial.",
     monthly: buildMonthly(minVotes, maxVotes, baseCost, ceilingCost, 0),
   };
 }
@@ -304,16 +304,16 @@ export function getMonthly(actor: ForceActor, month: string) {
 
 export function getRoleLabel(role: ForceRole) {
   if (role === "coord_rj") return "Coord. RJ";
-  if (role === "coord_marica") return "Coord. Maric\u00e1";
-  return "Lideran\u00e7a";
+  if (role === "coord_marica") return "Coord. Maricá";
+  return "Liderança";
 }
 
 export function getScopeLabel(scope: OperationalScope) {
-  return scope === "marica" ? "Maric\u00e1 por bairros" : "RJ por cidades";
+  return scope === "marica" ? "Maricá por bairros" : "RJ por cidades";
 }
 
 export function getRJRegionForCity(city: string) {
-  return rjRegions.find((region) => (region.cities as readonly string[]).includes(city))?.name ?? "Sem regi\u00e3o";
+  return rjRegions.find((region) => (region.cities as readonly string[]).includes(city))?.name ?? "Sem região";
 }
 
 export function getMaricaDistrictForNeighborhood(neighborhood: string) {

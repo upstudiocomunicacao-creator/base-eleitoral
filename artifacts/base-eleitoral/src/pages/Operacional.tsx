@@ -1,13 +1,15 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   BarChart3,
   Building2,
   CircleDollarSign,
   ClipboardList,
   Layers,
+  Loader2,
   MapPin,
   Network,
   Plus,
+  RefreshCw,
   Target,
   TrendingUp,
   Users,
@@ -49,8 +51,11 @@ import {
   rjRegions,
   type ForceActor,
   type ForceRole,
+  type ForceStatus,
   type OperationalScope,
 } from "@/services/operational";
+import { isLeadersSupabaseReady, listLeaders } from "@/services/leaders";
+import type { Leader } from "@/types/database";
 
 const statusTone: Record<string, string> = {
   Ativo: "border-emerald-200 bg-emerald-50 text-emerald-700",
@@ -63,6 +68,8 @@ export default function Operacional() {
   const [month, setMonth] = useState(operationalMonths[0]);
   const [scope, setScope] = useState<OperationalScope>("marica");
   const [actors, setActors] = useState<ForceActor[]>(operationalActors);
+  const [loadingRealData, setLoadingRealData] = useState(false);
+  const [dataMessage, setDataMessage] = useState("Dados mockados de referência");
   const [draft, setDraft] = useState({
     name: "",
     phone: "",
@@ -83,6 +90,36 @@ export default function Operacional() {
   const maricaPerformance = useMemo(() => groupTerritoryPerformance(actors, month, "marica"), [actors, month]);
   const scopedActors = useMemo(() => actors.filter((item) => item.scope === scope), [actors, scope]);
   const mapItems = scope === "marica" ? maricaPerformance : rjPerformance;
+
+  async function loadRealLeaders() {
+    if (!isLeadersSupabaseReady()) {
+      setActors(operationalActors);
+      setDataMessage("Supabase não configurado. Usando dados mockados de referência.");
+      return;
+    }
+
+    setLoadingRealData(true);
+    try {
+      const leaders = await listLeaders();
+      if (!leaders.length) {
+        setActors(operationalActors);
+        setDataMessage("Nenhuma liderança real encontrada. Usando dados mockados de referência.");
+        return;
+      }
+
+      setActors(leaders.map(leaderToOperationalActor));
+      setDataMessage("Dados reais carregados de Lideranças. Custos mensais aguardam o centro de custos.");
+    } catch {
+      setActors(operationalActors);
+      setDataMessage("Não foi possível carregar Lideranças reais. Usando dados mockados de referência.");
+    } finally {
+      setLoadingRealData(false);
+    }
+  }
+
+  useEffect(() => {
+    void loadRealLeaders();
+  }, []);
 
   function addActor() {
     if (!draft.name.trim() || !draft.phone.trim() || !draft.territory.trim()) return;
@@ -124,6 +161,10 @@ export default function Operacional() {
         description="Leitura simplificada por cidades do RJ e bairros de Maricá, com mapa de força, votos estimados e centro de custos mensal."
         actions={
           <div className="flex flex-wrap gap-2">
+            <Button variant="outline" className="bg-white" onClick={() => void loadRealLeaders()} disabled={loadingRealData}>
+              {loadingRealData ? <Loader2 className="h-4 w-4 animate-spin" /> : <RefreshCw className="h-4 w-4" />}
+              Atualizar dados
+            </Button>
             <Select value={month} onValueChange={setMonth}>
               <SelectTrigger className="w-36 bg-white">
                 <SelectValue />
@@ -135,6 +176,10 @@ export default function Operacional() {
           </div>
         }
       />
+
+      <div className="rounded-xl border border-blue-100 bg-blue-50 px-4 py-3 text-sm font-bold text-blue-800">
+        {dataMessage}
+      </div>
 
       <div className="grid grid-cols-2 gap-4 md:grid-cols-4 xl:grid-cols-7">
         <MetricCard label="Coord. RJ" value={summary.coordinatorsRJ} icon={Building2} tone="blue" />
@@ -699,6 +744,58 @@ function MiniStat({ label, value }: { label: string; value: number | string }) {
 
 function Connector() {
   return <div className="mx-auto h-8 w-px bg-gradient-to-b from-blue-200 to-emerald-200" />;
+}
+
+function leaderToOperationalActor(leader: Leader): ForceActor {
+  const city = leader.city || "Maricá";
+  const isMarica = normalizeText(city) === "marica";
+  const scope: OperationalScope = isMarica ? "marica" : "rj";
+  const territory = isMarica ? leader.neighborhood || "Centro" : city;
+  const type = normalizeText(leader.leader_type);
+  const role: ForceRole = type.includes("coord") ? (isMarica ? "coord_marica" : "coord_rj") : "leader";
+  const estimatedSupporters = Number(leader.registered_supporters ?? 0) + Number(leader.estimated_direct_supporters ?? 0) + Number(leader.estimated_indirect_supporters ?? 0);
+  const declaredVotes = Number(leader.declared_votes ?? 0);
+  const validatedVotes = Number(leader.validated_votes ?? 0);
+  const minVotes = validatedVotes || Math.round(declaredVotes * 0.6);
+  const maxVotes = declaredVotes || estimatedSupporters;
+
+  return {
+    id: leader.id,
+    name: leader.full_name,
+    phone: leader.phone,
+    role,
+    scope,
+    territory,
+    city,
+    neighborhood: isMarica ? territory : undefined,
+    region: isMarica ? undefined : getRJRegionForCity(city),
+    district: isMarica ? getMaricaDistrictForNeighborhood(territory) : undefined,
+    status: toForceStatus(leader.status),
+    latitude: leader.latitude ?? undefined,
+    longitude: leader.longitude ?? undefined,
+    notes: leader.notes ?? undefined,
+    monthly: operationalMonths.map((item) => ({
+      month: item,
+      estimatedSupporters,
+      minVotes,
+      maxVotes,
+      baseCost: 0,
+      ceilingCost: 0,
+      extraCost: 0,
+    })),
+  };
+}
+
+function toForceStatus(status: string): ForceStatus {
+  const normalized = normalizeText(status);
+  if (normalized.includes("atencao")) return "Atenção";
+  if (normalized.includes("prior")) return "Prioritário";
+  if (normalized.includes("pend") || normalized.includes("validacao")) return "Pendente";
+  return "Ativo";
+}
+
+function normalizeText(value: string) {
+  return value.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
 }
 
 function currency(value: number) {

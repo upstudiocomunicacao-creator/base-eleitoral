@@ -1,16 +1,19 @@
-import { ReactNode, useState } from "react";
+﻿import { ReactNode, useState } from "react";
 import { Link, useLocation } from "wouter";
 import {
   BarChart3,
   ChevronRight,
   FileText,
+  Gauge,
   LayoutDashboard,
   ListChecks,
   Map,
+  MapPinned,
   MapPin,
   Menu,
   Network,
   Settings,
+  UploadCloud,
   Users,
   X,
   Zap,
@@ -28,6 +31,9 @@ const navItems = [
   { href: "/mapa-marica", label: "Mapa Maricá", icon: MapPin, group: "Mapas", module: "mapa_marica" },
   { href: "/comparativo", label: "Análises", icon: BarChart3, group: "Inteligência", module: "comparativo" },
   { href: "/relatorios", label: "Relatórios", icon: FileText, group: "Gestão", module: "relatorios" },
+  { href: "/importacao", label: "Importação", icon: UploadCloud, group: "Gestão", module: "importacao_dados" },
+  { href: "/geocodificacao", label: "Geocodificação", icon: MapPinned, group: "Gestão", module: "geocodificacao" },
+  { href: "/diagnostico", label: "Diagnóstico", icon: Gauge, group: "Gestão", module: "diagnostico" },
   { href: "/configuracoes", label: "Configurações", icon: Settings, group: "Gestão", module: "configuracoes" },
 ] as const;
 
@@ -159,3 +165,4 @@ export function AppLayout({ children }: { children: ReactNode }) {
     </div>
   );
 }
+

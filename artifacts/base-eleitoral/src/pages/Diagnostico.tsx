@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+﻿import { useMemo, useState } from "react";
 import {
   Activity,
   AlertTriangle,
@@ -105,7 +105,7 @@ export default function Diagnostico() {
       });
     }
 
-    await runCheck(add, "crud-leaders", "CRUD temporário", "Cadastros territoriais", runLeaderCrud);
+    await runCheck(add, "crud-operational", "CRUD temporário", "Cadastros e métricas mensais", runOperationalCrud);
 
     await runCheck(add, "mapbox", "Mapas", "Mapbox", async () => {
       const token = import.meta.env.VITE_MAPBOX_ACCESS_TOKEN;
@@ -153,16 +153,23 @@ export default function Diagnostico() {
     setCleanupRunning(true);
     try {
       const supabase = getSupabaseClient();
-      await Promise.all([
-        supabase.from("leaders").delete().ilike("full_name", "Teste Diagnóstico%"),
-      ]);
+      const { data: temporaryLeaders, error } = await supabase
+        .from("leaders")
+        .select("id")
+        .ilike("full_name", "Teste Diagnóstico%");
+      if (error) throw error;
+      const ids = (temporaryLeaders ?? []).map((item) => item.id);
+      if (ids.length) {
+        await supabase.from("leader_monthly_metrics").delete().in("leader_id", ids);
+        await supabase.from("leaders").delete().in("id", ids);
+      }
       setResults((current) => [
         {
           id: `cleanup-${Date.now()}`,
           name: "Limpeza de temporários",
           group: "Manutenção",
           status: "ok",
-          detail: "Registros temporários de diagnóstico foram removidos.",
+          detail: ids.length ? `${ids.length} registro(s) temporário(s) removido(s).` : "Nenhum registro temporário encontrado.",
         },
         ...current,
       ]);
@@ -268,7 +275,7 @@ export default function Diagnostico() {
           <div>
             <div className="font-extrabold">Como funciona</div>
             <p className="mt-1 text-sm font-medium leading-6">
-              O teste de CRUD cria um cadastro territorial temporário em Lideranças, edita o registro e remove tudo ao final. Se alguma etapa falhar, o detalhe aparece na tabela para orientar a correção.
+              O teste de CRUD cria um cadastro territorial temporário, registra uma métrica mensal, edita os dados e remove tudo ao final. Se alguma etapa falhar, o detalhe aparece na tabela para orientar a correção.
             </p>
           </div>
         </CardContent>
@@ -294,10 +301,10 @@ async function runCheck(
   }
 }
 
-async function runLeaderCrud() {
+async function runOperationalCrud() {
   const supabase = getSupabaseClient();
   const stamp = Date.now();
-  const { data, error } = await supabase.from("leaders").insert({
+  const { data: leader, error } = await supabase.from("leaders").insert({
     campaign_id: DEFAULT_CAMPAIGN_ID,
     full_name: `Teste Diagnóstico Liderança ${stamp}`,
     political_nickname: "Teste automático",
@@ -326,11 +333,30 @@ async function runLeaderCrud() {
   if (error) throw error;
 
   try {
-    const { error: updateError } = await supabase.from("leaders").update({ status: "Ativa", validated_votes: 12 }).eq("id", data.id);
-    if (updateError) throw updateError;
-    return "Criou, editou e removeu cadastro territorial temporário.";
+    const { data: metric, error: metricError } = await supabase.from("leader_monthly_metrics").insert({
+      campaign_id: DEFAULT_CAMPAIGN_ID,
+      leader_id: leader.id,
+      month_ref: "2026-06",
+      estimated_supporters: 20,
+      min_votes: 8,
+      max_votes: 20,
+      base_cost: 1000,
+      ceiling_cost: 1500,
+      extra_cost: 200,
+      notes: "Registro temporário criado pelo diagnóstico.",
+    }).select("*").single();
+    if (metricError) throw metricError;
+
+    const { error: updateLeaderError } = await supabase.from("leaders").update({ status: "Ativa", validated_votes: 12 }).eq("id", leader.id);
+    if (updateLeaderError) throw updateLeaderError;
+
+    const { error: updateMetricError } = await supabase.from("leader_monthly_metrics").update({ min_votes: 12, max_votes: 24 }).eq("id", metric.id);
+    if (updateMetricError) throw updateMetricError;
+
+    return "Criou, editou e removeu cadastro territorial e métrica mensal temporários.";
   } finally {
-    await supabase.from("leaders").delete().eq("id", data.id);
+    await supabase.from("leader_monthly_metrics").delete().eq("leader_id", leader.id);
+    await supabase.from("leaders").delete().eq("id", leader.id);
   }
 }
 
@@ -348,3 +374,4 @@ function getErrorMessage(error: unknown) {
   if (error && typeof error === "object" && "message" in error) return String((error as { message?: unknown }).message);
   return "Erro inesperado.";
 }
+

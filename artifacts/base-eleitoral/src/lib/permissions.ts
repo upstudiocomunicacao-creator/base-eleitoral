@@ -1,4 +1,4 @@
-import type { UserProfile } from "@/types/database";
+﻿import type { UserProfile } from "@/types/database";
 
 export const USER_ROLES = {
   admin: "Administrador",
@@ -44,21 +44,17 @@ export const ACTIONS = [
 
 export type PermissionAction = (typeof ACTIONS)[number];
 
-const operationalModules: PermissionModule[] = ["apoiadores", "prospeccao", "agenda", "demandas"];
+const operationalModules: PermissionModule[] = ["liderancas", "geocodificacao"];
 const readOnlyModules: PermissionModule[] = [
   "dashboard",
   "mapa_forca",
   "liderancas",
-  "apoiadores",
-  "prospeccao",
   "mapa_rj",
   "mapa_marica",
-  "zonas_eleitorais",
   "comparativo",
-  "agenda",
-  "demandas",
   "relatorios",
   "geocodificacao",
+  "diagnostico",
 ];
 
 function normalizeRole(role: string | null): UserRole {
@@ -86,23 +82,21 @@ export function hasPermission(
   }
 
   if (role === "coordenador_regional") {
-    if (moduleName === "configuracoes") return false;
+    if (["configuracoes", "importacao_dados", "diagnostico"].includes(moduleName)) return false;
     if (action === "delete" || action === "import") return false;
     if (action === "export") return ["dashboard", "comparativo", "relatorios"].includes(moduleName);
     return readOnlyModules.includes(moduleName);
   }
 
   if (role === "operador_campo") {
-    if (moduleName === "configuracoes" || moduleName === "relatorios") return false;
+    if (["configuracoes", "relatorios", "importacao_dados", "diagnostico"].includes(moduleName)) return false;
     if (action === "view") return readOnlyModules.includes(moduleName);
     if (["create", "edit"].includes(action)) return operationalModules.includes(moduleName);
     return false;
   }
 
   if (role === "lideranca") {
-    if (action === "view") return ["dashboard", "mapa_forca", "apoiadores", "prospeccao", "agenda", "demandas"].includes(moduleName);
-    if (action === "create") return ["apoiadores", "demandas"].includes(moduleName);
-    if (action === "edit") return ["apoiadores", "demandas"].includes(moduleName);
+    if (action === "view") return ["dashboard", "mapa_forca", "liderancas", "mapa_marica", "comparativo"].includes(moduleName);
     return false;
   }
 

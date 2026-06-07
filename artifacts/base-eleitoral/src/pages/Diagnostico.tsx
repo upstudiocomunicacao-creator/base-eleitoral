@@ -86,10 +86,10 @@ drop policy if exists "mvp_public_insert" on leader_monthly_metrics;
 drop policy if exists "mvp_public_update" on leader_monthly_metrics;
 drop policy if exists "mvp_public_delete" on leader_monthly_metrics;
 
-create policy "mvp_public_select" on leader_monthly_metrics for select to anon using (true);
-create policy "mvp_public_insert" on leader_monthly_metrics for insert to anon with check (true);
-create policy "mvp_public_update" on leader_monthly_metrics for update to anon using (true) with check (true);
-create policy "mvp_public_delete" on leader_monthly_metrics for delete to anon using (true);
+create policy "mvp_public_select" on leader_monthly_metrics for select to anon, authenticated using (true);
+create policy "mvp_public_insert" on leader_monthly_metrics for insert to anon, authenticated with check (true);
+create policy "mvp_public_update" on leader_monthly_metrics for update to anon, authenticated using (true) with check (true);
+create policy "mvp_public_delete" on leader_monthly_metrics for delete to anon, authenticated using (true);
 
 notify pgrst, 'reload schema';`;
 

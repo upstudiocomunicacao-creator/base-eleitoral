@@ -29,11 +29,15 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "@/hooks/use-toast";
 import { createLeader, deleteLeader, DEFAULT_CAMPAIGN_ID, isLeadersSupabaseReady, listLeaders, updateLeader } from "@/services/leaders";
+import { getMaricaDistrictForNeighborhood, getRJRegionForCity, maricaNeighborhoods, rjCities } from "@/services/operational";
 import type { Database, Leader } from "@/types/database";
 
 type LeaderInsert = Database["public"]["Tables"]["leaders"]["Insert"];
 type LeaderUpdate = Database["public"]["Tables"]["leaders"]["Update"];
 type AttentionLevel = "Crítico" | "Atenção" | "Estável" | "Forte";
+
+const rjCityOptions = [...rjCities] as string[];
+const maricaNeighborhoodOptions = [...maricaNeighborhoods] as string[];
 
 type Filters = {
   search: string;
@@ -100,10 +104,10 @@ const emptyForm: LeaderFormState = {
   street: "",
   number: "",
   complement: "",
-  neighborhood: "",
+  neighborhood: "Centro",
   city: "Maricá",
   state: "RJ",
-  territory_region: "",
+  territory_region: "Sede / Maricá",
   geographic_precision: "Média",
   internal_responsible: "Coordenação Territorial",
   registered_supporters: 0,
@@ -519,6 +523,20 @@ function LeadershipFormSheet({
     setRecord({ ...record, [key]: value });
   }
 
+  function updateCity(city: string) {
+    if (!record) return;
+    const isMarica = city === "Maricá";
+    const neighborhood = isMarica ? "Centro" : "Todos";
+    const territoryRegion = isMarica ? getMaricaDistrictForNeighborhood(neighborhood) : getRJRegionForCity(city);
+    setRecord({ ...record, city, state: "RJ", neighborhood, territory_region: territoryRegion });
+  }
+
+  function updateNeighborhood(neighborhood: string) {
+    if (!record) return;
+    const territoryRegion = record.city === "Maricá" ? getMaricaDistrictForNeighborhood(neighborhood) : getRJRegionForCity(record.city);
+    setRecord({ ...record, neighborhood, territory_region: territoryRegion });
+  }
+
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent className="w-full overflow-y-auto border-l-0 bg-slate-50 p-0 sm:max-w-4xl">
@@ -547,10 +565,14 @@ function LeadershipFormSheet({
               <TextField label="Rua" value={record.street} onChange={(value) => update("street", value)} />
               <TextField label="Número" value={record.number} onChange={(value) => update("number", value)} />
               <TextField label="Complemento" value={record.complement} onChange={(value) => update("complement", value)} />
-              <TextField required label="Bairro" value={record.neighborhood} onChange={(value) => update("neighborhood", value)} />
-              <TextField required label="Cidade" value={record.city} onChange={(value) => update("city", value)} />
+              {record.city === "Maricá" ? (
+                <SelectTextField required label="Bairro" value={record.neighborhood} values={maricaNeighborhoodOptions} onChange={updateNeighborhood} />
+              ) : (
+                <SelectTextField required label="Bairro" value="Todos" values={["Todos"]} onChange={updateNeighborhood} />
+              )}
+              <SelectTextField required label="Cidade" value={record.city} values={rjCityOptions} onChange={updateCity} />
               <TextField required label="Estado" value={record.state} onChange={(value) => update("state", value)} />
-              <TextField label="Região de atuação" value={record.territory_region} onChange={(value) => update("territory_region", value)} />
+              <TextField readOnly label={record.city === "Maricá" ? "Distrito automático" : "Região automática"} value={record.territory_region} onChange={() => undefined} />
               <SelectTextField required label="Precisão geográfica" value={record.geographic_precision} values={["Alta", "Média alta", "Média", "Baixa", "Muito baixa"]} onChange={(value) => update("geographic_precision", value)} />
             </FormSection>
 
@@ -701,8 +723,8 @@ function FilterSelect({ label, value, values, onChange }: { label: string; value
   );
 }
 
-function TextField({ label, value, onChange, type = "text", required = false }: { label: string; value: string; onChange: (value: string) => void; type?: string; required?: boolean }) {
-  return <Field label={label}><Input required={required} type={type} value={value} onChange={(event) => onChange(event.target.value)} /></Field>;
+function TextField({ label, value, onChange, type = "text", required = false, readOnly = false }: { label: string; value: string; onChange: (value: string) => void; type?: string; required?: boolean; readOnly?: boolean }) {
+  return <Field label={label}><Input required={required} readOnly={readOnly} type={type} value={value} onChange={(event) => onChange(event.target.value)} className={readOnly ? "bg-slate-100 text-slate-600" : undefined} /></Field>;
 }
 
 function NumberField({ label, value, onChange }: { label: string; value: number; onChange: (value: number) => void }) {
@@ -790,6 +812,12 @@ function IconButton({ label, icon: Icon, onClick, danger = false }: { label: str
 }
 
 function toFormState(leader: Leader): LeaderFormState {
+  const city = rjCityOptions.includes(leader.city) ? leader.city : "Maricá";
+  const isMarica = city === "Maricá";
+  const neighborhood = isMarica
+    ? (maricaNeighborhoodOptions.includes(leader.neighborhood) ? leader.neighborhood : "Centro")
+    : "Todos";
+
   return {
     id: leader.id,
     full_name: leader.full_name,
@@ -802,10 +830,10 @@ function toFormState(leader: Leader): LeaderFormState {
     street: leader.street ?? "",
     number: leader.number ?? "",
     complement: leader.complement ?? "",
-    neighborhood: leader.neighborhood,
-    city: leader.city,
+    neighborhood,
+    city,
     state: leader.state,
-    territory_region: leader.territory_region ?? "",
+    territory_region: isMarica ? getMaricaDistrictForNeighborhood(neighborhood) : getRJRegionForCity(city),
     geographic_precision: leader.geographic_precision,
     internal_responsible: leader.internal_responsible ?? "",
     registered_supporters: leader.registered_supporters,
@@ -823,6 +851,8 @@ function toFormState(leader: Leader): LeaderFormState {
 }
 
 function toInsertPayload(form: LeaderFormState): LeaderInsert {
+  const territory = normalizeTerritory(form);
+
   return {
     campaign_id: DEFAULT_CAMPAIGN_ID,
     full_name: form.full_name.trim(),
@@ -835,10 +865,10 @@ function toInsertPayload(form: LeaderFormState): LeaderInsert {
     street: nullable(form.street),
     number: nullable(form.number),
     complement: nullable(form.complement),
-    neighborhood: form.neighborhood.trim(),
-    city: form.city.trim(),
+    neighborhood: territory.neighborhood,
+    city: territory.city,
     state: form.state.trim(),
-    territory_region: nullable(form.territory_region),
+    territory_region: territory.territory_region,
     geographic_precision: form.geographic_precision,
     internal_responsible: nullable(form.internal_responsible),
     registered_supporters: Number(form.registered_supporters || 0),
@@ -857,6 +887,17 @@ function toInsertPayload(form: LeaderFormState): LeaderInsert {
 
 function toUpdatePayload(form: LeaderFormState): LeaderUpdate {
   return toInsertPayload(form);
+}
+
+function normalizeTerritory(form: LeaderFormState) {
+  const city = rjCityOptions.includes(form.city) ? form.city : "Maricá";
+  const isMarica = city === "Maricá";
+  const neighborhood = isMarica && maricaNeighborhoodOptions.includes(form.neighborhood) ? form.neighborhood : "Todos";
+  return {
+    city,
+    neighborhood,
+    territory_region: isMarica ? getMaricaDistrictForNeighborhood(neighborhood) : getRJRegionForCity(city),
+  };
 }
 
 function validateForm(form: LeaderFormState) {

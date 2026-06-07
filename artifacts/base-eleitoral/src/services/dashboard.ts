@@ -1,5 +1,6 @@
 import { getSupabaseClient, isSupabaseConfigured } from "@/lib/supabaseClient";
-import type { Campaign, Demand, ElectoralZone, FieldAgenda, Leader, Municipality, Neighborhood, Prospect, Supporter } from "@/types/database";
+import type { Campaign, Demand, ElectoralZone, FieldAgenda, Leader, LeaderMonthlyMetric, Municipality, Neighborhood, Prospect, Supporter } from "@/types/database";
+import { listLeaderMonthlyMetrics } from "./leaderMonthlyMetrics";
 import { listLeaders } from "./leaders";
 
 export type DashboardDataset = {
@@ -12,6 +13,7 @@ export type DashboardDataset = {
   demands: Demand[];
   municipalities: Municipality[];
   neighborhoods: Neighborhood[];
+  leaderMonthlyMetrics: LeaderMonthlyMetric[];
   warnings: string[];
 };
 
@@ -29,10 +31,20 @@ export type DashboardFilters = {
 export type DashboardSummary = {
   totalLeaders: number;
   activeLeaders: number;
+  coordinatorsRJ: number;
+  coordinatorsMarica: number;
+  territorialLeaders: number;
   totalSupporters: number;
   estimatedSupporters: number;
   declaredVotes: number;
   validatedVotes: number;
+  minVotes: number;
+  maxVotes: number;
+  baseCost: number;
+  ceilingCost: number;
+  extraCost: number;
+  costPerMinVote: number;
+  latestMonth: string;
   confidenceIndex: number;
   municipalitiesWithAction: number;
   coveredNeighborhoods: number;
@@ -83,6 +95,7 @@ const emptyDataset: DashboardDataset = {
   demands: [],
   municipalities: [],
   neighborhoods: [],
+  leaderMonthlyMetrics: [],
   warnings: [],
 };
 
@@ -91,11 +104,12 @@ export function isDashboardSupabaseReady() {
 }
 
 export async function getDashboardDataset(): Promise<DashboardDataset> {
-  const [campaigns, leaders, municipalities, neighborhoods] = await Promise.all([
+  const [campaigns, leaders, municipalities, neighborhoods, leaderMonthlyMetrics] = await Promise.all([
     safeLoad("campaigns", listCampaigns()),
     safeLoad("leaders", listLeaders()),
     safeLoad("municipalities", listMunicipalities()),
     safeLoad("neighborhoods", listNeighborhoods()),
+    safeLoad("leader_monthly_metrics", listLeaderMonthlyMetrics()),
   ]);
 
   return {
@@ -108,7 +122,8 @@ export async function getDashboardDataset(): Promise<DashboardDataset> {
     demands: [],
     municipalities: municipalities.data,
     neighborhoods: neighborhoods.data,
-    warnings: [campaigns, leaders, municipalities, neighborhoods].flatMap((item) => item.warning ? [item.warning] : []),
+    leaderMonthlyMetrics: leaderMonthlyMetrics.data,
+    warnings: [campaigns, leaders, municipalities, neighborhoods, leaderMonthlyMetrics].flatMap((item) => item.warning ? [item.warning] : []),
   };
 }
 
@@ -168,6 +183,7 @@ export function getFilteredDataset(dataset: DashboardDataset, filters: Partial<D
     matchesPeriod(period, item.created_at),
   );
   const leaderIds = new Set(leaders.map((item) => item.id));
+  const leaderMonthlyMetrics = dataset.leaderMonthlyMetrics.filter((item) => leaderIds.has(item.leader_id));
 
   const supporters = dataset.supporters.filter((item) =>
     filterLocation(item) &&
@@ -217,31 +233,54 @@ export function getFilteredDataset(dataset: DashboardDataset, filters: Partial<D
     electoralZones,
     fieldAgenda,
     demands,
+    leaderMonthlyMetrics,
     municipalities: dataset.municipalities.filter((item) => selectMatches(state, item.state) && selectMatches(city, item.name)),
     neighborhoods: dataset.neighborhoods.filter((item) => filterLocation({ state: item.state, city: item.city, neighborhood: item.name })),
   };
 }
 
 export function computeDashboard(dataset: DashboardDataset = emptyDataset): DashboardComputed {
-  const totalValidatedFromLeaders = sum(dataset.leaders, "validated_votes");
-  const validatedVotes = totalValidatedFromLeaders;
-  const declaredVotes = sum(dataset.leaders, "declared_votes");
+  const latestMonth = getLatestMonth(dataset.leaderMonthlyMetrics);
+  const currentMetrics = latestMonth ? dataset.leaderMonthlyMetrics.filter((item) => item.month_ref === latestMonth) : [];
+  const currentMetricMap = getCurrentMetricMap(dataset);
+  const hasMonthlyMetrics = currentMetrics.length > 0;
+  const validatedVotes = hasMonthlyMetrics ? sumMetric(currentMetrics, "min_votes") : sum(dataset.leaders, "validated_votes");
+  const declaredVotes = hasMonthlyMetrics ? sumMetric(currentMetrics, "max_votes") : sum(dataset.leaders, "declared_votes");
+  const minVotes = hasMonthlyMetrics ? sumMetric(currentMetrics, "min_votes") : validatedVotes;
+  const maxVotes = hasMonthlyMetrics ? sumMetric(currentMetrics, "max_votes") : declaredVotes;
+  const baseCost = sumMetric(currentMetrics, "base_cost");
+  const ceilingCost = sumMetric(currentMetrics, "ceiling_cost");
+  const extraCost = sumMetric(currentMetrics, "extra_cost");
+  const totalCost = ceilingCost + extraCost;
   const mappedVoters = dataset.neighborhoods.reduce((total, item) => total + Number(item.estimated_voters ?? 0), 0);
-  const generalVoteGoal = dataset.campaigns[0]?.general_vote_goal || declaredVotes || validatedVotes || 0;
+  const generalVoteGoal = maxVotes || dataset.campaigns[0]?.general_vote_goal || declaredVotes || validatedVotes || 0;
   const activeCitySet = unique(dataset.leaders.map((item) => item.city).filter((city) => normalize(city) !== "marica"));
   const coveredNeighborhoods = unique(dataset.leaders.filter((item) => normalize(item.city) === "marica").map((item) => item.neighborhood));
-  const estimatedSupporters = dataset.leaders.reduce((total, item) => total + Number(item.estimated_direct_supporters ?? 0) + Number(item.estimated_indirect_supporters ?? 0), 0);
+  const estimatedSupporters = hasMonthlyMetrics ? sumMetric(currentMetrics, "estimated_supporters") : dataset.leaders.reduce((total, item) => total + Number(item.estimated_direct_supporters ?? 0) + Number(item.estimated_indirect_supporters ?? 0) + Number(item.registered_supporters ?? 0), 0);
   const confidenceIndex = dataset.leaders.length ? Math.round(dataset.leaders.reduce((total, item) => total + confidenceScore(item.confidence_level), 0) / dataset.leaders.length) : 0;
+  const coordinatorsRJ = dataset.leaders.filter((item) => isCoordinator(item) && normalize(item.city) !== "marica").length;
+  const coordinatorsMarica = dataset.leaders.filter((item) => isCoordinator(item) && normalize(item.city) === "marica").length;
+  const territorialLeaders = dataset.leaders.filter((item) => normalize(item.leader_type).includes("lider")).length;
   const priorityRegions = buildPriorityRegions(dataset);
 
   return {
     summary: {
       totalLeaders: dataset.leaders.length,
       activeLeaders: dataset.leaders.filter((item) => normalize(item.status).includes("ativa") || normalize(item.status).includes("ativo")).length,
+      coordinatorsRJ,
+      coordinatorsMarica,
+      territorialLeaders,
       totalSupporters: estimatedSupporters,
       estimatedSupporters,
       declaredVotes,
       validatedVotes,
+      minVotes,
+      maxVotes,
+      baseCost,
+      ceilingCost,
+      extraCost,
+      costPerMinVote: minVotes ? round(totalCost / minVotes) : 0,
+      latestMonth: latestMonth ? formatMonth(latestMonth) : "Cadastro",
       confidenceIndex,
       municipalitiesWithAction: activeCitySet.length,
       coveredNeighborhoods: coveredNeighborhoods.length,
@@ -252,15 +291,15 @@ export function computeDashboard(dataset: DashboardDataset = emptyDataset): Dash
       openDemands: 0,
       upcomingActions: 0,
       priorityRegions: priorityRegions.filter((item) => item.priority === "Crítica" || item.priority === "Alta").length,
-      generalCoverage: generalVoteGoal ? round((validatedVotes / generalVoteGoal) * 100) : 0,
+      generalCoverage: generalVoteGoal ? round((minVotes / generalVoteGoal) * 100) : 0,
       validationRate: declaredVotes ? round((validatedVotes / declaredVotes) * 100) : 0,
     },
     weeklyGrowth: getWeeklyGrowth(dataset),
     leaderRanking: dataset.leaders
       .slice()
-      .sort((a, b) => Number(b.validated_votes ?? 0) - Number(a.validated_votes ?? 0))
+      .sort((a, b) => getMetricValue(b, currentMetricMap, "min_votes", b.validated_votes ?? 0) - getMetricValue(a, currentMetricMap, "min_votes", a.validated_votes ?? 0))
       .slice(0, 8)
-      .map((item) => ({ nome: item.full_name, valor: Number(item.validated_votes ?? 0) })),
+      .map((item) => ({ nome: item.full_name, valor: getMetricValue(item, currentMetricMap, "min_votes", item.validated_votes ?? 0) })),
     neighborhoodCoverage: getNeighborhoodCoverageRows(dataset),
     voteComparison: getVoteComparison(dataset),
     supporterStatus: countSeries(dataset.supporters.map((item) => item.political_status)),
@@ -315,12 +354,13 @@ function getWeeklyGrowth(dataset: DashboardDataset) {
 }
 
 function getNeighborhoodCoverageRows(dataset: DashboardDataset) {
+  const metricMap = getCurrentMetricMap(dataset);
   return getLeanTerritoryGroups(dataset).map(({ name, leaders }) => {
     const votersReference = dataset.neighborhoods.find((item) => normalize(item.name) === normalize(name));
     const eleitores = Number(votersReference?.estimated_voters ?? 0);
-    const validados = leaders.reduce((total, item) => total + Number(item.validated_votes ?? 0), 0);
-    const declarados = leaders.reduce((total, item) => total + Number(item.declared_votes ?? 0), 0);
-    const estimatedSupport = leaders.reduce((total, item) => total + Number(item.estimated_direct_supporters ?? 0) + Number(item.estimated_indirect_supporters ?? 0), 0);
+    const validados = leaders.reduce((total, item) => total + getMetricValue(item, metricMap, "min_votes", item.validated_votes ?? 0), 0);
+    const declarados = leaders.reduce((total, item) => total + getMetricValue(item, metricMap, "max_votes", item.declared_votes ?? 0), 0);
+    const estimatedSupport = leaders.reduce((total, item) => total + getMetricValue(item, metricMap, "estimated_supporters", Number(item.estimated_direct_supporters ?? 0) + Number(item.estimated_indirect_supporters ?? 0) + Number(item.registered_supporters ?? 0)), 0);
     return {
       nome: name,
       cobertura: eleitores ? round((validados / eleitores) * 100) : declarados ? round((validados / declarados) * 100) : 0,
@@ -332,11 +372,12 @@ function getNeighborhoodCoverageRows(dataset: DashboardDataset) {
 }
 
 function getVoteComparison(dataset: DashboardDataset) {
+  const metricMap = getCurrentMetricMap(dataset);
   return getLeanTerritoryGroups(dataset)
     .map(({ name, leaders }) => ({
       nome: name,
-      declarados: leaders.reduce((total, item) => total + Number(item.declared_votes ?? 0), 0),
-      validados: leaders.reduce((total, item) => total + Number(item.validated_votes ?? 0), 0),
+      declarados: leaders.reduce((total, item) => total + getMetricValue(item, metricMap, "max_votes", item.declared_votes ?? 0), 0),
+      validados: leaders.reduce((total, item) => total + getMetricValue(item, metricMap, "min_votes", item.validated_votes ?? 0), 0),
     }))
     .sort((a, b) => b.validados - a.validados)
     .slice(0, 8);
@@ -363,12 +404,13 @@ function getUpcomingAgenda(actions: FieldAgenda[]) {
 }
 
 function buildPriorityRegions(dataset: DashboardDataset): PriorityRegion[] {
+  const metricMap = getCurrentMetricMap(dataset);
   return getLeanTerritoryGroups(dataset).map(({ name, city, leaders }) => {
     const neighborhood = city === "Maricá" ? dataset.neighborhoods.find((item) => normalize(item.name) === normalize(name)) : null;
     const estimatedVoters = Number(neighborhood?.estimated_voters ?? 0);
-    const validatedVotes = leaders.reduce((total, item) => total + Number(item.validated_votes ?? 0), 0);
-    const declaredVotes = leaders.reduce((total, item) => total + Number(item.declared_votes ?? 0), 0);
-    const supporters = leaders.reduce((total, item) => total + Number(item.estimated_direct_supporters ?? 0) + Number(item.estimated_indirect_supporters ?? 0), 0);
+    const validatedVotes = leaders.reduce((total, item) => total + getMetricValue(item, metricMap, "min_votes", item.validated_votes ?? 0), 0);
+    const declaredVotes = leaders.reduce((total, item) => total + getMetricValue(item, metricMap, "max_votes", item.declared_votes ?? 0), 0);
+    const supporters = leaders.reduce((total, item) => total + getMetricValue(item, metricMap, "estimated_supporters", Number(item.estimated_direct_supporters ?? 0) + Number(item.estimated_indirect_supporters ?? 0) + Number(item.registered_supporters ?? 0)), 0);
     const coverage = estimatedVoters ? validatedVotes / estimatedVoters : declaredVotes ? validatedVotes / declaredVotes : 0;
     const confidence = leaders.length ? leaders.reduce((total, item) => total + confidenceScore(item.confidence_level), 0) / leaders.length : 0;
     const score = (leaders.length <= 1 ? 3 : 0) + (coverage < 0.35 ? 3 : 0) + (supporters >= 200 && validatedVotes < 80 ? 2 : 0) + (confidence < 60 ? 2 : 0);
@@ -419,6 +461,34 @@ function confidenceScore(value: string) {
   if (normalized.includes("medio")) return 60;
   if (normalized.includes("baixo")) return 30;
   return 10;
+}
+
+function isCoordinator(leader: Leader) {
+  return normalize(leader.leader_type).includes("coord");
+}
+
+function getLatestMonth(metrics: LeaderMonthlyMetric[]) {
+  return metrics.map((item) => item.month_ref).filter(Boolean).sort((a, b) => b.localeCompare(a))[0] ?? null;
+}
+
+function getCurrentMetricMap(dataset: DashboardDataset) {
+  const latestMonth = getLatestMonth(dataset.leaderMonthlyMetrics);
+  const metrics = latestMonth ? dataset.leaderMonthlyMetrics.filter((item) => item.month_ref === latestMonth) : [];
+  return new Map(metrics.map((item) => [item.leader_id, item]));
+}
+
+function getMetricValue(leader: Leader, metricMap: Map<string, LeaderMonthlyMetric>, key: keyof Pick<LeaderMonthlyMetric, "estimated_supporters" | "min_votes" | "max_votes" | "base_cost" | "ceiling_cost" | "extra_cost">, fallback: number) {
+  return Number(metricMap.get(leader.id)?.[key] ?? fallback ?? 0);
+}
+
+function sumMetric(metrics: LeaderMonthlyMetric[], key: keyof Pick<LeaderMonthlyMetric, "estimated_supporters" | "min_votes" | "max_votes" | "base_cost" | "ceiling_cost" | "extra_cost">) {
+  return metrics.reduce((total, item) => total + Number(item[key] ?? 0), 0);
+}
+
+function formatMonth(value: string) {
+  const [year, month] = value.split("-");
+  if (!year || !month) return value;
+  return `${month}/${year}`;
 }
 
 function matchesPeriod(period: string, rawDate: string) {

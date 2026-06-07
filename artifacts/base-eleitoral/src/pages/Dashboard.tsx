@@ -1,15 +1,14 @@
 import { ReactNode, useEffect, useMemo, useState } from "react";
 import {
-  AlertCircle,
   AlertTriangle,
   BarChart2,
   Building2,
   CheckCircle2,
+  CircleDollarSign,
   MapPin,
   RefreshCw,
   ShieldCheck,
   Star,
-  Target,
   TrendingUp,
   Users,
   Zap,
@@ -57,15 +56,16 @@ const emptyFilters: DashboardFilters = {
 
 const statCards = [
   { key: "totalLeaders", label: "Cadastros", icon: Users, tone: "blue" },
-  { key: "activeLeaders", label: "Ativas", icon: ShieldCheck, tone: "emerald" },
+  { key: "coordinatorsRJ", label: "Coord. RJ", icon: Building2, tone: "indigo" },
+  { key: "coordinatorsMarica", label: "Coord. Maricá", icon: MapPin, tone: "emerald" },
+  { key: "territorialLeaders", label: "Lideranças", icon: ShieldCheck, tone: "cyan" },
   { key: "estimatedSupporters", label: "Apoio estim.", icon: BarChart2, tone: "violet" },
-  { key: "declaredVotes", label: "Declarados", icon: Star, tone: "amber" },
-  { key: "validatedVotes", label: "Validados", icon: CheckCircle2, tone: "green" },
-  { key: "confidenceIndex", label: "Confiança", icon: TrendingUp, tone: "cyan" },
+  { key: "minVotes", label: "Votos mín.", icon: CheckCircle2, tone: "green" },
+  { key: "maxVotes", label: "Votos máx.", icon: Star, tone: "amber" },
+  { key: "ceilingCost", label: "Custo teto", icon: CircleDollarSign, tone: "orange" },
+  { key: "costPerMinVote", label: "Custo/voto", icon: TrendingUp, tone: "cyan" },
   { key: "municipalitiesWithAction", label: "Cidades RJ", icon: Building2, tone: "indigo" },
   { key: "coveredNeighborhoods", label: "Bairros Maricá", icon: MapPin, tone: "rose" },
-  { key: "generalVoteGoal", label: "Meta geral", icon: Target, tone: "violet" },
-  { key: "distanceToGoal", label: "Distância", icon: AlertCircle, tone: "orange" },
   { key: "priorityRegions", label: "Prioritárias", icon: AlertTriangle, tone: "red" },
 ] as const;
 
@@ -154,7 +154,7 @@ export default function Dashboard() {
             icon={icon}
             tone={tone}
             loading={loading}
-            value={computed?.summary[key] ?? 0}
+            value={formatDashboardMetric(key, computed?.summary[key] ?? 0)}
           />
         ))}
       </div>
@@ -205,8 +205,9 @@ export default function Dashboard() {
 }
 
 function ExecutivePulse({ computed, loading }: { computed: DashboardComputed | null; loading: boolean }) {
-  const validationRate = computed?.summary.validationRate ?? 0;
+  const conversionRate = computed?.summary.estimatedSupporters ? Math.round(((computed?.summary.minVotes ?? 0) / computed.summary.estimatedSupporters) * 100) : 0;
   const coverage = computed?.summary.generalCoverage ?? 0;
+  const month = computed?.summary.latestMonth ?? "Cadastro";
   return (
     <div className="grid gap-4 lg:grid-cols-[1.35fr_0.65fr]">
       <div className="premium-card rounded-lg p-5">
@@ -218,22 +219,22 @@ function ExecutivePulse({ computed, loading }: { computed: DashboardComputed | n
             </div>
             {loading ? <Skeleton className="mt-3 h-8 w-80 rounded-lg" /> : (
               <div className="mt-2 text-2xl font-extrabold tracking-tight text-slate-950">
-                {validationRate}% dos votos declarados estão validados
+                {formatNumber(computed?.summary.minVotes ?? 0)} a {formatNumber(computed?.summary.maxVotes ?? 0)} votos estimados
               </div>
             )}
             <p className="mt-1 text-sm font-medium text-slate-500">
-              Cobertura geral estimada: {coverage}% dos eleitores mapeados.
+              Recorte {month}. Conversão mínima estimada: {conversionRate}% do apoio cadastrado. Cobertura do teto: {coverage}%.
             </p>
           </div>
           <div className="min-w-44 rounded-lg border border-blue-100 bg-blue-50 p-4">
-            <div className="text-xs font-bold uppercase tracking-[0.12em] text-blue-700">Validados</div>
+            <div className="text-xs font-bold uppercase tracking-[0.12em] text-blue-700">Custo por voto</div>
             <div className="mt-1 text-3xl font-extrabold text-blue-900">
-              {formatNumber(computed?.summary.validatedVotes ?? 0)}
+              {formatCurrency(computed?.summary.costPerMinVote ?? 0)}
             </div>
           </div>
         </div>
         <div className="mt-5 h-2 overflow-hidden rounded-full bg-slate-100">
-          <div className="h-full rounded-full bg-gradient-to-r from-blue-600 via-cyan-500 to-emerald-500" style={{ width: `${Math.min(validationRate, 100)}%` }} />
+          <div className="h-full rounded-full bg-gradient-to-r from-blue-600 via-cyan-500 to-emerald-500" style={{ width: `${Math.min(conversionRate, 100)}%` }} />
         </div>
       </div>
 
@@ -501,6 +502,15 @@ function normalize(value: string | null | undefined) {
 
 function formatNumber(value: number) {
   return Number(value ?? 0).toLocaleString("pt-BR");
+}
+
+function formatCurrency(value: number) {
+  return Number(value ?? 0).toLocaleString("pt-BR", { style: "currency", currency: "BRL", maximumFractionDigits: 0 });
+}
+
+function formatDashboardMetric(key: string, value: number | string) {
+  if (key === "ceilingCost" || key === "costPerMinVote") return formatCurrency(Number(value));
+  return value;
 }
 
 function getErrorMessage(error: unknown) {

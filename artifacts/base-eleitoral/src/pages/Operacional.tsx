@@ -55,7 +55,8 @@ import {
   type OperationalScope,
 } from "@/services/operational";
 import { isLeadersSupabaseReady, listLeaders } from "@/services/leaders";
-import type { Leader } from "@/types/database";
+import { listLeaderMonthlyMetrics } from "@/services/leaderMonthlyMetrics";
+import type { Leader, LeaderMonthlyMetric } from "@/types/database";
 
 const statusTone: Record<string, string> = {
   Ativo: "border-emerald-200 bg-emerald-50 text-emerald-700",
@@ -100,15 +101,18 @@ export default function Operacional() {
 
     setLoadingRealData(true);
     try {
-      const leaders = await listLeaders();
+      const [leaders, monthlyMetrics] = await Promise.all([
+        listLeaders(),
+        listLeaderMonthlyMetrics().catch(() => [] as LeaderMonthlyMetric[]),
+      ]);
       if (!leaders.length) {
         setActors(operationalActors);
         setDataMessage("Nenhuma liderança real encontrada. Usando dados mockados de referência.");
         return;
       }
 
-      setActors(leaders.map(leaderToOperationalActor));
-      setDataMessage("Dados reais carregados de Lideranças. Custos mensais aguardam o centro de custos.");
+      setActors(leaders.map((leader) => leaderToOperationalActor(leader, monthlyMetrics)));
+      setDataMessage(monthlyMetrics.length ? "Dados reais carregados com centro de custos mensal." : "Dados reais carregados de Lideranças. Custos mensais aguardam o centro de custos.");
     } catch {
       setActors(operationalActors);
       setDataMessage("Não foi possível carregar Lideranças reais. Usando dados mockados de referência.");
@@ -746,7 +750,7 @@ function Connector() {
   return <div className="mx-auto h-8 w-px bg-gradient-to-b from-blue-200 to-emerald-200" />;
 }
 
-function leaderToOperationalActor(leader: Leader): ForceActor {
+function leaderToOperationalActor(leader: Leader, monthlyMetrics: LeaderMonthlyMetric[] = []): ForceActor {
   const city = leader.city || "Maricá";
   const isMarica = normalizeText(city) === "marica";
   const scope: OperationalScope = isMarica ? "marica" : "rj";
@@ -758,6 +762,8 @@ function leaderToOperationalActor(leader: Leader): ForceActor {
   const validatedVotes = Number(leader.validated_votes ?? 0);
   const minVotes = validatedVotes || Math.round(declaredVotes * 0.6);
   const maxVotes = declaredVotes || estimatedSupporters;
+
+  const metricsByMonth = monthlyMetrics.filter((item) => item.leader_id === leader.id);
 
   return {
     id: leader.id,
@@ -774,16 +780,29 @@ function leaderToOperationalActor(leader: Leader): ForceActor {
     latitude: leader.latitude ?? undefined,
     longitude: leader.longitude ?? undefined,
     notes: leader.notes ?? undefined,
-    monthly: operationalMonths.map((item) => ({
-      month: item,
-      estimatedSupporters,
-      minVotes,
-      maxVotes,
-      baseCost: 0,
-      ceilingCost: 0,
-      extraCost: 0,
-    })),
+    monthly: operationalMonths.map((item) => {
+      const metric = metricsByMonth.find((row) => formatMetricMonth(row.month_ref) === item);
+      return {
+        month: item,
+        estimatedSupporters: metric?.estimated_supporters ?? estimatedSupporters,
+        minVotes: metric?.min_votes ?? minVotes,
+        maxVotes: metric?.max_votes ?? maxVotes,
+        baseCost: Number(metric?.base_cost ?? 0),
+        ceilingCost: Number(metric?.ceiling_cost ?? 0),
+        extraCost: Number(metric?.extra_cost ?? 0),
+      };
+    }),
   };
+}
+
+function formatMetricMonth(value: string) {
+  const date = new Date(`${value.slice(0, 10)}T00:00:00`);
+  const month = date.toLocaleDateString("pt-BR", { month: "short" }).replace(".", "");
+  return `${capitalize(month)}/${String(date.getFullYear()).slice(-2)}`;
+}
+
+function capitalize(value: string) {
+  return value.charAt(0).toUpperCase() + value.slice(1);
 }
 
 function toForceStatus(status: string): ForceStatus {

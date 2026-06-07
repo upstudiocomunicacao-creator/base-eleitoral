@@ -301,6 +301,19 @@ export type ImportHistory = {
   created_at: string;
 };
 
+export type LeaderMonthlyMetric = RowBase & {
+  campaign_id: string;
+  leader_id: string;
+  month_ref: string;
+  estimated_supporters: number;
+  min_votes: number;
+  max_votes: number;
+  base_cost: number;
+  ceiling_cost: number;
+  extra_cost: number;
+  notes: string | null;
+};
+
 export type Database = {
   public: {
     Tables: {
@@ -317,6 +330,7 @@ export type Database = {
       audit_logs: Table<AuditLog>;
       report_history: Table<ReportHistory>;
       import_history: Table<ImportHistory>;
+      leader_monthly_metrics: Table<LeaderMonthlyMetric>;
     };
     Views: Record<string, never>;
     Functions: Record<string, never>;

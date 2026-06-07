@@ -1,5 +1,9 @@
 ﻿import type { EnrichedTerritoryRecord, HeatMode, TerritoryRecord } from "./types";
 
+import { getMaricaDistrictForNeighborhood, getRJRegionForCity } from "@/services/operational";
+import type { Leader, LeaderMonthlyMetric } from "@/types/database";
+import type { TerritoryScope } from "./types";
+
 export const heatModes: Array<{ key: HeatMode; label: string }> = [
   { key: "forca", label: "For\u00e7a territorial" },
   { key: "apoiadores", label: "Apoio estimado" },
@@ -53,6 +57,45 @@ const citySeeds: Seed[] = [
 export const stateTerritories = complete(stateSeeds);
 export const cityTerritories = complete(citySeeds);
 
+export function buildOperationalTerritories(scope: TerritoryScope, leaders: Leader[], monthlyMetrics: LeaderMonthlyMetric[]): TerritoryRecord[] {
+  if (!leaders.length) return scope === "state" ? stateTerritories : cityTerritories;
+
+  const latestMonth = getLatestMonth(monthlyMetrics);
+  const monthMetrics = latestMonth ? monthlyMetrics.filter((metric) => metric.month_ref === latestMonth) : [];
+  const metricsByLeader = new Map(monthMetrics.map((metric) => [metric.leader_id, metric]));
+  const baseSeeds = scope === "state" ? stateSeeds : citySeeds;
+  const baseByName = new Map(baseSeeds.map((record) => [normalizeText(record.name), record]));
+  const grouped = new Map<string, Leader[]>();
+
+  for (const leader of leaders) {
+    const isMarica = normalizeText(leader.city) === "marica";
+    if (scope === "state" && isMarica) continue;
+    if (scope === "city" && !isMarica) continue;
+
+    const territory = scope === "state" ? leader.city : leader.neighborhood;
+    if (!territory) continue;
+
+    const key = normalizeText(territory);
+    grouped.set(key, [...(grouped.get(key) ?? []), leader]);
+  }
+
+  const records = baseSeeds.map((seedRecord, index) => {
+    const key = normalizeText(seedRecord.name);
+    return grouped.has(key)
+      ? buildRecordFromLeaders(scope, seedRecord.name, grouped.get(key) ?? [], metricsByLeader, seedRecord, index)
+      : buildEmptyRecord(scope, seedRecord, index);
+  });
+
+  for (const [key, group] of grouped) {
+    if (baseByName.has(key)) continue;
+    const name = scope === "state" ? group[0]?.city : group[0]?.neighborhood;
+    if (!name) continue;
+    records.push(buildRecordFromLeaders(scope, name, group, metricsByLeader, undefined, records.length));
+  }
+
+  return complete(records);
+}
+
 export function enrichTerritory(record: TerritoryRecord): EnrichedTerritoryRecord {
   const coverage = pct(record.validatedVotes, record.estimatedElectors);
   const goalProgress = pct(record.validatedVotes, record.target);
@@ -81,6 +124,83 @@ export function enrichTerritory(record: TerritoryRecord): EnrichedTerritoryRecor
       sem_cobertura: Math.round(Math.min(100, (1 - Math.min(coverage / 5, 1)) * 100)),
     },
     analysis: buildAnalysis(record.name, record.type, record.status, record.priority, record.leaders, coverage, record.validatedVotes, record.target),
+  };
+}
+
+function buildRecordFromLeaders(
+  scope: TerritoryScope,
+  name: string,
+  leaders: Leader[],
+  metricsByLeader: Map<string, LeaderMonthlyMetric>,
+  seedRecord: Seed | undefined,
+  index: number,
+): Seed {
+  const isState = scope === "state";
+  const metrics = leaders.map((leader) => metricsByLeader.get(leader.id)).filter((metric): metric is LeaderMonthlyMetric => Boolean(metric));
+  const supporters = metrics.length ? sum(metrics, (metric) => metric.estimated_supporters) : sum(leaders, getLeaderSupporters);
+  const declaredVotes = metrics.length ? sum(metrics, (metric) => metric.max_votes) : sum(leaders, (leader) => leader.declared_votes ?? 0);
+  const validatedVotes = metrics.length ? sum(metrics, (metric) => metric.min_votes) : sum(leaders, (leader) => leader.validated_votes ?? 0);
+  const target = Math.max(declaredVotes, validatedVotes, Math.round(supporters * 0.72), 1);
+  const estimatedElectors = Math.max(seedRecord?.estimatedElectors ?? 0, target * (isState ? 45 : 18), supporters * (isState ? 16 : 8), isState ? 12000 : 2800);
+  const coverage = pct(validatedVotes, estimatedElectors);
+  const status = getOperationalStatus(leaders.length, coverage, validatedVotes, target);
+  const priority = getOperationalPriority(leaders.length, coverage, validatedVotes, target);
+  const region = isState ? getRJRegionForCity(name) : getMaricaDistrictForNeighborhood(name);
+  const nextActions = uniqueText(leaders.map((leader) => leader.next_action).filter(Boolean) as string[]);
+
+  return {
+    id: seedRecord?.id ?? 9000 + index,
+    name,
+    region,
+    type: isState ? "Município" : "Bairro",
+    status,
+    priority,
+    responsible: mostCommon(leaders.map((leader) => leader.internal_responsible).filter(Boolean) as string[]) ?? "Coordenação Territorial",
+    leaders: leaders.length,
+    supporters,
+    estimatedSupporters: supporters,
+    declaredVotes,
+    validatedVotes,
+    target,
+    estimatedElectors,
+    undecided: Math.max(0, supporters - validatedVotes),
+    demands: 0,
+    confidence: getAverageConfidence(leaders),
+    campaignActive: true,
+    zones: [],
+    sections: [],
+    votingPlaces: [],
+    leadersLinked: leaders.map((leader) => leader.full_name).filter(Boolean).slice(0, 6),
+    nextActions: nextActions.length ? nextActions.slice(0, 4) : ["Atualizar estimativa mensal", "Revisar centro de custos"],
+    geoPrecision: mostCommon(leaders.map((leader) => leader.geographic_precision).filter(Boolean) as TerritoryRecord["geoPrecision"][]) ?? "Média",
+    position: seedRecord?.position ?? generatedPosition(index),
+  };
+}
+
+function buildEmptyRecord(scope: TerritoryScope, seedRecord: Seed, index: number): Seed {
+  const isState = scope === "state";
+  return {
+    ...seedRecord,
+    type: isState ? "Município" : "Bairro",
+    status: "Sem liderança",
+    priority: "Crítica",
+    responsible: "Sem responsável",
+    leaders: 0,
+    supporters: 0,
+    estimatedSupporters: 0,
+    declaredVotes: 0,
+    validatedVotes: 0,
+    target: Math.max(seedRecord.target, 1),
+    undecided: 0,
+    demands: 0,
+    confidence: 0,
+    campaignActive: false,
+    zones: [],
+    sections: [],
+    votingPlaces: [],
+    leadersLinked: [],
+    nextActions: isState ? ["Cadastrar coordenação ou liderança na cidade", "Definir estimativa mensal"] : ["Cadastrar coordenação ou liderança no bairro", "Definir estimativa mensal"],
+    position: seedRecord.position ?? generatedPosition(index),
   };
 }
 
@@ -113,6 +233,67 @@ function buildAnalysis(name: string, type: string, status: string, priority: str
 
 function pct(value: number, total: number) {
   return total > 0 ? (value / total) * 100 : 0;
+}
+
+function getLatestMonth(metrics: LeaderMonthlyMetric[]) {
+  return metrics.map((metric) => metric.month_ref).filter(Boolean).sort((a, b) => b.localeCompare(a))[0] ?? null;
+}
+
+function getLeaderSupporters(leader: Leader) {
+  return (leader.registered_supporters ?? 0) + (leader.estimated_direct_supporters ?? 0) + (leader.estimated_indirect_supporters ?? 0);
+}
+
+function getOperationalStatus(leaders: number, coverage: number, validatedVotes: number, target: number): TerritoryRecord["status"] {
+  if (!leaders) return "Sem liderança";
+  if (validatedVotes >= target * 0.72) return "Forte";
+  if (coverage < 1 || validatedVotes < target * 0.28) return "Baixa cobertura";
+  if (validatedVotes < target * 0.48) return "Prioritário";
+  return "Em crescimento";
+}
+
+function getOperationalPriority(leaders: number, coverage: number, validatedVotes: number, target: number): TerritoryRecord["priority"] {
+  if (!leaders || coverage < 0.7) return "Crítica";
+  if (validatedVotes < target * 0.45) return "Alta";
+  if (validatedVotes >= target * 0.78) return "Manter";
+  return "Média";
+}
+
+function getAverageConfidence(leaders: Leader[]) {
+  if (!leaders.length) return 0;
+  const score = leaders.reduce((total, leader) => {
+    const confidence = normalizeText(leader.confidence_level);
+    return total + (confidence === "alto" ? 90 : confidence === "medio" ? 62 : 34);
+  }, 0);
+  return Math.round(score / leaders.length);
+}
+
+function generatedPosition(index: number) {
+  const columns = 5;
+  const col = index % columns;
+  const row = Math.floor(index / columns);
+  return {
+    x: 18 + col * 16 + (row % 2) * 5,
+    y: 18 + (row % 5) * 15,
+  };
+}
+
+function uniqueText(items: string[]) {
+  return Array.from(new Set(items.map((item) => item.trim()).filter(Boolean)));
+}
+
+function mostCommon<T extends string>(items: T[]) {
+  if (!items.length) return null;
+  const counts = new Map<T, number>();
+  for (const item of items) counts.set(item, (counts.get(item) ?? 0) + 1);
+  return [...counts.entries()].sort((a, b) => b[1] - a[1])[0]?.[0] ?? null;
+}
+
+function sum<T>(items: T[], getValue: (item: T) => number | null | undefined) {
+  return items.reduce((total, item) => total + Number(getValue(item) ?? 0), 0);
+}
+
+function normalizeText(value: string | null | undefined) {
+  return String(value ?? "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
 }
 
 function normalize(value: number, max: number) {

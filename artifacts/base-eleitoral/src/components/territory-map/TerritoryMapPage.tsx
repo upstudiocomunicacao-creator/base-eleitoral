@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   AlertTriangle,
   BarChart3,
@@ -13,6 +13,7 @@ import {
   RadioTower,
   Route,
   Search,
+  RefreshCw,
   SlidersHorizontal,
   Target,
   TrendingUp,
@@ -30,8 +31,10 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { listLeaderMonthlyMetrics } from "@/services/leaderMonthlyMetrics";
+import { isLeadersSupabaseReady, listLeaders } from "@/services/leaders";
 import type { MapDataFilters } from "@/services/mapData";
-import { cityTerritories, enrichTerritory, formatPercent, heatModes, stateTerritories } from "./territoryData";
+import { buildOperationalTerritories, cityTerritories, enrichTerritory, formatPercent, heatModes, stateTerritories } from "./territoryData";
 import type { EnrichedTerritoryRecord, HeatMode, MapViewMode, TerritoryPriority, TerritoryScope, TerritoryStatus } from "./types";
 
 type Filters = {
@@ -81,6 +84,10 @@ const viewModes: Array<{ key: MapViewMode; label: string; icon: LucideIcon }> = 
 
 export function TerritoryMapPage({ scope }: { scope: TerritoryScope }) {
   const isState = scope === "state";
+  const [baseRecords, setBaseRecords] = useState(() => (isState ? stateTerritories : cityTerritories));
+  const [loadingData, setLoadingData] = useState(false);
+  const [sourceLabel, setSourceLabel] = useState("Modelo demonstrativo");
+  const [dataError, setDataError] = useState<string | null>(null);
   const [filters, setFilters] = useState<Filters>(emptyFilters);
   const [activeLayer, setActiveLayer] = useState<HeatMode>("forca");
   const [viewMode, setViewMode] = useState<MapViewMode>("estrategico");
@@ -88,7 +95,36 @@ export function TerritoryMapPage({ scope }: { scope: TerritoryScope }) {
   const [selected, setSelected] = useState<EnrichedTerritoryRecord | null>(null);
   const [detailsOpen, setDetailsOpen] = useState(false);
 
-  const records = useMemo(() => (isState ? stateTerritories : cityTerritories).map(enrichTerritory), [isState]);
+  async function loadTerritoryData() {
+    setDataError(null);
+
+    if (!isLeadersSupabaseReady()) {
+      setBaseRecords(isState ? stateTerritories : cityTerritories);
+      setSourceLabel("Modelo demonstrativo");
+      setDataError("Supabase não está configurado. O mapa está usando dados demonstrativos.");
+      return;
+    }
+
+    setLoadingData(true);
+    try {
+      const [leaders, monthlyMetrics] = await Promise.all([listLeaders(), listLeaderMonthlyMetrics()]);
+      setBaseRecords(buildOperationalTerritories(scope, leaders, monthlyMetrics));
+      setSourceLabel(leaders.length ? "Dados reais do Supabase" : "Sem cadastros reais ainda");
+    } catch (err) {
+      setBaseRecords(isState ? stateTerritories : cityTerritories);
+      setSourceLabel("Modelo demonstrativo");
+      setDataError(err instanceof Error ? err.message : "Não foi possível carregar os dados reais do mapa.");
+    } finally {
+      setLoadingData(false);
+    }
+  }
+
+  useEffect(() => {
+    setBaseRecords(isState ? stateTerritories : cityTerritories);
+    void loadTerritoryData();
+  }, [scope, isState]);
+
+  const records = useMemo(() => baseRecords.map(enrichTerritory), [baseRecords]);
   const options = useMemo(() => buildOptions(records), [records]);
   const filtered = useMemo(() => records.filter((item) => matches(item, filters)), [records, filters]);
   const summary = useMemo(() => buildSummary(filtered, scope), [filtered, scope]);
@@ -112,11 +148,17 @@ export function TerritoryMapPage({ scope }: { scope: TerritoryScope }) {
         }
         actions={
           <div className="flex flex-wrap gap-2">
+            <span className="rounded-full border border-blue-100 bg-blue-50 px-3 py-2 text-xs font-extrabold uppercase tracking-[0.08em] text-blue-700">{sourceLabel}</span>
+            <Button variant="outline" onClick={() => void loadTerritoryData()} disabled={loadingData}>
+              <RefreshCw className={`h-4 w-4 ${loadingData ? "animate-spin" : ""}`} /> Atualizar
+            </Button>
             <Button variant="outline"><Layers className="h-4 w-4" /> Visual estratégico</Button>
             <Button variant="outline"><Route className="h-4 w-4" /> Pronto para mapa real</Button>
           </div>
         }
       />
+
+      {dataError ? <MapDataWarning message={dataError} /> : null}
 
       <Card className="border-emerald-200 bg-emerald-50 shadow-sm">
         <CardContent className="flex flex-col gap-2 p-4 text-emerald-900 sm:flex-row sm:items-center sm:justify-between">
@@ -178,6 +220,18 @@ export function TerritoryMapPage({ scope }: { scope: TerritoryScope }) {
           if (!open) setSelected(null);
         }}
       />
+    </div>
+  );
+}
+
+function MapDataWarning({ message }: { message: string }) {
+  return (
+    <div className="flex items-start gap-3 rounded-lg border border-amber-200 bg-amber-50 p-4 text-sm font-semibold leading-6 text-amber-950">
+      <AlertTriangle className="mt-0.5 h-5 w-5 shrink-0 text-amber-600" />
+      <div>
+        <div className="font-extrabold">Mapa em modo demonstrativo</div>
+        <div className="text-amber-800">{message}</div>
+      </div>
     </div>
   );
 }

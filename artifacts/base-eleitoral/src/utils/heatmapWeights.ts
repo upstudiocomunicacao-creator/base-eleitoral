@@ -31,11 +31,12 @@ export function calculateHeatmapWeight(record: MapPoint, layerType: MapHeatmapLa
   }
 
   if (layerType === "opportunity") {
-    const voters = Number(record.originalRecord?.voters_count ?? 0);
     const validated = Number(record.originalRecord?.validated_votes ?? 0);
-    const goal = Number(record.originalRecord?.vote_goal ?? 0);
-    const distance = Math.max(goal - validated, 0);
-    return clamp((voters / 20000) + (distance / 1000), 0.25, 1);
+    const declared = Number(record.originalRecord?.declared_votes ?? 0);
+    const direct = Number(record.originalRecord?.estimated_direct_supporters ?? 0);
+    const indirect = Number(record.originalRecord?.estimated_indirect_supporters ?? 0);
+    const gap = Math.max(declared - validated, 0);
+    return clamp((gap / 300) + ((direct + indirect) / 500), 0.25, 1);
   }
 
   return record.weight;

@@ -52,10 +52,6 @@ export async function getMapPoints(filters: MapDataFilters = {}): Promise<MapPoi
   const dataset = await getDashboardDataset();
   const points: MapPoint[] = [
     ...dataset.leaders.map((record) => toPoint("leaders", record, record.full_name, record.leader_type, record.status, getLeaderPriority(record), record.internal_responsible ?? "")),
-    ...dataset.supporters.map((record) => toPoint("supporters", record, record.full_name, record.person_type, record.political_status, record.political_status, record.internal_responsible ?? "")),
-    ...dataset.electoralZones.map((record) => toPoint("electoral_zones", record, record.voting_place, `Zona ${record.zone_number}${record.section_number ? ` · Seção ${record.section_number}` : ""}`, record.status, record.priority, record.regional_responsible ?? "")),
-    ...dataset.demands.map((record) => toPoint("demands", record, record.title, record.category, record.status, record.priority, record.internal_responsible ?? "")),
-    ...dataset.fieldAgenda.map((record) => toPoint("field_agenda", record, record.title, record.action_type, record.status, record.priority, record.internal_responsible ?? "")),
   ].filter((point): point is MapPoint => Boolean(point));
 
   return filterMapPoints(points, filters);
@@ -78,22 +74,6 @@ export async function getLeadersMapPoints(filters: MapDataFilters = {}) {
   return getMapPoints({ ...filters, type: "leaders" });
 }
 
-export async function getSupportersMapPoints(filters: MapDataFilters = {}) {
-  return getMapPoints({ ...filters, type: "supporters" });
-}
-
-export async function getElectoralZonesMapPoints(filters: MapDataFilters = {}) {
-  return getMapPoints({ ...filters, type: "electoral_zones" });
-}
-
-export async function getDemandMapPoints(filters: MapDataFilters = {}) {
-  return getMapPoints({ ...filters, type: "demands" });
-}
-
-export async function getFieldAgendaMapPoints(filters: MapDataFilters = {}) {
-  return getMapPoints({ ...filters, type: "field_agenda" });
-}
-
 export async function getHeatmapData(layerType: MapHeatmapLayerType, filters: MapDataFilters = {}) {
   return (await getMapPoints(filters))
     .filter((point) => shouldUsePointForHeatmap(point, layerType))
@@ -104,10 +84,6 @@ export async function getRecordsWithoutCoordinates(filters: MapDataFilters = {})
   const dataset = await getDashboardDataset();
   const records = [
     ...dataset.leaders.map((record) => withoutPoint("leaders", record, record.full_name)),
-    ...dataset.supporters.map((record) => withoutPoint("supporters", record, record.full_name)),
-    ...dataset.electoralZones.map((record) => withoutPoint("electoral_zones", record, record.voting_place)),
-    ...dataset.demands.map((record) => withoutPoint("demands", record, record.title)),
-    ...dataset.fieldAgenda.map((record) => withoutPoint("field_agenda", record, record.title)),
   ];
 
   return records
@@ -129,16 +105,15 @@ function buildMapSummary(points: MapPoint[], withoutCoordinates: Array<{ id: str
   const byNeighborhood = countBy(points, (point) => point.neighborhood || "Não definido");
   const strongest = Object.entries(byNeighborhood).sort((a, b) => b[1] - a[1])[0]?.[0] ?? "-";
   const opportunity = points
-    .filter((point) => point.type === "electoral_zones")
-    .sort((a, b) => Number(b.originalRecord.vote_goal ?? 0) - Number(b.originalRecord.validated_votes ?? 0))[0]?.neighborhood ?? "-";
+    .sort((a, b) => opportunityScore(b) - opportunityScore(a))[0]?.neighborhood ?? "-";
 
   return {
     totalPoints: points.length,
     leaders: points.filter((point) => point.type === "leaders").length,
-    supporters: points.filter((point) => point.type === "supporters").length,
-    zones: points.filter((point) => point.type === "electoral_zones").length,
-    demands: points.filter((point) => point.type === "demands").length,
-    agenda: points.filter((point) => point.type === "field_agenda").length,
+    supporters: 0,
+    zones: 0,
+    demands: 0,
+    agenda: 0,
     withoutCoordinates: withoutCoordinates.length,
     strongestRegion: strongest,
     opportunityRegion: opportunity,
@@ -227,11 +202,19 @@ function withoutPoint(type: MapPointType, record: Record<string, unknown>, title
 function shouldUsePointForHeatmap(point: MapPoint, layerType: MapHeatmapLayerType) {
   if (layerType === "supporters") return point.type === "supporters";
   if (layerType === "leaders") return point.type === "leaders";
-  if (layerType === "validated_votes") return point.type === "leaders" || point.type === "electoral_zones";
-  if (layerType === "demands") return point.type === "demands";
+  if (layerType === "validated_votes") return point.type === "leaders";
+  if (layerType === "demands") return false;
   if (layerType === "undecided") return point.type === "supporters";
-  if (layerType === "opportunity") return point.type === "electoral_zones";
+  if (layerType === "opportunity") return point.type === "leaders";
   return true;
+}
+
+function opportunityScore(point: MapPoint) {
+  const declared = Number(point.originalRecord.declared_votes ?? 0);
+  const validated = Number(point.originalRecord.validated_votes ?? 0);
+  const direct = Number(point.originalRecord.estimated_direct_supporters ?? 0);
+  const indirect = Number(point.originalRecord.estimated_indirect_supporters ?? 0);
+  return Math.max(0, declared - validated) + direct + indirect;
 }
 
 function getLeaderPriority(record: { validated_votes: number; declared_votes: number; confidence_level: string }) {

@@ -21,10 +21,10 @@ type InfoItem = [string, string];
 
 const moduleLinks: Record<MapPointType, string> = {
   leaders: "/liderancas",
-  supporters: "/apoiadores",
-  electoral_zones: "/zonas",
-  demands: "/demandas",
-  field_agenda: "/agenda",
+  supporters: "/liderancas",
+  electoral_zones: "/liderancas",
+  demands: "/liderancas",
+  field_agenda: "/liderancas",
 };
 
 export function MapDetailDrawer({ point, open, onOpenChange }: Props) {
@@ -157,7 +157,7 @@ function buildStrategicItems(point: MapPoint): InfoItem[] {
   if (point.type === "leaders") {
     return [
       ...common,
-      ["Apoiadores cadastrados", formatNumber(record.registered_supporters)],
+      ["Apoio estimado base", formatNumber(record.registered_supporters)],
       ["Potencial estimado", formatNumber(Number(record.estimated_direct_supporters ?? 0) + Number(record.estimated_indirect_supporters ?? 0))],
       ["Taxa de validação", formatPercent(Number(record.validated_votes ?? 0), Number(record.declared_votes ?? 0))],
       ["Próxima ação", value(record.next_action)],
@@ -223,9 +223,9 @@ function buildGeoItems(point: MapPoint): InfoItem[] {
 
 function buildRecommendation(point: MapPoint) {
   const region = point.neighborhood || point.city || "território";
-  if (point.type === "leaders") return `${point.title} concentra força em ${region}. Compare votos declarados e validados antes de ampliar metas ou cobrar nova lista de apoiadores.`;
+  if (point.type === "leaders") return `${point.title} concentra força em ${region}. Compare votos declarados, votos validados e estimativa mensal antes de ampliar metas ou ajustar custos.`;
   if (point.type === "supporters") return `${point.title} está em ${region}. Use o status político e a próxima ação para decidir se o contato deve entrar em validação, retorno ou mobilização.`;
-  if (point.type === "electoral_zones") return `${point.title} ajuda a medir cobertura eleitoral em ${region}. A distância até a meta indica se a área precisa de liderança, agenda ou prospecção.`;
+  if (point.type === "electoral_zones") return `${point.title} ajuda a medir cobertura territorial em ${region}. A distância até a meta indica se a área precisa de coordenação ou liderança.`;
   if (point.type === "demands") return `${point.title} aponta uma demanda territorial em ${region}. Priorize retorno quando a prioridade for alta ou crítica.`;
   return `${point.title} representa uma ação de campo em ${region}. Use o resultado e o público estimado para decidir se a agenda deve gerar retorno, nova visita ou mobilização.`;
 }

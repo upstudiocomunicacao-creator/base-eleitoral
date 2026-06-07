@@ -2,11 +2,9 @@
 
 export const heatModes: Array<{ key: HeatMode; label: string }> = [
   { key: "forca", label: "For\u00e7a territorial" },
-  { key: "apoiadores", label: "Apoiadores" },
-  { key: "liderancas", label: "Lideran\u00e7as" },
+  { key: "apoiadores", label: "Apoio estimado" },
+  { key: "liderancas", label: "Cadastros" },
   { key: "votos", label: "Votos validados" },
-  { key: "indecisos", label: "Indecisos" },
-  { key: "demandas", label: "Demandas" },
   { key: "oportunidade", label: "Oportunidade" },
   { key: "sem_cobertura", label: "\u00c1reas sem cobertura" },
 ];
@@ -14,16 +12,16 @@ export const heatModes: Array<{ key: HeatMode; label: string }> = [
 type Seed = Omit<TerritoryRecord, "weeklyGrowth" | "areas" | "notes">;
 
 const stateSeeds: Seed[] = [
-  seed(1, "Maric\u00e1", "Leste Metropolitano", "Munic\u00edpio", "Forte", "Manter", "Coordena\u00e7\u00e3o RJ", 42, 3750, 5900, 5040, 2432, 7410, 152200, 820, 46, 78, true, ["55"], [], [], ["Mariana Costa", "Cl\u00e1udia Menezes"], ["Refor\u00e7ar valida\u00e7\u00e3o por zona", "Manter agenda com lideran\u00e7as"], "M\u00e9dia", 55, 55),
-  seed(2, "Niter\u00f3i", "Leste Metropolitano", "Munic\u00edpio", "Em crescimento", "Alta", "Coordena\u00e7\u00e3o RJ", 11, 820, 1700, 1080, 420, 1800, 372000, 390, 18, 62, true, ["55"], [], [], ["Equipe Niter\u00f3i"], ["Prospec\u00e7\u00e3o qualificada", "Abrir n\u00facleo comunit\u00e1rio"], "M\u00e9dia", 44, 42),
-  seed(3, "S\u00e3o Gon\u00e7alo", "Leste Metropolitano", "Munic\u00edpio", "Baixa cobertura", "Cr\u00edtica", "Coordena\u00e7\u00e3o RJ", 6, 520, 1300, 760, 240, 2200, 685000, 610, 32, 45, true, ["55"], [], [], ["Equipe SG"], ["Cadastrar novas lideran\u00e7as", "Iniciar prospec\u00e7\u00e3o regional"], "Baixa", 38, 48),
+  seed(1, "Maric\u00e1", "Leste Metropolitano", "Munic\u00edpio", "Forte", "Manter", "Coordena\u00e7\u00e3o RJ", 42, 3750, 5900, 5040, 2432, 7410, 152200, 820, 46, 78, true, ["55"], [], [], ["Mariana Costa", "Cl\u00e1udia Menezes"], ["Refor\u00e7ar valida\u00e7\u00e3o mensal", "Manter alinhamento com coordena\u00e7\u00f5es"], "M\u00e9dia", 55, 55),
+  seed(2, "Niter\u00f3i", "Leste Metropolitano", "Munic\u00edpio", "Em crescimento", "Alta", "Coordena\u00e7\u00e3o RJ", 11, 820, 1700, 1080, 420, 1800, 372000, 390, 18, 62, true, ["55"], [], [], ["Equipe Niter\u00f3i"], ["Definir coordenador municipal", "Atualizar estimativa mensal"], "M\u00e9dia", 44, 42),
+  seed(3, "S\u00e3o Gon\u00e7alo", "Leste Metropolitano", "Munic\u00edpio", "Baixa cobertura", "Cr\u00edtica", "Coordena\u00e7\u00e3o RJ", 6, 520, 1300, 760, 240, 2200, 685000, 610, 32, 45, true, ["55"], [], [], ["Equipe SG"], ["Cadastrar novas lideran\u00e7as", "Definir meta m\u00ednima e teto mensal"], "Baixa", 38, 48),
   seed(4, "Itabora\u00ed", "Leste Metropolitano", "Munic\u00edpio", "Em crescimento", "Alta", "Coordena\u00e7\u00e3o RJ", 5, 410, 880, 530, 180, 1100, 180000, 280, 21, 51, true, ["55"], [], [], ["Equipe Itabora\u00ed"], ["Reuni\u00e3o regional", "Validar base inicial"], "M\u00e9dia", 50, 38),
   seed(5, "Rio de Janeiro", "Capital", "Munic\u00edpio", "Baixa cobertura", "Alta", "Coordena\u00e7\u00e3o Capital", 9, 760, 2100, 980, 360, 2600, 5300000, 740, 45, 55, true, ["55"], [], [], ["Coordena\u00e7\u00e3o Capital"], ["Segmentar regi\u00f5es", "Criar coordena\u00e7\u00e3o local"], "M\u00e9dia", 30, 60),
-  seed(6, "Saquarema", "Baixadas Litor\u00e2neas", "Munic\u00edpio", "Priorit\u00e1rio", "Alta", "Coordena\u00e7\u00e3o RJ", 4, 280, 640, 350, 120, 700, 76000, 170, 13, 48, true, ["55"], [], [], ["Equipe Lagos"], ["Ativar lideran\u00e7a tem\u00e1tica", "Agenda de rua"], "M\u00e9dia", 62, 68),
-  seed(7, "Araruama", "Baixadas Litor\u00e2neas", "Munic\u00edpio", "Em crescimento", "M\u00e9dia", "Coordena\u00e7\u00e3o RJ", 5, 360, 690, 410, 190, 760, 110000, 160, 9, 57, true, ["55"], [], [], ["Equipe Lagos"], ["Ampliar apoiadores", "Consolidar lista"], "M\u00e9dia", 72, 63),
-  seed(8, "Cabo Frio", "Baixadas Litor\u00e2neas", "Munic\u00edpio", "Baixa cobertura", "Alta", "Coordena\u00e7\u00e3o RJ", 3, 210, 520, 260, 80, 700, 175000, 220, 18, 42, true, ["55"], [], [], ["Equipe Lagos"], ["Criar agenda regional", "Buscar lideran\u00e7a local"], "Baixa", 82, 75),
-  seed(9, "Silva Jardim", "Interior Leste", "Munic\u00edpio", "Sem lideran\u00e7a", "Cr\u00edtica", "Coordena\u00e7\u00e3o RJ", 0, 48, 130, 65, 12, 220, 17000, 70, 8, 24, false, ["55"], [], [], [], ["Cadastrar lideran\u00e7a", "Mapear demandas"], "Muito baixa", 67, 30),
-  seed(10, "Tangu\u00e1", "Leste Metropolitano", "Munic\u00edpio", "Sem lideran\u00e7a", "Cr\u00edtica", "Coordena\u00e7\u00e3o RJ", 0, 64, 160, 80, 18, 260, 25000, 82, 7, 27, false, ["55"], [], [], [], ["Criar primeiro n\u00facleo local", "Busca ativa de apoiadores"], "Muito baixa", 47, 32),
+  seed(6, "Saquarema", "Baixadas Litor\u00e2neas", "Munic\u00edpio", "Priorit\u00e1rio", "Alta", "Coordena\u00e7\u00e3o RJ", 4, 280, 640, 350, 120, 700, 76000, 170, 13, 48, true, ["55"], [], [], ["Equipe Lagos"], ["Ativar lideran\u00e7a local", "Revisar centro de custos"], "M\u00e9dia", 62, 68),
+  seed(7, "Araruama", "Baixadas Litor\u00e2neas", "Munic\u00edpio", "Em crescimento", "M\u00e9dia", "Coordena\u00e7\u00e3o RJ", 5, 360, 690, 410, 190, 760, 110000, 160, 9, 57, true, ["55"], [], [], ["Equipe Lagos"], ["Ampliar cadastros territoriais", "Consolidar estimativas"], "M\u00e9dia", 72, 63),
+  seed(8, "Cabo Frio", "Baixadas Litor\u00e2neas", "Munic\u00edpio", "Baixa cobertura", "Alta", "Coordena\u00e7\u00e3o RJ", 3, 210, 520, 260, 80, 700, 175000, 220, 18, 42, true, ["55"], [], [], ["Equipe Lagos"], ["Criar coordena\u00e7\u00e3o municipal", "Buscar lideran\u00e7a local"], "Baixa", 82, 75),
+  seed(9, "Silva Jardim", "Interior Leste", "Munic\u00edpio", "Sem lideran\u00e7a", "Cr\u00edtica", "Coordena\u00e7\u00e3o RJ", 0, 48, 130, 65, 12, 220, 17000, 70, 8, 24, false, ["55"], [], [], [], ["Cadastrar lideran\u00e7a", "Definir respons\u00e1vel municipal"], "Muito baixa", 67, 30),
+  seed(10, "Tangu\u00e1", "Leste Metropolitano", "Munic\u00edpio", "Sem lideran\u00e7a", "Cr\u00edtica", "Coordena\u00e7\u00e3o RJ", 0, 64, 160, 80, 18, 260, 25000, 82, 7, 27, false, ["55"], [], [], [], ["Criar primeiro n\u00facleo local", "Cadastrar coordenador municipal"], "Muito baixa", 47, 32),
   seed(11, "Rio Bonito", "Interior Leste", "Munic\u00edpio", "Priorit\u00e1rio", "M\u00e9dia", "Coordena\u00e7\u00e3o RJ", 2, 140, 310, 190, 68, 420, 42000, 95, 10, 41, true, ["55"], [], [], ["Equipe Interior"], ["Reuni\u00e3o com comerciantes", "Validar votos declarados"], "Baixa", 59, 24),
   seed(12, "Mag\u00e9", "Baixada", "Munic\u00edpio", "Baixa cobertura", "Alta", "Coordena\u00e7\u00e3o RJ", 2, 190, 460, 230, 72, 650, 180000, 210, 16, 39, true, ["55"], [], [], ["Equipe Baixada"], ["Mapear lideran\u00e7a", "A\u00e7\u00e3o em bairro priorit\u00e1rio"], "Baixa", 25, 36),
 ];
@@ -91,7 +89,7 @@ function seed(id: number, name: string, region: string, type: TerritoryRecord["t
 }
 
 function city(id: number, name: string, region: string, status: TerritoryRecord["status"], priority: TerritoryRecord["priority"], leaders: number, supporters: number, estimatedSupporters: number, declaredVotes: number, validatedVotes: number, target: number, estimatedElectors: number, undecided: number, demands: number, confidence: number, sections: string[], votingPlaces: string[], geoPrecision: TerritoryRecord["geoPrecision"], leadersLinked: string[], x: number, y: number): Seed {
-  return seed(id, name, region, "Bairro", status, priority, region.includes("Litoral") ? "Cl\u00e1udia Menezes" : region.includes("Central") ? "Mariana Costa" : "Equipe Territorial", leaders, supporters, estimatedSupporters, declaredVotes, validatedVotes, target, estimatedElectors, undecided, demands, confidence, leaders > 0, ["55"], sections, votingPlaces, leadersLinked, leaders === 0 ? ["Cadastrar lideran\u00e7a local", "A\u00e7\u00e3o de busca ativa no bairro"] : ["Reuni\u00e3o com lideran\u00e7as", "Mutir\u00e3o de valida\u00e7\u00e3o por se\u00e7\u00e3o"], geoPrecision, x, y);
+  return seed(id, name, region, "Bairro", status, priority, region.includes("Litoral") ? "Cl\u00e1udia Menezes" : region.includes("Central") ? "Mariana Costa" : "Equipe Territorial", leaders, supporters, estimatedSupporters, declaredVotes, validatedVotes, target, estimatedElectors, undecided, demands, confidence, leaders > 0, ["55"], sections, votingPlaces, leadersLinked, leaders === 0 ? ["Cadastrar lideran\u00e7a local", "Definir coordenador de bairro"] : ["Reuni\u00e3o com coordena\u00e7\u00e3o local", "Atualizar estimativa mensal"], geoPrecision, x, y);
 }
 
 function complete(records: Seed[]): TerritoryRecord[] {
@@ -99,18 +97,18 @@ function complete(records: Seed[]): TerritoryRecord[] {
     ...record,
     weeklyGrowth: Math.max(1, Math.round(record.validatedVotes / (record.type === "Munic\u00edpio" ? 80 : 30))),
     areas: record.type === "Munic\u00edpio" ? record.leadersLinked.length ? record.leadersLinked : [record.name] : [record.name, record.region],
-    notes: record.type === "Município" ? "Registro estadual preparado para geocodificação municipal e camada PostGIS." : "Registro municipal preparado para leitura por bairro, rua, CEP e heatmap real.",
+    notes: record.type === "Município" ? "Registro estadual preparado para leitura por cidade e camada PostGIS." : "Registro municipal preparado para leitura por bairro, distrito e heatmap real.",
   }));
 }
 
 function buildAnalysis(name: string, type: string, status: string, priority: string, leaders: number, coverage: number, validated: number, target: number) {
   if (status === "Forte") return name + " concentra for\u00e7a territorial relevante, com base de lideran\u00e7as e votos validados em crescimento.";
   if (status === "Sem lideran\u00e7a") return name + " tem baixa presen\u00e7a pol\u00edtica e precisa de lideran\u00e7a local antes de ampliar cadastros.";
-  if (type === "Munic\u00edpio" && name === "S\u00e3o Gon\u00e7alo") return "S\u00e3o Gon\u00e7alo possui alto potencial eleitoral, mas ainda apresenta baixa cobertura da campanha. Recomenda-se cadastrar novas lideran\u00e7as e iniciar prospec\u00e7\u00e3o regional.";
-  if (name === "Itaipua\u00e7u") return "Itaipua\u00e7u concentra grande volume estimado de eleitores, mas apresenta baixa cobertura e poucos votos validados. A prioridade \u00e9 ampliar lideran\u00e7as locais, cadastrar apoiadores e agendar a\u00e7\u00f5es de campo.";
-  if (priority === "Cr\u00edtica") return name + " combina potencial eleitoral alto, baixa cobertura e pouca valida\u00e7\u00e3o. Deve entrar na agenda priorit\u00e1ria.";
+  if (type === "Munic\u00edpio" && name === "S\u00e3o Gon\u00e7alo") return "S\u00e3o Gon\u00e7alo possui alto potencial eleitoral, mas ainda apresenta baixa cobertura. Recomenda-se cadastrar novas lideran\u00e7as e ajustar a meta mensal.";
+  if (name === "Itaipua\u00e7u") return "Itaipua\u00e7u concentra grande volume estimado de eleitores, mas apresenta baixa cobertura e poucos votos validados. A prioridade \u00e9 ampliar lideran\u00e7as locais e atualizar estimativas mensais.";
+  if (priority === "Cr\u00edtica") return name + " combina potencial eleitoral alto, baixa cobertura e pouca valida\u00e7\u00e3o. Deve receber prioridade na coordena\u00e7\u00e3o territorial.";
   if (validated >= target * 0.75) return name + " est\u00e1 perto da meta e pode avan\u00e7ar com a\u00e7\u00f5es curtas de valida\u00e7\u00e3o.";
-  return name + " est\u00e1 em desenvolvimento, com cobertura de " + formatPercent(coverage) + " e espa\u00e7o para prospec\u00e7\u00e3o qualificada.";
+  return name + " est\u00e1 em desenvolvimento, com cobertura de " + formatPercent(coverage) + " e espa\u00e7o para refor\u00e7ar cadastros territoriais.";
 }
 
 function pct(value: number, total: number) {

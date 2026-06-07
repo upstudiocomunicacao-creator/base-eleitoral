@@ -1,5 +1,5 @@
 ﻿import { Component, type ErrorInfo, type ReactNode, useEffect, useMemo, useState } from "react";
-import { AlertTriangle, Database, Loader2, MapPin, Navigation, Route, Zap, type LucideIcon } from "lucide-react";
+import { AlertTriangle, Database, Loader2, MapPin, Navigation, Zap, type LucideIcon } from "lucide-react";
 import { Link } from "wouter";
 import { EmptyState } from "@/components/common/EmptyState";
 import { Button } from "@/components/ui/button";
@@ -27,11 +27,11 @@ type Props = {
   filters?: MapDataFilters;
 };
 
-const allPointTypes: MapPointType[] = ["leaders", "supporters", "electoral_zones", "demands", "field_agenda"];
+const allPointTypes: MapPointType[] = ["leaders"];
 
 export function RealMapContainer({ scope, fallback, filters = {} }: Props) {
   const [mode, setMode] = useState<RealMapMode>("pins");
-  const [heatmapLayer, setHeatmapLayer] = useState<MapHeatmapLayerType>(scope === "city" ? "supporters" : "validated_votes");
+  const [heatmapLayer, setHeatmapLayer] = useState<MapHeatmapLayerType>("leaders");
   const [visibleTypes, setVisibleTypes] = useState<MapPointType[]>(allPointTypes);
   const [data, setData] = useState<MapData | null>(null);
   const [selectedPoint, setSelectedPoint] = useState<MapPoint | null>(null);
@@ -98,7 +98,7 @@ export function RealMapContainer({ scope, fallback, filters = {} }: Props) {
       <div className="space-y-3">
         <MapboxNotice
           title="Visual estratégico ativo"
-          description="Você está vendo a leitura territorial estratégica. Use Pins reais, Mapa de calor ou Clusters para visualizar o mapa Mapbox."
+          description="Você está vendo a leitura territorial estratégica. Use Pins reais, Mapa de calor ou Clusters para visualizar os cadastros territoriais no Mapbox."
           tone="blue"
         />
         <MapLayerControls
@@ -139,7 +139,7 @@ export function RealMapContainer({ scope, fallback, filters = {} }: Props) {
                 {title}
               </CardTitle>
               <p className="mt-1 text-sm font-medium text-slate-500">
-                Dados reais geocodificados do Supabase com pins, clusterização e heatmap por camada.
+                Dados reais geocodificados do Supabase com pins, clusterização e heatmap dos cadastros territoriais.
               </p>
             </div>
             <div className="flex flex-wrap gap-2">
@@ -221,10 +221,7 @@ function countActiveFilters(filters: MapDataFilters, scope: MapScope) {
 function RealMapSummary({ summary, mode, heatmapLayer }: { summary: MapData["summary"] | undefined; mode: RealMapMode; heatmapLayer: MapHeatmapLayerType }) {
   const cards: Array<{ label: string; value: string | number; icon: LucideIcon }> = [
     { label: "Pontos no mapa", value: summary?.totalPoints ?? 0, icon: MapPin },
-    { label: "Lideranças", value: summary?.leaders ?? 0, icon: Database },
-    { label: "Apoiadores", value: summary?.supporters ?? 0, icon: Database },
-    { label: "Zonas", value: summary?.zones ?? 0, icon: Route },
-    { label: "Demandas", value: summary?.demands ?? 0, icon: AlertTriangle },
+    { label: "Cadastros", value: summary?.leaders ?? 0, icon: Database },
     { label: "Sem coordenadas", value: summary?.withoutCoordinates ?? 0, icon: AlertTriangle },
     { label: "Região forte", value: summary?.strongestRegion ?? "-", icon: Zap },
     { label: "Oportunidade", value: summary?.opportunityRegion ?? "-", icon: Zap },

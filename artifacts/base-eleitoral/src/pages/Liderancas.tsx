@@ -155,7 +155,7 @@ export default function Liderancas() {
 
     if (!isLeadersSupabaseReady()) {
       setLeaders([]);
-      setError("Supabase não está configurado. Preencha VITE_SUPABASE_URL e VITE_SUPABASE_ANON_KEY para carregar lideranças reais.");
+      setError("Supabase não está configurado. Preencha VITE_SUPABASE_URL e VITE_SUPABASE_ANON_KEY para carregar cadastros territoriais reais.");
       setLoading(false);
       return;
     }
@@ -248,11 +248,11 @@ export default function Liderancas() {
       if (editing.id) {
         const saved = await updateLeader(editing.id, toUpdatePayload(editing));
         setLeaders((current) => current.map((item) => (item.id === saved.id ? saved : item)));
-        toast({ title: "Liderança atualizada", description: "As alterações foram salvas no Supabase." });
+        toast({ title: "Cadastro atualizado", description: "As alterações foram salvas no Supabase." });
       } else {
         const saved = await createLeader(toInsertPayload(editing));
         setLeaders((current) => [saved, ...current]);
-        toast({ title: "Liderança criada", description: "O novo registro foi salvo no Supabase." });
+        toast({ title: "Cadastro criado", description: "O novo registro foi salvo no Supabase." });
       }
       setFormOpen(false);
       setEditing(null);
@@ -264,13 +264,13 @@ export default function Liderancas() {
   }
 
   async function removeLeadership(record: Leader) {
-    const confirmed = window.confirm(`Excluir a liderança "${record.full_name}"?\n\nEssa ação não poderá ser desfeita.`);
+    const confirmed = window.confirm(`Excluir o cadastro "${record.full_name}"?\n\nEssa ação não poderá ser desfeita.`);
     if (!confirmed) return;
 
     try {
       await deleteLeader(record.id);
       setLeaders((current) => current.filter((item) => item.id !== record.id));
-      toast({ title: "Liderança excluída", description: "O registro foi removido do Supabase." });
+      toast({ title: "Cadastro excluído", description: "O registro foi removido do Supabase." });
     } catch (err) {
       toast({ title: "Não foi possível excluir", description: getErrorMessage(err), variant: "destructive" });
     }
@@ -280,8 +280,8 @@ export default function Liderancas() {
     <div className="space-y-6">
       <PageHeader
         eyebrow="Base Territorial"
-        title="Lideranças"
-        description={`${filtered.length} lideranças no recorte atual - dados reais da tabela leaders no Supabase.`}
+        title="Cadastros Territoriais"
+        description={`${filtered.length} cadastros no recorte atual - coordenações e lideranças reais do Supabase.`}
         actions={
           <div className="flex flex-wrap gap-2">
             <Button variant="outline" onClick={() => void loadLeaders()} disabled={loading}>
@@ -289,7 +289,7 @@ export default function Liderancas() {
             </Button>
             <PermissionGate module="liderancas" action="create">
               <Button onClick={openCreate}>
-                <PlusCircle className="h-4 w-4" /> Nova Liderança
+                <PlusCircle className="h-4 w-4" /> Novo cadastro
               </Button>
             </PermissionGate>
           </div>
@@ -420,8 +420,8 @@ function LeadersTable({
   return (
     <Card className="premium-card overflow-hidden">
       <CardHeader className="section-divider border-t-0 px-5 py-4">
-        <CardTitle className="text-base font-extrabold text-slate-950">Força Territorial</CardTitle>
-        <p className="text-sm font-medium text-slate-500">Clique em uma liderança para abrir a ficha individual.</p>
+        <CardTitle className="text-base font-extrabold text-slate-950">Cadastros de Coordenação e Liderança</CardTitle>
+        <p className="text-sm font-medium text-slate-500">Clique em um cadastro para abrir a ficha individual.</p>
       </CardHeader>
       <CardContent className="p-0">
         <div className="overflow-x-auto">
@@ -457,7 +457,7 @@ function LeadersTable({
               ) : leaders.length === 0 ? (
                 <TableRow>
                   <TableCell colSpan={13} className="p-6">
-                    <EmptyState title="Nenhuma liderança encontrada" description="Ajuste os filtros ou cadastre uma nova liderança para ampliar a base territorial." icon={Users} />
+                    <EmptyState title="Nenhum cadastro encontrado" description="Ajuste os filtros ou cadastre uma coordenação/liderança para ampliar a base territorial." icon={Users} />
                   </TableCell>
                 </TableRow>
               ) : (
@@ -557,9 +557,9 @@ function LeadershipFormSheet({
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent className="w-full overflow-y-auto border-l-0 bg-slate-50 p-0 sm:max-w-4xl">
         <SheetHeader className="bg-gradient-to-br from-slate-950 to-blue-950 p-6 pb-8 text-white">
-          <SheetTitle className="text-2xl font-extrabold text-white">{record?.id ? "Editar liderança" : "Nova liderança"}</SheetTitle>
+          <SheetTitle className="text-2xl font-extrabold text-white">{record?.id ? "Editar cadastro" : "Novo cadastro"}</SheetTitle>
           <SheetDescription className="text-sm font-medium leading-6 text-white/80">
-            Registre dados territoriais, potencial político e comprovação da força da liderança.
+            Registre coordenações e lideranças com território, potencial político e estimativas operacionais.
           </SheetDescription>
         </SheetHeader>
 
@@ -570,7 +570,7 @@ function LeadershipFormSheet({
               <TextField label="Apelido político" value={record.political_nickname} onChange={(value) => update("political_nickname", value)} />
               <TextField required label="Telefone/WhatsApp" value={record.phone} onChange={(value) => update("phone", value)} />
               <TextField label="E-mail" value={record.email} onChange={(value) => update("email", value)} />
-              <SelectTextField required label="Tipo de liderança" value={record.leader_type} values={leaderTypeOptions} onChange={(value) => update("leader_type", value)} />
+              <SelectTextField required label="Tipo de cadastro" value={record.leader_type} values={leaderTypeOptions} onChange={(value) => update("leader_type", value)} />
               <SelectTextField required label="Status" value={record.status} values={["Ativa", "Atenção", "Em validação", "Inativa"]} onChange={(value) => update("status", value)} />
               <TextField label="Responsável interno" value={record.internal_responsible} onChange={(value) => update("internal_responsible", value)} />
               <AreaField label="Observações" value={record.notes} onChange={(value) => update("notes", value)} />
@@ -609,7 +609,7 @@ function LeadershipFormSheet({
               <Button type="button" variant="outline" onClick={() => onOpenChange(false)} disabled={saving}>Cancelar</Button>
               <Button type="submit" disabled={saving}>
                 {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
-                Salvar liderança
+                Salvar cadastro
               </Button>
             </div>
           </form>
@@ -930,7 +930,7 @@ function validateForm(form: LeaderFormState) {
   const required: Array<[keyof LeaderFormState, string]> = [
     ["full_name", "Nome completo"],
     ["phone", "Telefone/WhatsApp"],
-    ["leader_type", "Tipo de liderança"],
+    ["leader_type", "Tipo de cadastro"],
     ["status", "Status"],
     ["neighborhood", "Bairro"],
     ["city", "Cidade"],

@@ -1,4 +1,5 @@
 import { isSupabaseConfigured } from "@/lib/supabaseClient";
+import type { Leader, LeaderMonthlyMetric } from "@/types/database";
 import type { DashboardDataset } from "./dashboard";
 import { getDashboardDataset } from "./dashboard";
 
@@ -137,6 +138,7 @@ export async function getReportsDashboardData(history: ReportsDashboardData["his
 
 export function buildReportsDashboardData(dataset: DashboardDataset, history: ReportsDashboardData["history"], warnings: string[] = []): ReportsDashboardData {
   const territoryRows = buildTerritoryRows(dataset);
+  const currentMetrics = getCurrentMetrics(dataset.leaderMonthlyMetrics);
   const generatedThisMonth = history.filter((item) => isCurrentMonth(item.date)).length;
   const lastUpdate = latestDate(dataset.leaders.map((item) => item.updated_at));
 
@@ -149,8 +151,8 @@ export function buildReportsDashboardData(dataset: DashboardDataset, history: Re
       analyzedLeaders: dataset.leaders.length,
       analyzedNeighborhoods: unique(dataset.leaders.map((item) => item.neighborhood)).length,
       analyzedTerritories: territoryRows.length,
-      estimatedSupporters: sumLeadersSupport(dataset.leaders),
-      analyzedValidatedVotes: sum(dataset.leaders, "validated_votes"),
+      estimatedSupporters: sumMetric(currentMetrics, "estimated_supporters") || sumLeadersSupport(dataset.leaders),
+      analyzedValidatedVotes: sumMetric(currentMetrics, "min_votes") || sum(dataset.leaders, "validated_votes"),
       analyzedZones: 0,
       analyzedDemands: 0,
       analyzedFieldActions: 0,
@@ -209,10 +211,12 @@ export function filterReportDataset(dataset: DashboardDataset, filters: ReportFi
     selectMatches(filters.status, item.status) &&
     matchesPeriod(filters.periodo, item.created_at),
   );
+  const leaderIds = new Set(leaders.map((item) => item.id));
 
   return {
     ...dataset,
     leaders,
+    leaderMonthlyMetrics: dataset.leaderMonthlyMetrics.filter((item) => leaderIds.has(item.leader_id)),
     supporters: [],
     prospects: [],
     electoralZones: [],
@@ -227,16 +231,17 @@ function buildRowsForReport(reportId: string, dataset: DashboardDataset, territo
   if (reportId === "municipio") return groupByCity(territoryRows);
 
   if (reportId === "lideranca") {
+    const metricMap = getCurrentMetricMap(dataset.leaderMonthlyMetrics);
     return dataset.leaders.map((item) => ({
       Cadastro: item.full_name,
       Papel: item.leader_type,
       Bairro: item.neighborhood,
       Cidade: item.city,
       "Região/Distrito": item.territory_region ?? "-",
-      "Apoio estimado": leaderSupport(item),
-      "Votos declarados": item.declared_votes,
-      "Votos validados": item.validated_votes,
-      "Taxa de validação": `${percent(item.validated_votes, item.declared_votes)}%`,
+      "Apoio estimado": getLeaderMetricValue(item, metricMap, "estimated_supporters", leaderSupport(item)),
+      "Votos mínimos": getLeaderMetricValue(item, metricMap, "min_votes", item.validated_votes),
+      "Votos máximos": getLeaderMetricValue(item, metricMap, "max_votes", item.declared_votes),
+      "Confirmação": `${percent(getLeaderMetricValue(item, metricMap, "min_votes", item.validated_votes), getLeaderMetricValue(item, metricMap, "max_votes", item.declared_votes))}%`,
       Confiança: item.confidence_level,
       Responsável: item.internal_responsible ?? "Não definido",
       "Próxima ação": item.next_action ?? "Validar estimativa",
@@ -244,15 +249,19 @@ function buildRowsForReport(reportId: string, dataset: DashboardDataset, territo
   }
 
   if (reportId === "custos") {
+    const metricMap = getCurrentMetricMap(dataset.leaderMonthlyMetrics);
     return dataset.leaders.map((item) => ({
       Cadastro: item.full_name,
       Papel: item.leader_type,
       Cidade: item.city,
       Bairro: item.neighborhood,
-      "Custo base mensal": "A definir",
-      "Teto mensal": "A definir",
-      "Despesa extra": "A definir",
-      Observação: "Preencher no centro de custos mensal",
+      "Custo base mensal": getLeaderMetricValue(item, metricMap, "base_cost", 0),
+      "Teto mensal": getLeaderMetricValue(item, metricMap, "ceiling_cost", 0),
+      "Despesa extra": getLeaderMetricValue(item, metricMap, "extra_cost", 0),
+      "Custo por voto mínimo": costPerVote(
+        getLeaderMetricValue(item, metricMap, "ceiling_cost", 0) + getLeaderMetricValue(item, metricMap, "extra_cost", 0),
+        getLeaderMetricValue(item, metricMap, "min_votes", item.validated_votes),
+      ),
     }));
   }
 
@@ -262,11 +271,11 @@ function buildRowsForReport(reportId: string, dataset: DashboardDataset, territo
     "Região/Distrito": item.region,
     Lideranças: item.leaders,
     "Apoio estimado": item.supportEstimate,
-    "Votos declarados": item.declaredVotes,
-    "Votos validados": item.validatedVotes,
+    "Votos mínimos": item.validatedVotes,
+    "Votos máximos": item.declaredVotes,
     "Meta atual": item.voteGoal,
     Cobertura: `${item.coverage}%`,
-    Conversão: `${item.validationRate}%`,
+    Confirmação: `${item.validationRate}%`,
     Distância: item.distanceToGoal,
     Responsável: item.responsible,
     Prioridade: item.priority,
@@ -274,17 +283,20 @@ function buildRowsForReport(reportId: string, dataset: DashboardDataset, territo
 }
 
 function buildMetricsForReport(reportId: string, dataset: DashboardDataset, territoryRows: TerritoryReportRow[], rows: Array<Record<string, string | number>>) {
-  const supportEstimate = sumLeadersSupport(dataset.leaders);
-  const declaredVotes = sum(dataset.leaders, "declared_votes");
-  const validatedVotes = sum(dataset.leaders, "validated_votes");
-  const distance = Math.max(declaredVotes - validatedVotes, 0);
+  const currentMetrics = getCurrentMetrics(dataset.leaderMonthlyMetrics);
+  const supportEstimate = sumMetric(currentMetrics, "estimated_supporters") || sumLeadersSupport(dataset.leaders);
+  const minVotes = sumMetric(currentMetrics, "min_votes") || sum(dataset.leaders, "validated_votes");
+  const maxVotes = sumMetric(currentMetrics, "max_votes") || sum(dataset.leaders, "declared_votes");
+  const monthlyCost = sumMetric(currentMetrics, "ceiling_cost") + sumMetric(currentMetrics, "extra_cost");
+  const distance = Math.max(maxVotes - minVotes, 0);
 
   if (reportId === "custos") {
     return [
       metric("Cadastros com custo", dataset.leaders.length),
-      metric("Custo base", "A definir"),
-      metric("Teto mensal", "A definir"),
-      metric("Extras", "A definir"),
+      metric("Custo base", sumMetric(currentMetrics, "base_cost")),
+      metric("Teto mensal", sumMetric(currentMetrics, "ceiling_cost")),
+      metric("Extras", sumMetric(currentMetrics, "extra_cost")),
+      metric("Custo/voto mínimo", costPerVote(monthlyCost, minVotes)),
     ];
   }
 
@@ -292,9 +304,10 @@ function buildMetricsForReport(reportId: string, dataset: DashboardDataset, terr
     metric("Cadastros", dataset.leaders.length),
     metric("Territórios", territoryRows.length),
     metric("Apoio estimado", supportEstimate),
-    metric("Votos validados", validatedVotes),
-    metric("Conversão", `${percent(validatedVotes, declaredVotes)}%`),
-    metric("Distância até meta", distance || sum(rows, "Distância")),
+    metric("Votos mínimos", minVotes),
+    metric("Votos máximos", maxVotes),
+    metric("Confirmação", `${percent(minVotes, maxVotes)}%`),
+    metric("Distância", distance || sum(rows, "Distância")),
   ];
 }
 
@@ -302,8 +315,8 @@ function buildChartForReport(reportId: string, territoryRows: TerritoryReportRow
   const rows = reportId === "municipio" ? cityChartRows(territoryRows) : territoryRows;
   return rows.slice(0, 8).map((item) => ({
     name: item.area,
-    meta: item.voteGoal,
-    validados: item.validatedVotes,
+    maximos: item.declaredVotes,
+    minimos: item.validatedVotes,
     apoio: item.supportEstimate,
   }));
 }
@@ -458,6 +471,27 @@ function getLeaderPriority(validated: number, declared: number, confidence: stri
   if (normalize(confidence).includes("baixo")) return "Alta";
   if (normalize(confidence).includes("alto")) return "Manter";
   return "Média";
+}
+
+function getCurrentMetrics(metrics: LeaderMonthlyMetric[]) {
+  const latestMonth = metrics.map((item) => item.month_ref).filter(Boolean).sort((a, b) => b.localeCompare(a))[0];
+  return latestMonth ? metrics.filter((item) => item.month_ref === latestMonth) : [];
+}
+
+function getCurrentMetricMap(metrics: LeaderMonthlyMetric[]) {
+  return new Map(getCurrentMetrics(metrics).map((item) => [item.leader_id, item]));
+}
+
+function getLeaderMetricValue(leader: Leader, metricMap: Map<string, LeaderMonthlyMetric>, key: keyof Pick<LeaderMonthlyMetric, "estimated_supporters" | "min_votes" | "max_votes" | "base_cost" | "ceiling_cost" | "extra_cost">, fallback: number) {
+  return Number(metricMap.get(leader.id)?.[key] ?? fallback ?? 0);
+}
+
+function sumMetric(metrics: LeaderMonthlyMetric[], key: keyof Pick<LeaderMonthlyMetric, "estimated_supporters" | "min_votes" | "max_votes" | "base_cost" | "ceiling_cost" | "extra_cost">) {
+  return metrics.reduce((total, item) => total + Number(item[key] ?? 0), 0);
+}
+
+function costPerVote(cost: number, votes: number) {
+  return votes ? Math.round(cost / votes) : 0;
 }
 
 function selectMatches(filter: string, value: string) {

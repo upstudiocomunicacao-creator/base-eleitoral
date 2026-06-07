@@ -183,7 +183,7 @@ export default function Relatorios() {
         <MetricCard label="Cadastros" value={summary?.analyzedLeaders ?? 0} icon={Users} tone="violet" loading={loading} />
         <MetricCard label="Territórios" value={summary?.analyzedTerritories ?? 0} icon={MapPin} tone="cyan" loading={loading} />
         <MetricCard label="Apoio estimado" value={summary?.estimatedSupporters ?? 0} icon={Users} tone="orange" loading={loading} />
-        <MetricCard label="Votos validados" value={summary?.analyzedValidatedVotes ?? 0} icon={TrendingUp} tone="green" loading={loading} />
+        <MetricCard label="Votos mínimos" value={summary?.analyzedValidatedVotes ?? 0} icon={TrendingUp} tone="green" loading={loading} />
         <MetricCard label="Críticos" value={summary?.criticalIndicators ?? 0} icon={AlertTriangle} tone="red" loading={loading} />
       </section>
 

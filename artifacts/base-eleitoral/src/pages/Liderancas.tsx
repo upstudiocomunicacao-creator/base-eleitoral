@@ -40,18 +40,10 @@ const rjCityOptions = [...rjCities] as string[];
 const maricaNeighborhoodOptions = [...maricaNeighborhoods] as string[];
 const leaderTypeOptions = [
   "Coordenação Geral",
-  "Coordenação RJ",
-  "Coordenação Maricá",
+  "Coordenador RJ",
+  "Coordenador Maricá",
   "Liderança RJ",
   "Liderança Maricá",
-  "Comunitária",
-  "Regional",
-  "Territorial",
-  "Juventude",
-  "Comerciante",
-  "Religiosa",
-  "Temática",
-  "Política",
 ];
 
 type Filters = {
@@ -281,7 +273,7 @@ export default function Liderancas() {
       <PageHeader
         eyebrow="Base Territorial"
         title="Cadastros Territoriais"
-        description={`${filtered.length} cadastros no recorte atual - coordenações e lideranças reais do Supabase.`}
+        description={`${filtered.length} cadastros no recorte atual - coordenação geral, coordenadores e lideranças reais do Supabase.`}
         actions={
           <div className="flex flex-wrap gap-2">
             <Button variant="outline" onClick={() => void loadLeaders()} disabled={loading}>
@@ -301,11 +293,11 @@ export default function Liderancas() {
       <div className="grid grid-cols-2 gap-4 md:grid-cols-4 xl:grid-cols-8">
         <MetricCard label="Total" value={filtered.length} icon={Users} tone="blue" loading={loading} />
         <MetricCard label="Ativas" value={summary.active} icon={CheckCircle2} tone="emerald" loading={loading} />
-        <MetricCard label="Estimados" value={summary.estimated} icon={TrendingUp} tone="violet" loading={loading} />
+        <MetricCard label="Apoio estimado" value={summary.estimated} icon={TrendingUp} tone="violet" loading={loading} />
         <MetricCard label="Declarados" value={summary.declared} icon={UserRound} tone="amber" loading={loading} />
         <MetricCard label="Validados" value={summary.validated} icon={ShieldCheck} tone="green" loading={loading} />
         <MetricCard label="Confiança" value={summary.confidence} icon={ShieldCheck} tone="cyan" loading={loading} />
-        <MetricCard label="Bairros" value={summary.neighborhoods} icon={MapPinned} tone="indigo" loading={loading} />
+        <MetricCard label="Territórios" value={summary.neighborhoods} icon={MapPinned} tone="indigo" loading={loading} />
         <MetricCard label="Atenção" value={summary.attention} icon={AlertTriangle} tone="red" loading={loading} />
       </div>
 
@@ -420,7 +412,7 @@ function LeadersTable({
   return (
     <Card className="premium-card overflow-hidden">
       <CardHeader className="section-divider border-t-0 px-5 py-4">
-        <CardTitle className="text-base font-extrabold text-slate-950">Cadastros de Coordenação e Liderança</CardTitle>
+        <CardTitle className="text-base font-extrabold text-slate-950">Cadastros da força territorial</CardTitle>
         <p className="text-sm font-medium text-slate-500">Clique em um cadastro para abrir a ficha individual.</p>
       </CardHeader>
       <CardContent className="p-0">
@@ -432,9 +424,9 @@ function LeadersTable({
                 <TableHead className="min-w-40">Apelido político</TableHead>
                 <TableHead>Bairro</TableHead>
                 <TableHead>Cidade</TableHead>
-                <TableHead>Tipo</TableHead>
+                <TableHead>Papel</TableHead>
                 <TableHead>Status</TableHead>
-                <TableHead className="text-right">Estimados</TableHead>
+                <TableHead className="text-right">Apoio estimado</TableHead>
                 <TableHead className="text-right">Declarados</TableHead>
                 <TableHead className="text-right">Validados</TableHead>
                 <TableHead>Confiança</TableHead>
@@ -547,6 +539,12 @@ function LeadershipFormSheet({
     setRecord({ ...record, city, state: "RJ", neighborhood, territory_region: territoryRegion, leader_type: leaderType });
   }
 
+  function updateScope(scope: "rj" | "marica") {
+    if (!record) return;
+    const city = scope === "marica" ? "Maricá" : "Niterói";
+    updateCity(city);
+  }
+
   function updateNeighborhood(neighborhood: string) {
     if (!record) return;
     const territoryRegion = record.city === "Maricá" ? getMaricaDistrictForNeighborhood(neighborhood) : getRJRegionForCity(record.city);
@@ -559,7 +557,7 @@ function LeadershipFormSheet({
         <SheetHeader className="bg-gradient-to-br from-slate-950 to-blue-950 p-6 pb-8 text-white">
           <SheetTitle className="text-2xl font-extrabold text-white">{record?.id ? "Editar cadastro" : "Novo cadastro"}</SheetTitle>
           <SheetDescription className="text-sm font-medium leading-6 text-white/80">
-            Registre coordenações e lideranças com território, potencial político e estimativas operacionais.
+            Registre coordenação geral, coordenadores e lideranças com território, apoio estimado e votos acompanháveis.
           </SheetDescription>
         </SheetHeader>
 
@@ -570,13 +568,24 @@ function LeadershipFormSheet({
               <TextField label="Apelido político" value={record.political_nickname} onChange={(value) => update("political_nickname", value)} />
               <TextField required label="Telefone/WhatsApp" value={record.phone} onChange={(value) => update("phone", value)} />
               <TextField label="E-mail" value={record.email} onChange={(value) => update("email", value)} />
-              <SelectTextField required label="Tipo de cadastro" value={record.leader_type} values={leaderTypeOptions} onChange={(value) => update("leader_type", value)} />
+              <SelectTextField required label="Papel no organograma" value={record.leader_type} values={leaderTypeOptions} onChange={(value) => update("leader_type", value)} />
               <SelectTextField required label="Status" value={record.status} values={["Ativa", "Atenção", "Em validação", "Inativa"]} onChange={(value) => update("status", value)} />
               <TextField label="Responsável interno" value={record.internal_responsible} onChange={(value) => update("internal_responsible", value)} />
               <AreaField label="Observações" value={record.notes} onChange={(value) => update("notes", value)} />
             </FormSection>
 
-            <FormSection title="Endereço e território">
+            <FormSection title="Território de atuação">
+              <div className="rounded-xl border border-blue-100 bg-blue-50 p-3 text-sm font-semibold leading-6 text-blue-950 md:col-span-2 xl:col-span-3">
+                RJ usa cidade e região de governo automática. Maricá usa bairro e distrito automático. Para cidades fora de Maricá, o bairro fica fixado como Todos.
+              </div>
+              <div className="flex flex-wrap gap-2 md:col-span-2 xl:col-span-3">
+                <Button type="button" variant={record.city === "Maricá" ? "outline" : "default"} onClick={() => updateScope("rj")}>
+                  Atuação RJ
+                </Button>
+                <Button type="button" variant={record.city === "Maricá" ? "default" : "outline"} onClick={() => updateScope("marica")}>
+                  Atuação Maricá
+                </Button>
+              </div>
               <TextField label="CEP" value={record.cep} onChange={(value) => update("cep", value)} />
               <TextField label="Rua" value={record.street} onChange={(value) => update("street", value)} />
               <TextField label="Número" value={record.number} onChange={(value) => update("number", value)} />
@@ -592,10 +601,13 @@ function LeadershipFormSheet({
               <SelectTextField required label="Precisão geográfica" value={record.geographic_precision} values={["Alta", "Média alta", "Média", "Baixa", "Muito baixa"]} onChange={(value) => update("geographic_precision", value)} />
             </FormSection>
 
-            <FormSection title="Potencial político">
+            <FormSection title="Estimativas atuais">
+              <div className="rounded-xl border border-emerald-100 bg-emerald-50 p-3 text-sm font-semibold leading-6 text-emerald-950 md:col-span-2 xl:col-span-3">
+                Use estes campos como base atual. A atualização mensal de votos mínimo/máximo e centro de custos fica no Modo Operacional.
+              </div>
               <NumberField label="Apoio estimado base" value={record.registered_supporters} onChange={(value) => update("registered_supporters", value)} />
-              <NumberField label="Estimativa direta" value={record.estimated_direct_supporters} onChange={(value) => update("estimated_direct_supporters", value)} />
-              <NumberField label="Estimativa indireta" value={record.estimated_indirect_supporters} onChange={(value) => update("estimated_indirect_supporters", value)} />
+              <NumberField label="Apoio estimado direto" value={record.estimated_direct_supporters} onChange={(value) => update("estimated_direct_supporters", value)} />
+              <NumberField label="Apoio estimado indireto" value={record.estimated_indirect_supporters} onChange={(value) => update("estimated_indirect_supporters", value)} />
               <NumberField label="Votos declarados" value={record.declared_votes} onChange={(value) => update("declared_votes", value)} />
               <NumberField label="Votos validados" value={record.validated_votes} onChange={(value) => update("validated_votes", value)} />
               <SelectTextField required label="Grau de confiança" value={record.confidence_level} values={["Baixo", "Médio", "Alto"]} onChange={(value) => update("confidence_level", value)} />
@@ -643,7 +655,7 @@ function LeadershipDetailSheet({ open, record, onOpenChange }: { open: boolean; 
 
         <div className="space-y-5 p-5 sm:p-6">
           <div className="grid gap-4 md:grid-cols-4">
-            <DetailMetric label="Potencial total" value={potential.toLocaleString("pt-BR")} />
+            <DetailMetric label="Apoio estimado" value={potential.toLocaleString("pt-BR")} />
             <DetailMetric label="Declarados" value={record.declared_votes.toLocaleString("pt-BR")} />
             <DetailMetric label="Validados" value={record.validated_votes.toLocaleString("pt-BR")} />
             <DetailMetric label="Taxa" value={`${validation}%`} />
@@ -652,7 +664,7 @@ function LeadershipDetailSheet({ open, record, onOpenChange }: { open: boolean; 
           <div className="grid gap-5 xl:grid-cols-[1fr_0.9fr]">
             <DetailCard title="Dados principais">
               <InfoGrid items={[
-                ["Tipo", record.leader_type],
+                ["Papel", record.leader_type],
                 ["Status", record.status],
                 ["Confiança", record.confidence_level],
                 ["Nível de atenção", attention],
@@ -676,7 +688,7 @@ function LeadershipDetailSheet({ open, record, onOpenChange }: { open: boolean; 
           </div>
 
           <div className="grid gap-5 xl:grid-cols-3">
-            <DetailCard title="Endereço e território">
+            <DetailCard title="Território de atuação">
               <InfoGrid items={[
                 ["CEP", record.cep ?? "-"],
                 ["Rua", record.street ?? "-"],
@@ -689,11 +701,11 @@ function LeadershipDetailSheet({ open, record, onOpenChange }: { open: boolean; 
               ]} />
             </DetailCard>
 
-            <DetailCard title="Potencial político">
+            <DetailCard title="Estimativas atuais">
               <InfoGrid items={[
                 ["Apoio estimado base", String(record.registered_supporters)],
-                ["Estimativa direta", String(record.estimated_direct_supporters)],
-                ["Estimativa indireta", String(record.estimated_indirect_supporters)],
+                ["Apoio direto", String(record.estimated_direct_supporters)],
+                ["Apoio indireto", String(record.estimated_indirect_supporters)],
                 ["Fonte", record.estimate_source ?? "-"],
                 ["Comprovação", record.proof_type ?? "-"],
                 ["Última atualização", record.last_update ?? "-"],
@@ -709,9 +721,9 @@ function LeadershipDetailSheet({ open, record, onOpenChange }: { open: boolean; 
           </div>
 
           <div className="grid gap-5 xl:grid-cols-3">
-            <DetailList title="Vínculos operacionais" />
-            <DetailList title="Histórico operacional" />
-            <DetailList title="Notas e pendências" />
+            <DetailList title="Coordenação vinculada" />
+            <DetailList title="Evolução mensal" />
+            <DetailList title="Centro de custos" />
           </div>
         </div>
       </SheetContent>
@@ -840,7 +852,7 @@ function toFormState(leader: Leader): LeaderFormState {
     political_nickname: leader.political_nickname ?? "",
     phone: leader.phone,
     email: leader.email ?? "",
-    leader_type: leader.leader_type,
+    leader_type: normalizeLeadershipTypeForTerritory(leader.leader_type, isMarica),
     status: leader.status,
     cep: leader.cep ?? "",
     street: leader.street ?? "",
@@ -919,10 +931,13 @@ function normalizeTerritory(form: LeaderFormState) {
 
 function normalizeLeadershipTypeForTerritory(type: string, isMarica: boolean) {
   if (type === "Coordenação Geral") return type;
-  if (isMarica && type === "Coordenação RJ") return "Coordenação Maricá";
+  if (type === "Coordenação RJ") return "Coordenador RJ";
+  if (type === "Coordenação Maricá") return "Coordenador Maricá";
+  if (isMarica && type === "Coordenador RJ") return "Coordenador Maricá";
   if (isMarica && type === "Liderança RJ") return "Liderança Maricá";
-  if (!isMarica && type === "Coordenação Maricá") return "Coordenação RJ";
+  if (!isMarica && type === "Coordenador Maricá") return "Coordenador RJ";
   if (!isMarica && type === "Liderança Maricá") return "Liderança RJ";
+  if (!leaderTypeOptions.includes(type)) return isMarica ? "Liderança Maricá" : "Liderança RJ";
   return type;
 }
 

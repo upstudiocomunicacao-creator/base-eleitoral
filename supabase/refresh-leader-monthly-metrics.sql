@@ -2,6 +2,14 @@
 -- Run this in Supabase SQL Editor if the app can read leader_monthly_metrics
 -- but inserts/updates fail with a PostgREST schema cache message.
 
+create or replace function set_updated_at()
+returns trigger as $$
+begin
+  new.updated_at = now();
+  return new;
+end;
+$$ language plpgsql;
+
 create table if not exists leader_monthly_metrics (
   id uuid primary key default gen_random_uuid(),
   campaign_id uuid not null references campaigns(id) on delete cascade,

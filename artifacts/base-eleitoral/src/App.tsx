@@ -1,5 +1,6 @@
 ﻿import { lazy, Suspense } from "react";
-import { Switch, Route, Router as WouterRouter } from "wouter";
+import { useEffect } from "react";
+import { Switch, Route, Router as WouterRouter, useLocation } from "wouter";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { Loader2 } from "lucide-react";
 import { Toaster } from "@/components/ui/toaster";
@@ -15,14 +16,9 @@ const Dashboard = lazy(() => import("./pages/Dashboard"));
 const Operacional = lazy(() => import("./pages/Operacional"));
 const MapaForca = lazy(() => import("./pages/MapaForca"));
 const Liderancas = lazy(() => import("./pages/Liderancas"));
-const Apoiadores = lazy(() => import("./pages/Apoiadores"));
-const Prospeccao = lazy(() => import("./pages/Prospeccao"));
 const MapaRJ = lazy(() => import("./pages/MapaRJ"));
 const MapaMarica = lazy(() => import("./pages/MapaMarica"));
-const Zonas = lazy(() => import("./pages/Zonas"));
 const Comparativo = lazy(() => import("./pages/Comparativo"));
-const Agenda = lazy(() => import("./pages/Agenda"));
-const Demandas = lazy(() => import("./pages/Demandas"));
 const Relatorios = lazy(() => import("./pages/Relatorios"));
 const Importacao = lazy(() => import("./pages/Importacao"));
 const Geocodificacao = lazy(() => import("./pages/Geocodificacao"));
@@ -53,14 +49,14 @@ function Router() {
               <Route path="/operacional" component={Operacional} />
               <Route path="/mapa-forca" component={MapaForca} />
               <Route path="/liderancas" component={Liderancas} />
-              <Route path="/apoiadores" component={Apoiadores} />
-              <Route path="/prospeccao" component={Prospeccao} />
+              <Route path="/apoiadores"><LegacyRedirect to="/liderancas" /></Route>
+              <Route path="/prospeccao"><LegacyRedirect to="/operacional" /></Route>
               <Route path="/mapa-rj" component={MapaRJ} />
               <Route path="/mapa-marica" component={MapaMarica} />
-              <Route path="/zonas" component={Zonas} />
+              <Route path="/zonas"><LegacyRedirect to="/mapa-rj" /></Route>
               <Route path="/comparativo" component={Comparativo} />
-              <Route path="/agenda" component={Agenda} />
-              <Route path="/demandas" component={Demandas} />
+              <Route path="/agenda"><LegacyRedirect to="/operacional" /></Route>
+              <Route path="/demandas"><LegacyRedirect to="/operacional" /></Route>
               <Route path="/relatorios" component={Relatorios} />
               <Route path="/importacao" component={Importacao} />
               <Route path="/geocodificacao" component={Geocodificacao} />
@@ -75,12 +71,28 @@ function Router() {
   );
 }
 
+function LegacyRedirect({ to }: { to: string }) {
+  const [, navigate] = useLocation();
+
+  useEffect(() => {
+    navigate(to, { replace: true });
+  }, [navigate, to]);
+
+  return (
+    <div className="flex min-h-[420px] items-center justify-center">
+      <div className="rounded-full border border-slate-200 bg-white px-4 py-2 text-sm font-bold text-slate-700 shadow-sm">
+        Redirecionando para a versão enxuta
+      </div>
+    </div>
+  );
+}
+
 function PageLoading() {
   return (
     <div className="flex min-h-[420px] items-center justify-center">
       <div className="flex items-center gap-2 rounded-full border border-slate-200 bg-white px-4 py-2 text-sm font-bold text-slate-700 shadow-sm">
         <Loader2 className="h-4 w-4 animate-spin text-blue-600" />
-        Carregando mÃ³dulo
+        Carregando módulo
       </div>
     </div>
   );

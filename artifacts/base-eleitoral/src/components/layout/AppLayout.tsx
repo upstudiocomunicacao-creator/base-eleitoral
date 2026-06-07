@@ -1,19 +1,16 @@
 import { ReactNode, useState } from "react";
 import { Link, useLocation } from "wouter";
 import {
-  Activity,
   BarChart3,
   ChevronRight,
   FileText,
   LayoutDashboard,
   ListChecks,
   Map,
-  MapPinned,
   MapPin,
   Menu,
   Network,
   Settings,
-  UploadCloud,
   Users,
   X,
   Zap,
@@ -23,28 +20,25 @@ import { canAccessModule, type PermissionModule } from "@/lib/permissions";
 import { useAuth } from "@/hooks/useAuth";
 
 const navItems = [
-  { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard, group: "Visão Geral", module: "dashboard" },
-  { href: "/operacional", label: "Modo Operacional", icon: ListChecks, group: "Visão Geral", module: "dashboard" },
-  { href: "/mapa-forca", label: "Mapa de Força", icon: Network, group: "Visão Geral", module: "mapa_forca" },
-  { href: "/liderancas", label: "Lideranças", icon: Users, group: "Base Territorial", module: "liderancas" },
+  { href: "/dashboard", label: "Painel", icon: LayoutDashboard, group: "Operação", module: "dashboard" },
+  { href: "/operacional", label: "Operacional", icon: ListChecks, group: "Operação", module: "dashboard" },
+  { href: "/mapa-forca", label: "Mapa de Força", icon: Network, group: "Operação", module: "mapa_forca" },
+  { href: "/liderancas", label: "Cadastros", icon: Users, group: "Território", module: "liderancas" },
   { href: "/mapa-rj", label: "Mapa RJ", icon: Map, group: "Mapas", module: "mapa_rj" },
   { href: "/mapa-marica", label: "Mapa Maricá", icon: MapPin, group: "Mapas", module: "mapa_marica" },
-  { href: "/comparativo", label: "Comparativo", icon: BarChart3, group: "Inteligência", module: "comparativo" },
-  { href: "/relatorios", label: "Relatórios", icon: FileText, group: "Sistema", module: "relatorios" },
-  { href: "/importacao", label: "Importação", icon: UploadCloud, group: "Sistema", module: "importacao_dados" },
-  { href: "/geocodificacao", label: "Geocodificação", icon: MapPinned, group: "Sistema", module: "geocodificacao" },
-  { href: "/diagnostico", label: "Diagnóstico", icon: Activity, group: "Sistema", module: "diagnostico" },
-  { href: "/configuracoes", label: "Configurações", icon: Settings, group: "Sistema", module: "configuracoes" },
+  { href: "/comparativo", label: "Análises", icon: BarChart3, group: "Inteligência", module: "comparativo" },
+  { href: "/relatorios", label: "Relatórios", icon: FileText, group: "Gestão", module: "relatorios" },
+  { href: "/configuracoes", label: "Configurações", icon: Settings, group: "Gestão", module: "configuracoes" },
 ] as const;
 
-const groups = ["Visão Geral", "Base Territorial", "Mapas", "Inteligência", "Sistema"];
+const groups = ["Operação", "Território", "Mapas", "Inteligência", "Gestão"];
 
 export function AppLayout({ children }: { children: ReactNode }) {
   const [location] = useLocation();
   const [mobileOpen, setMobileOpen] = useState(false);
   const { profile } = useAuth();
   const visibleNavItems = navItems.filter((item) => canAccessModule(profile, item.module as PermissionModule));
-  const activeLabel = visibleNavItems.find((item) => item.href === location || (item.href === "/dashboard" && location === "/"))?.label ?? "Dashboard";
+  const activeLabel = visibleNavItems.find((item) => item.href === location || (item.href === "/dashboard" && location === "/"))?.label ?? "Painel";
 
   const sidebar = (
     <div className="flex h-full flex-col">

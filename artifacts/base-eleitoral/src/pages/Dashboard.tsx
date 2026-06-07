@@ -64,19 +64,14 @@ const emptyFilters: DashboardFilters = {
 const statCards = [
   { key: "totalLeaders", label: "Lideranças", icon: Users, tone: "blue" },
   { key: "activeLeaders", label: "Ativas", icon: ShieldCheck, tone: "emerald" },
-  { key: "totalSupporters", label: "Apoiadores", icon: UserPlus, tone: "green" },
-  { key: "estimatedSupporters", label: "Estimados", icon: BarChart2, tone: "violet" },
+  { key: "estimatedSupporters", label: "Apoio estim.", icon: BarChart2, tone: "violet" },
   { key: "declaredVotes", label: "Declarados", icon: Star, tone: "amber" },
   { key: "validatedVotes", label: "Validados", icon: CheckCircle2, tone: "green" },
   { key: "confidenceIndex", label: "Confiança", icon: TrendingUp, tone: "cyan" },
   { key: "municipalitiesWithAction", label: "Municípios", icon: Building2, tone: "indigo" },
   { key: "coveredNeighborhoods", label: "Bairros", icon: MapPin, tone: "rose" },
-  { key: "electoralZones", label: "Zonas", icon: Landmark, tone: "orange" },
-  { key: "mappedVoters", label: "Eleitores", icon: Users, tone: "blue" },
   { key: "generalVoteGoal", label: "Meta geral", icon: Target, tone: "violet" },
   { key: "distanceToGoal", label: "Distância", icon: AlertCircle, tone: "orange" },
-  { key: "openDemands", label: "Demandas abertas", icon: MessageSquareWarning, tone: "red" },
-  { key: "upcomingActions", label: "Próx. ações", icon: CalendarDays, tone: "amber" },
   { key: "priorityRegions", label: "Prioritárias", icon: AlertTriangle, tone: "red" },
 ] as const;
 
@@ -139,7 +134,7 @@ export default function Dashboard() {
       <PageHeader
         eyebrow="Dashboard Geral"
         title="Comando Geral"
-        description={`${today} · visão executiva consolidada da campanha com dados reais do Supabase.`}
+        description={`${today} · visão executiva enxuta por coordenação, liderança, território, votos e custo estimado.`}
         actions={
           <Button variant="outline" onClick={() => void loadDashboard()} disabled={loading}>
             <RefreshCw className={`h-4 w-4 ${loading ? "animate-spin" : ""}`} /> Atualizar
@@ -150,14 +145,14 @@ export default function Dashboard() {
       {error ? <ConnectionWarning message={error} onRetry={() => void loadDashboard()} /> : null}
       {dataset?.warnings.length ? <WarningsPanel warnings={dataset.warnings} /> : null}
       {!loading && !error && !hasAnyData ? (
-        <EmptyState title="Sem dados suficientes neste módulo." description="Cadastre lideranças, apoiadores, zonas, demandas ou agendas para alimentar o dashboard geral." icon={BarChart2} />
+        <EmptyState title="Sem dados suficientes neste módulo." description="Cadastre coordenações e lideranças para alimentar o dashboard geral." icon={BarChart2} />
       ) : null}
 
       <DashboardFiltersPanel filters={filters} setFilters={setFilters} options={filterOptions} />
 
       <ExecutivePulse computed={computed} loading={loading} />
 
-      <div className="grid grid-cols-2 gap-4 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-8">
+      <div className="grid grid-cols-2 gap-4 md:grid-cols-3 lg:grid-cols-5 xl:grid-cols-10">
         {statCards.map(({ key, label, icon, tone }) => (
           <MetricCard
             key={key}
@@ -171,7 +166,7 @@ export default function Dashboard() {
       </div>
 
       <div className="grid gap-6 lg:grid-cols-2">
-        <ChartCard title="Evolução semanal de cadastros" description="Lideranças, apoiadores e prospecções por semana" loading={loading} empty={!computed?.weeklyGrowth.length}>
+        <ChartCard title="Evolução semanal da força" description="Cadastros de coordenações e lideranças por semana" loading={loading} empty={!computed?.weeklyGrowth.length}>
           <ResponsiveContainer width="100%" height={280}>
             <AreaChart data={computed?.weeklyGrowth ?? []} margin={{ top: 5, right: 16, left: -20, bottom: 0 }}>
               <defs>
@@ -179,18 +174,12 @@ export default function Dashboard() {
                   <stop offset="5%" stopColor="#2563eb" stopOpacity={0.2} />
                   <stop offset="95%" stopColor="#2563eb" stopOpacity={0} />
                 </linearGradient>
-                <linearGradient id="gradApoiador" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="5%" stopColor="#059669" stopOpacity={0.2} />
-                  <stop offset="95%" stopColor="#059669" stopOpacity={0} />
-                </linearGradient>
               </defs>
               <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
               <XAxis dataKey="semana" axisLine={false} tickLine={false} tick={{ fontSize: 11, fill: "#94a3b8" }} />
               <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 11, fill: "#94a3b8" }} />
               <Tooltip content={<ChartTooltip />} />
               <Area type="monotone" dataKey="liderancas" stroke="#2563eb" strokeWidth={2.5} fill="url(#gradLider)" name="Lideranças" dot={false} />
-              <Area type="monotone" dataKey="apoiadores" stroke="#059669" strokeWidth={2.5} fill="url(#gradApoiador)" name="Apoiadores" dot={false} />
-              <Area type="monotone" dataKey="prospeccoes" stroke="#8b5cf6" strokeWidth={2.5} fill="transparent" name="Prospecções" dot={false} />
             </AreaChart>
           </ResponsiveContainer>
         </ChartCard>
@@ -214,10 +203,6 @@ export default function Dashboard() {
         <div className="grid gap-6 lg:grid-cols-2">
           <RankingCard title="Top lideranças" description="Por votos validados" items={computed?.leaderRanking ?? []} loading={loading} colorClass="bg-emerald-500" valueClass="text-emerald-600" />
           <CoverageCard rows={computed?.neighborhoodCoverage ?? []} loading={loading} />
-          <SimpleBarCard title="Apoiadores por status" data={computed?.supporterStatus ?? []} loading={loading} color="#2563eb" />
-          <SimpleBarCard title="Funil de prospecção" data={computed?.prospectFunnel ?? []} loading={loading} color="#8b5cf6" />
-          <SimpleBarCard title="Demandas por categoria" data={computed?.demandCategories ?? []} loading={loading} color="#f59e0b" />
-          <UpcomingAgendaCard rows={computed?.upcomingAgenda ?? []} loading={loading} />
         </div>
         <PriorityRegionsPanel rows={computed?.priorityRegions ?? []} loading={loading} />
       </div>

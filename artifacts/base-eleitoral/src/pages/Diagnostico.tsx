@@ -336,7 +336,7 @@ async function runOperationalCrud() {
     const { data: metric, error: metricError } = await supabase.from("leader_monthly_metrics").insert({
       campaign_id: DEFAULT_CAMPAIGN_ID,
       leader_id: leader.id,
-      month_ref: "2026-06",
+      month_ref: "2026-06-01",
       estimated_supporters: 20,
       min_votes: 8,
       max_votes: 20,

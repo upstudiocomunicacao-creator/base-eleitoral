@@ -272,7 +272,7 @@ function GeneralTab({ users, onSave }: { users: SystemUser[]; onSave: (label: st
     <div className="space-y-5">
       <section className="grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
         <MetricCard label="Sistema ativo" value="Online" icon={Activity} tone="green" />
-        <MetricCard label="Ãšltima atualização" value="05/06" icon={CheckCircle2} tone="blue" />
+        <MetricCard label="Última atualização" value="05/06" icon={CheckCircle2} tone="blue" />
         <MetricCard label="Usuários" value={users.length} icon={Users} tone="indigo" />
         <MetricCard label="Perfis ativos" value={accessProfiles.filter((p) => p.status === "Ativo").length} icon={UserCog} tone="violet" />
         <MetricCard label="Módulos" value={modules.length} icon={Database} tone="emerald" />
@@ -303,7 +303,7 @@ function UsersTab({ users, summary, onCreate, onEdit, onDelete }: { users: Syste
         <MetricCard label="Ativos" value={summary.active} icon={CheckCircle2} tone="green" />
         <MetricCard label="Pendentes" value={summary.pending} icon={AlertTriangle} tone="amber" />
         <MetricCard label="Bloqueados" value={summary.blocked} icon={LockKeyhole} tone="red" />
-        <MetricCard label="Ãšltimos acessos" value="4 hoje" icon={Activity} tone="indigo" />
+        <MetricCard label="Últimos acessos" value="4 hoje" icon={Activity} tone="indigo" />
         <MetricCard label="Perfis" value={accessProfiles.length} icon={UserCog} tone="violet" />
       </section>
       <Card className="premium-card overflow-hidden">
@@ -318,7 +318,7 @@ function UsersTab({ users, summary, onCreate, onEdit, onDelete }: { users: Syste
         <CardContent className="p-0">
           <div className="overflow-x-auto">
             <Table>
-              <TableHeader><TableRow>{["Nome", "E-mail", "Telefone", "Perfil", "Região", "Status", "Ãšltimo acesso", "Criado em", "Ações"].map((head) => <TableHead key={head}>{head}</TableHead>)}</TableRow></TableHeader>
+              <TableHeader><TableRow>{["Nome", "E-mail", "Telefone", "Perfil", "Região", "Status", "Último acesso", "Criado em", "Ações"].map((head) => <TableHead key={head}>{head}</TableHead>)}</TableRow></TableHeader>
               <TableBody>
                 {users.map((item) => (
                   <TableRow key={item.id}>

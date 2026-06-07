@@ -39,7 +39,7 @@ import { downloadBlob } from "@/utils/exportCsv";
 import { downloadImportTemplate, getImportModule, importModules, type ImportModuleKey } from "@/utils/importTemplates";
 import type { ImportHistory } from "@/types/database";
 
-const steps = ["Módulo", "Arquivo", "Mapeamento", "Validação", "Importação"];
+const steps = ["Tipo", "Arquivo", "Mapeamento", "Validação", "Importação"];
 
 export default function Importacao() {
   const { profile } = useAuth();
@@ -146,7 +146,7 @@ export default function Importacao() {
   if (!canImport) {
     return (
       <div className="space-y-6">
-        <PageHeader eyebrow="Importação" title="Importação de Dados" description="Carga em massa de planilhas CSV/XLSX para módulos territoriais." />
+        <PageHeader eyebrow="Importação" title="Importação de Dados" description="Carga em massa de coordenações, lideranças, apoio estimado, votos e localização territorial." />
         <Card className="border-amber-200 bg-amber-50 shadow-sm">
           <CardContent className="flex items-start gap-3 p-5 text-amber-900">
             <ShieldAlert className="mt-1 h-5 w-5" />
@@ -165,7 +165,7 @@ export default function Importacao() {
       <PageHeader
         eyebrow="Importação de Dados"
         title="Assistente de Importação CSV/XLSX"
-        description="Valide planilhas, revise duplicidades e salve dados em massa no Supabase com segurança."
+        description="Valide cadastros territoriais, revise duplicidades e salve dados em massa no Supabase com segurança."
         actions={<Button variant="outline" onClick={() => resetFlow()}><UploadCloud className="h-4 w-4" /> Nova importação</Button>}
       />
 
@@ -177,7 +177,7 @@ export default function Importacao() {
         <MetricCard label="Importados" value={history.reduce((total, item) => total + item.imported_rows, 0)} icon={DatabaseZap} tone="emerald" loading={historyLoading} />
         <MetricCard label="Com erro" value={stats.errors} icon={XCircle} tone="red" />
         <MetricCard label="Última" value={history[0] ? new Date(history[0].created_at).toLocaleDateString("pt-BR") : "-"} icon={FileSpreadsheet} tone="indigo" loading={historyLoading} />
-        <MetricCard label="Módulos" value={importModules.length} icon={Rows3} tone="violet" />
+        <MetricCard label="Tipos" value={importModules.length} icon={Rows3} tone="violet" />
         <MetricCard label="Pendentes" value={file && !lastResult ? 1 : 0} icon={UploadCloud} tone="amber" />
         <MetricCard label="Duplicados" value={stats.duplicates} icon={AlertTriangle} tone="orange" />
         <MetricCard label="Validados" value={stats.valid} icon={CheckCircle2} tone="green" />
@@ -223,7 +223,7 @@ function ProgressSteps({ active }: { active: number }) {
 function ModuleSelector({ value, onChange }: { value: ImportModuleKey; onChange: (value: ImportModuleKey) => void }) {
   return (
     <Card className="premium-card">
-      <CardHeader><CardTitle className="text-base">1. Escolher módulo</CardTitle></CardHeader>
+      <CardHeader><CardTitle className="text-base">1. Escolher tipo de carga</CardTitle></CardHeader>
       <CardContent className="space-y-2">
         {importModules.map((item) => (
           <button key={item.key} type="button" onClick={() => onChange(item.key)} className={`w-full rounded-lg border p-3 text-left text-sm font-bold transition ${value === item.key ? "border-blue-200 bg-blue-50 text-blue-800" : "border-slate-100 bg-white text-slate-700 hover:bg-slate-50"}`}>

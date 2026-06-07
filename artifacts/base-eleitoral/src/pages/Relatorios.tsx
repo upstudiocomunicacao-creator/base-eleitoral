@@ -6,12 +6,9 @@ import {
   Download,
   FileSpreadsheet,
   FileText,
-  Flag,
-  Landmark,
   Loader2,
   Map,
   MapPin,
-  MessageSquareWarning,
   PieChart as PieChartIcon,
   Printer,
   RefreshCw,
@@ -20,7 +17,6 @@ import {
   Target,
   TrendingUp,
   Users,
-  Vote,
 } from "lucide-react";
 import { Bar, BarChart, CartesianGrid, Cell, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 import { EmptyState } from "@/components/common/EmptyState";
@@ -58,14 +54,9 @@ const iconByReport: Record<string, typeof BarChart3> = {
   lideranca: Users,
   bairro: MapPin,
   municipio: Map,
-  zona: Landmark,
-  secao: Flag,
-  apoiadores: Users,
-  prospeccao: TrendingUp,
-  votos: Vote,
+  votos: TrendingUp,
   metas: Target,
-  demandas: FileText,
-  agenda: CalendarDays,
+  custos: FileSpreadsheet,
   regioes: AlertTriangle,
   calor: PieChartIcon,
   oportunidade: Sparkles,
@@ -185,23 +176,21 @@ export default function Relatorios() {
       {historyWarning ? <WarningPanel message={historyWarning} /> : null}
       {dashboardData?.warnings.length ? <WarningPanel message={`Algumas tabelas retornaram vazias ou com restrição. A tela segue com os dados disponíveis. ${dashboardData.warnings.slice(0, 2).join(" | ")}`} /> : null}
 
-      <section className="grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
+      <section className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-8">
         <MetricCard label="Disponíveis" value={summary?.availableReports ?? 0} icon={FileText} tone="blue" loading={loading} />
         <MetricCard label="Gerados no mês" value={summary?.generatedThisMonth ?? 0} icon={Download} tone="emerald" loading={loading} />
         <MetricCard label="Última atualização" value={summary?.lastUpdate ?? "-"} icon={CalendarDays} tone="indigo" loading={loading} />
-        <MetricCard label="Lideranças" value={summary?.analyzedLeaders ?? 0} icon={Users} tone="violet" loading={loading} />
-        <MetricCard label="Bairros" value={summary?.analyzedNeighborhoods ?? 0} icon={MapPin} tone="cyan" loading={loading} />
-        <MetricCard label="Zonas" value={summary?.analyzedZones ?? 0} icon={Landmark} tone="orange" loading={loading} />
-        <MetricCard label="Votos validados" value={summary?.analyzedValidatedVotes ?? 0} icon={Vote} tone="green" loading={loading} />
-        <MetricCard label="Demandas" value={summary?.analyzedDemands ?? 0} icon={MessageSquareWarning} tone="rose" loading={loading} />
-        <MetricCard label="Ações de campo" value={summary?.analyzedFieldActions ?? 0} icon={CalendarDays} tone="amber" loading={loading} />
+        <MetricCard label="Cadastros" value={summary?.analyzedLeaders ?? 0} icon={Users} tone="violet" loading={loading} />
+        <MetricCard label="Territórios" value={summary?.analyzedTerritories ?? 0} icon={MapPin} tone="cyan" loading={loading} />
+        <MetricCard label="Apoio estimado" value={summary?.estimatedSupporters ?? 0} icon={Users} tone="orange" loading={loading} />
+        <MetricCard label="Votos validados" value={summary?.analyzedValidatedVotes ?? 0} icon={TrendingUp} tone="green" loading={loading} />
         <MetricCard label="Críticos" value={summary?.criticalIndicators ?? 0} icon={AlertTriangle} tone="red" loading={loading} />
       </section>
 
       <ReportFilters filters={filters} setFilters={setFilters} options={dashboardData?.options} />
 
-      {!loading && !error && dashboardData && dashboardData.summary.analyzedLeaders + dashboardData.summary.analyzedDemands + dashboardData.summary.analyzedFieldActions === 0 ? (
-        <EmptyState title="Sem dados reais para relatórios" description="Cadastre lideranças, apoiadores, zonas, demandas ou agenda para alimentar a central." icon={FileText} />
+      {!loading && !error && dashboardData && dashboardData.summary.analyzedLeaders === 0 ? (
+        <EmptyState title="Sem dados reais para relatórios" description="Cadastre coordenações ou lideranças territoriais para alimentar a central." icon={FileText} />
       ) : null}
 
       <section className="grid gap-4 xl:grid-cols-[minmax(0,0.95fr)_minmax(420px,1.05fr)]">
@@ -226,8 +215,6 @@ function ReportFilters({ filters, setFilters, options }: { filters: ReportFilter
         <FilterSelect label="Estado" value={filters.estado} options={options?.states ?? []} onChange={(value) => update("estado", value)} />
         <FilterSelect label="Cidade" value={filters.cidade} options={options?.cities ?? []} onChange={(value) => update("cidade", value)} />
         <FilterSelect label="Bairro" value={filters.bairro} options={options?.neighborhoods ?? []} onChange={(value) => update("bairro", value)} />
-        <FilterSelect label="Zona eleitoral" value={filters.zona} options={options?.zones ?? []} onChange={(value) => update("zona", value)} />
-        <FilterSelect label="Seção eleitoral" value={filters.secao} options={options?.sections ?? []} onChange={(value) => update("secao", value)} />
         <FilterSelect label="Liderança" value={filters.lideranca} options={options?.leaders ?? []} onChange={(value) => update("lideranca", value)} />
         <FilterSelect label="Responsável" value={filters.responsavel} options={options?.responsibles ?? []} onChange={(value) => update("responsavel", value)} />
         <FilterSelect label="Período" value={filters.periodo} options={["Últimos 7 dias", "Últimos 30 dias", "Ciclo completo"]} onChange={(value) => update("periodo", value)} />
@@ -268,7 +255,7 @@ function ReportLibrary({ reports, selectedId, onSelect, loading }: { reports: Re
 }
 
 function QuickReports({ reports, onSelect, loading }: { reports: ReportDefinition[]; onSelect: (id: string) => void; loading: boolean }) {
-  const quickIds = ["semanal", "metas", "demandas", "lideranca"];
+  const quickIds = ["semanal", "metas", "oportunidade", "lideranca"];
   const quick = quickIds.map((id) => reports.find((item) => item.id === id)).filter(Boolean) as ReportDefinition[];
   return (
     <Card className="premium-card">

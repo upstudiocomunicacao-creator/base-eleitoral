@@ -1,13 +1,12 @@
 import { isSupabaseConfigured } from "@/lib/supabaseClient";
 import type { DashboardDataset } from "./dashboard";
 import { getDashboardDataset } from "./dashboard";
-import { buildComparisonComputed, type ComparisonPriority, type OpportunityLevel, type RegionStatus, type RegionalComparisonRow, type TerritorialStrength } from "./electoralComparison";
 
 export type ReportType =
   | "Geral"
   | "Liderança"
   | "Território"
-  | "Eleitoral"
+  | "Financeiro"
   | "Operacional"
   | "Estratégico"
   | "Executivo";
@@ -55,8 +54,10 @@ export type ReportsDashboardData = {
     lastUpdate: string;
     analyzedLeaders: number;
     analyzedNeighborhoods: number;
-    analyzedZones: number;
+    analyzedTerritories: number;
+    estimatedSupporters: number;
     analyzedValidatedVotes: number;
+    analyzedZones: number;
     analyzedDemands: number;
     analyzedFieldActions: number;
     criticalIndicators: number;
@@ -78,186 +79,37 @@ export type ReportsDashboardData = {
   warnings: string[];
 };
 
+type TerritoryReportRow = {
+  area: string;
+  city: string;
+  state: string;
+  region: string;
+  voters: number;
+  leaders: number;
+  supportEstimate: number;
+  declaredVotes: number;
+  validatedVotes: number;
+  voteGoal: number;
+  distanceToGoal: number;
+  coverage: number;
+  validationRate: number;
+  priority: string;
+  responsible: string;
+};
+
 export const reportDefinitions: ReportDefinition[] = [
-  report("geral", "Relatório Geral da Campanha", "Geral", "Visão consolidada de lideranças, apoiadores, votos, metas, demandas, agenda e regiões prioritárias.", "Campanha completa"),
-  report("lideranca", "Relatório por Liderança", "Liderança", "Performance de lideranças por bairro, votos declarados, validação, demandas e próxima ação.", "Lideranças"),
-  report("bairro", "Relatório por Bairro", "Território", "Leitura territorial por bairro com cobertura, distância até a meta, demandas e ações de campo.", "Bairros"),
-  report("municipio", "Relatório por Município", "Território", "Comparativo municipal no RJ com atuação, oportunidade eleitoral e força territorial.", "Municípios"),
-  report("zona", "Relatório por Zona Eleitoral", "Eleitoral", "Zonas, seções, locais de votação, eleitores, metas, cobertura e prioridade.", "Zonas eleitorais"),
-  report("secao", "Relatório por Seção Eleitoral", "Eleitoral", "Seções eleitorais vinculadas a bairros, locais de votação e metas operacionais.", "Seções"),
-  report("apoiadores", "Relatório de Apoiadores", "Liderança", "Apoiadores, simpatizantes, indecisos, qualidade cadastral e vínculos territoriais.", "CRM territorial"),
-  report("prospeccao", "Relatório de Prospecção", "Operacional", "Funil de contatos, conversão por etapa, responsáveis e ações vencidas.", "Funil"),
-  report("votos", "Relatório de Votos Declarados x Votos Validados", "Eleitoral", "Promessa de voto, validação, taxa de conversão e lacunas por território.", "Votos"),
-  report("metas", "Relatório de Metas", "Estratégico", "Meta geral, metas por bairro/zona, distância e prioridade automática.", "Metas"),
-  report("demandas", "Relatório de Demandas", "Operacional", "Demandas abertas, críticas, resolvidas, recorrência por tema e retornos atrasados.", "Demandas"),
-  report("agenda", "Relatório de Agenda de Campo", "Operacional", "Ações agendadas, realizadas, atrasadas, público e resultados por bairro.", "Agenda"),
-  report("regioes", "Relatório de Regiões Prioritárias", "Estratégico", "Bairros e zonas que exigem ação imediata por baixa cobertura ou ausência de liderança.", "Prioridades"),
-  report("calor", "Relatório de Mapa de Calor", "Estratégico", "Concentração por apoiadores, lideranças, votos validados, demandas e oportunidade.", "Heatmap"),
-  report("oportunidade", "Relatório de Oportunidade Eleitoral", "Estratégico", "Onde há muitos eleitores, pouca campanha, baixa validação e maior retorno potencial.", "Oportunidade"),
-  report("semanal", "Relatório Semanal Executivo", "Executivo", "Resumo curto para decisão da coordenação e agenda da próxima semana.", "Executivo"),
+  report("geral", "Relatório Geral Operacional", "Geral", "Visão consolidada de coordenações, lideranças, apoio estimado, votos e territórios prioritários.", "Operação completa"),
+  report("lideranca", "Relatório por Cadastro Territorial", "Liderança", "Performance de coordenadores e lideranças por cidade, bairro, estimativa de apoio, votos e próxima ação.", "Cadastros"),
+  report("bairro", "Relatório Maricá por Bairro", "Território", "Leitura territorial por bairro e distrito de Maricá, com força local, meta e distância.", "Bairros de Maricá"),
+  report("municipio", "Relatório RJ por Cidade", "Território", "Comparativo das cidades do RJ com atuação, apoio estimado e oportunidade territorial.", "Cidades do RJ"),
+  report("votos", "Relatório de Votos e Conversão", "Estratégico", "Compara votos declarados, validados, taxa de conversão e lacunas por território.", "Votos"),
+  report("metas", "Relatório de Metas Territoriais", "Estratégico", "Mostra meta atual, distância até a meta e prioridade automática por cidade ou bairro.", "Metas"),
+  report("custos", "Relatório de Centro de Custos", "Financeiro", "Base para acompanhar custo mínimo, teto e despesas extras por cadastro territorial.", "Custos"),
+  report("regioes", "Relatório de Regiões Prioritárias", "Estratégico", "Lista cidades, regiões e bairros que exigem ação por baixa cobertura ou pouca liderança.", "Prioridades"),
+  report("calor", "Relatório de Mapa de Calor", "Estratégico", "Concentração territorial por apoio estimado, lideranças e votos validados.", "Heatmap"),
+  report("oportunidade", "Relatório de Oportunidade Territorial", "Estratégico", "Indica onde há alto potencial e baixa presença operacional.", "Oportunidade"),
+  report("semanal", "Relatório Semanal Executivo", "Executivo", "Resumo curto para decisão da coordenação geral e planejamento da próxima semana.", "Executivo"),
 ];
-
-export function isReportsSupabaseReady() {
-  return isSupabaseConfigured;
-}
-
-export async function getReportsDashboardData(history: ReportsDashboardData["history"] = []): Promise<ReportsDashboardData> {
-  const dataset = await getDashboardDataset();
-  const filtered = filterReportDataset(dataset, emptyReportFilters);
-  return buildReportsDashboardData(filtered, history, dataset.warnings);
-}
-
-export function buildReportsDashboardData(dataset: DashboardDataset, history: ReportsDashboardData["history"], warnings: string[] = []): ReportsDashboardData {
-  const comparison = buildComparisonComputedFromDataset(dataset);
-  const generatedThisMonth = history.filter((item) => isCurrentMonth(item.date)).length;
-  const lastUpdate = latestDate([
-    ...dataset.leaders.map((item) => item.updated_at),
-    ...dataset.supporters.map((item) => item.updated_at),
-    ...dataset.prospects.map((item) => item.updated_at),
-    ...dataset.electoralZones.map((item) => item.updated_at),
-    ...dataset.fieldAgenda.map((item) => item.updated_at),
-    ...dataset.demands.map((item) => item.updated_at),
-  ]);
-
-  return {
-    definitions: reportDefinitions,
-    summary: {
-      availableReports: reportDefinitions.length,
-      generatedThisMonth,
-      lastUpdate: lastUpdate ? formatDate(lastUpdate) : "-",
-      analyzedLeaders: dataset.leaders.length,
-      analyzedNeighborhoods: comparison.rows.length,
-      analyzedZones: unique(dataset.electoralZones.map((item) => item.zone_number)).length,
-      analyzedValidatedVotes: comparison.summary.validatedVotes,
-      analyzedDemands: dataset.demands.length,
-      analyzedFieldActions: dataset.fieldAgenda.length,
-      criticalIndicators: comparison.rows.filter((item) => item.priority === "Crítica" || item.openDemands > 0 || item.leaders === 0).length,
-    },
-    options: {
-      states: unique(["RJ", ...dataset.leaders.map((item) => item.state), ...dataset.supporters.map((item) => item.state), ...dataset.electoralZones.map((item) => item.state)]),
-      cities: unique([...dataset.municipalities.map((item) => item.name), ...dataset.leaders.map((item) => item.city), ...dataset.supporters.map((item) => item.city), ...dataset.electoralZones.map((item) => item.city)]),
-      neighborhoods: unique([...dataset.neighborhoods.map((item) => item.name), ...dataset.leaders.map((item) => item.neighborhood), ...dataset.supporters.map((item) => item.neighborhood), ...dataset.electoralZones.map((item) => item.neighborhood)]),
-      zones: unique(dataset.electoralZones.map((item) => item.zone_number)),
-      sections: unique(dataset.electoralZones.map((item) => item.section_number ?? "")),
-      leaders: unique(dataset.leaders.map((item) => item.full_name)),
-      responsibles: unique([
-        ...dataset.leaders.map((item) => item.internal_responsible ?? ""),
-        ...dataset.supporters.map((item) => item.internal_responsible ?? ""),
-        ...dataset.prospects.map((item) => item.internal_responsible ?? ""),
-        ...dataset.demands.map((item) => item.internal_responsible ?? ""),
-        ...dataset.fieldAgenda.map((item) => item.internal_responsible ?? ""),
-      ]),
-      priorities: ["Crítica", "Alta", "Média", "Baixa", "Manter"],
-      statuses: unique([
-        ...dataset.leaders.map((item) => item.status),
-        ...dataset.supporters.map((item) => item.political_status),
-        ...dataset.prospects.map((item) => item.funnel_stage),
-        ...dataset.demands.map((item) => item.status),
-        ...dataset.fieldAgenda.map((item) => item.status),
-      ]),
-      types: ["Geral", "Liderança", "Território", "Eleitoral", "Operacional", "Estratégico", "Executivo"],
-    },
-    history,
-    dataset,
-    warnings,
-  };
-}
-
-export function generateReportPreview(dataset: DashboardDataset, reportId: string, filters: ReportFilters): ReportPreviewData {
-  const definition = reportDefinitions.find((item) => item.id === reportId) ?? reportDefinitions[0];
-  const filtered = filterReportDataset(dataset, filters);
-  const comparison = buildComparisonComputedFromDataset(filtered);
-  const rows = buildRowsForReport(definition.id, filtered, comparison.rows);
-  const metrics = buildMetricsForReport(definition.id, filtered, comparison.summary, rows);
-  const chart = buildChartForReport(definition.id, rows, comparison.rows);
-  const recommendations = buildRecommendations(filtered, comparison.rows);
-  const executiveSummary = buildExecutiveSummary(definition.id, filtered, comparison.summary, comparison.rows);
-
-  return {
-    definition,
-    period: filters.periodo,
-    appliedFilters: filterSummary(filters),
-    executiveSummary,
-    metrics,
-    rows,
-    chart,
-    strategicReading: recommendations[0] ?? "Dados insuficientes para uma leitura estratégica automática.",
-    recommendations,
-    warnings: filtered.warnings,
-  };
-}
-
-export function filterReportDataset(dataset: DashboardDataset, filters: ReportFilters): DashboardDataset {
-  const leaderByName = dataset.leaders.find((item) => selectMatches(filters.lideranca, item.full_name));
-  const leaderId = filters.lideranca === "todos" ? "todos" : leaderByName?.id ?? "__none__";
-  const zoneIds = new Set(dataset.electoralZones.filter((item) =>
-    selectMatches(filters.estado, item.state) &&
-    selectMatches(filters.cidade, item.city) &&
-    selectMatches(filters.bairro, item.neighborhood) &&
-    selectMatches(filters.zona, item.zone_number) &&
-    selectMatches(filters.secao, item.section_number ?? "") &&
-    selectMatches(filters.prioridade, item.priority) &&
-    selectMatches(filters.status, item.status) &&
-    matchesPeriod(filters.periodo, item.created_at)
-  ).map((item) => item.id));
-
-  const location = (item: { state?: string | null; city?: string | null; neighborhood?: string | null }) =>
-    selectMatches(filters.estado, item.state ?? "RJ") &&
-    selectMatches(filters.cidade, item.city ?? "") &&
-    selectMatches(filters.bairro, item.neighborhood ?? "");
-
-  const leaders = dataset.leaders.filter((item) =>
-    location(item) &&
-    selectMatches(filters.lideranca, item.full_name) &&
-    selectMatches(filters.responsavel, item.internal_responsible ?? "Não definido") &&
-    selectMatches(filters.prioridade, getLeaderPriority(item.validated_votes, item.declared_votes, item.confidence_level)) &&
-    selectMatches(filters.status, item.status) &&
-    matchesPeriod(filters.periodo, item.created_at)
-  );
-  const leaderIds = new Set(leaders.map((item) => item.id));
-
-  return {
-    ...dataset,
-    leaders,
-    supporters: dataset.supporters.filter((item) =>
-      location(item) &&
-      (leaderId === "todos" || item.leader_id === leaderId || (item.leader_id && leaderIds.has(item.leader_id))) &&
-      selectMatches(filters.responsavel, item.internal_responsible ?? "Não definido") &&
-      selectMatches(filters.status, item.political_status) &&
-      matchesPeriod(filters.periodo, item.created_at)
-    ),
-    prospects: dataset.prospects.filter((item) =>
-      selectMatches(filters.cidade, item.city) &&
-      selectMatches(filters.bairro, item.neighborhood) &&
-      (leaderId === "todos" || item.leader_id === leaderId || (item.leader_id && leaderIds.has(item.leader_id))) &&
-      selectMatches(filters.responsavel, item.internal_responsible ?? "Não definido") &&
-      selectMatches(filters.prioridade, item.priority) &&
-      selectMatches(filters.status, item.funnel_stage) &&
-      matchesPeriod(filters.periodo, item.created_at)
-    ),
-    electoralZones: dataset.electoralZones.filter((item) => zoneIds.has(item.id)),
-    fieldAgenda: dataset.fieldAgenda.filter((item) =>
-      location(item) &&
-      (leaderId === "todos" || item.leader_id === leaderId || (item.leader_id && leaderIds.has(item.leader_id))) &&
-      (filters.zona === "todos" || (item.electoral_zone_id && zoneIds.has(item.electoral_zone_id))) &&
-      selectMatches(filters.responsavel, item.internal_responsible ?? "Não definido") &&
-      selectMatches(filters.prioridade, item.priority) &&
-      selectMatches(filters.status, item.status) &&
-      matchesPeriod(filters.periodo, item.action_date)
-    ),
-    demands: dataset.demands.filter((item) =>
-      location(item) &&
-      (leaderId === "todos" || item.leader_id === leaderId || (item.leader_id && leaderIds.has(item.leader_id))) &&
-      (filters.zona === "todos" || (item.electoral_zone_id && zoneIds.has(item.electoral_zone_id))) &&
-      selectMatches(filters.responsavel, item.internal_responsible ?? "Não definido") &&
-      selectMatches(filters.prioridade, item.priority) &&
-      selectMatches(filters.status, item.status) &&
-      matchesPeriod(filters.periodo, item.opening_date)
-    ),
-    municipalities: dataset.municipalities.filter((item) => selectMatches(filters.estado, item.state) && selectMatches(filters.cidade, item.name)),
-    neighborhoods: dataset.neighborhoods.filter((item) => selectMatches(filters.estado, item.state) && selectMatches(filters.cidade, item.city) && selectMatches(filters.bairro, item.name)),
-  };
-}
 
 export const emptyReportFilters: ReportFilters = {
   estado: "todos",
@@ -273,288 +125,316 @@ export const emptyReportFilters: ReportFilters = {
   tipo: "todos",
 };
 
-function buildRowsForReport(reportId: string, dataset: DashboardDataset, regionalRows: ReturnType<typeof buildComparisonComputedFromDataset>["rows"]) {
-  if (["bairro", "municipio", "regioes", "calor", "oportunidade", "metas", "votos", "geral", "semanal"].includes(reportId)) {
-    if (reportId === "municipio") return groupByCity(regionalRows);
-    return regionalRows.map((item) => ({
-      Área: item.neighborhood,
-      Cidade: item.city,
-      Zona: item.zones.join(", ") || "-",
-      Lideranças: item.leaders,
-      Apoiadores: item.registeredSupporters,
-      Prospecções: item.activeProspects,
-      Declarados: item.declaredVotes,
-      Validados: item.validatedVotes,
-      Eleitores: item.voters,
-      Meta: item.voteGoal,
-      Cobertura: `${item.coverage}%`,
-      Distância: item.distanceToGoal,
-      Demandas: item.openDemands,
-      Ações: item.plannedActions,
-      Prioridade: item.priority,
-    }));
-  }
+export function isReportsSupabaseReady() {
+  return isSupabaseConfigured;
+}
+
+export async function getReportsDashboardData(history: ReportsDashboardData["history"] = []): Promise<ReportsDashboardData> {
+  const dataset = await getDashboardDataset();
+  const filtered = filterReportDataset(dataset, emptyReportFilters);
+  return buildReportsDashboardData(filtered, history, dataset.warnings);
+}
+
+export function buildReportsDashboardData(dataset: DashboardDataset, history: ReportsDashboardData["history"], warnings: string[] = []): ReportsDashboardData {
+  const territoryRows = buildTerritoryRows(dataset);
+  const generatedThisMonth = history.filter((item) => isCurrentMonth(item.date)).length;
+  const lastUpdate = latestDate(dataset.leaders.map((item) => item.updated_at));
+
+  return {
+    definitions: reportDefinitions,
+    summary: {
+      availableReports: reportDefinitions.length,
+      generatedThisMonth,
+      lastUpdate: lastUpdate ? formatDate(lastUpdate) : "-",
+      analyzedLeaders: dataset.leaders.length,
+      analyzedNeighborhoods: unique(dataset.leaders.map((item) => item.neighborhood)).length,
+      analyzedTerritories: territoryRows.length,
+      estimatedSupporters: sumLeadersSupport(dataset.leaders),
+      analyzedValidatedVotes: sum(dataset.leaders, "validated_votes"),
+      analyzedZones: 0,
+      analyzedDemands: 0,
+      analyzedFieldActions: 0,
+      criticalIndicators: territoryRows.filter((item) => item.priority === "Crítica" || item.priority === "Alta").length,
+    },
+    options: {
+      states: unique(["RJ", ...dataset.leaders.map((item) => item.state)]),
+      cities: unique([...dataset.municipalities.map((item) => item.name), ...dataset.leaders.map((item) => item.city)]),
+      neighborhoods: unique([...dataset.neighborhoods.map((item) => item.name), ...dataset.leaders.map((item) => item.neighborhood)]),
+      zones: [],
+      sections: [],
+      leaders: unique(dataset.leaders.map((item) => item.full_name)),
+      responsibles: unique(dataset.leaders.map((item) => item.internal_responsible ?? "")),
+      priorities: ["Crítica", "Alta", "Média", "Baixa", "Manter"],
+      statuses: unique(dataset.leaders.map((item) => item.status)),
+      types: ["Geral", "Liderança", "Território", "Financeiro", "Estratégico", "Executivo"],
+    },
+    history,
+    dataset,
+    warnings,
+  };
+}
+
+export function generateReportPreview(dataset: DashboardDataset, reportId: string, filters: ReportFilters): ReportPreviewData {
+  const definition = reportDefinitions.find((item) => item.id === reportId) ?? reportDefinitions[0];
+  const filtered = filterReportDataset(dataset, filters);
+  const territoryRows = buildTerritoryRows(filtered);
+  const rows = buildRowsForReport(definition.id, filtered, territoryRows);
+  const metrics = buildMetricsForReport(definition.id, filtered, territoryRows, rows);
+  const chart = buildChartForReport(definition.id, territoryRows);
+  const recommendations = buildRecommendations(territoryRows);
+  const executiveSummary = buildExecutiveSummary(definition.id, filtered, territoryRows);
+
+  return {
+    definition,
+    period: filters.periodo,
+    appliedFilters: filterSummary(filters),
+    executiveSummary,
+    metrics,
+    rows,
+    chart,
+    strategicReading: recommendations[0] ?? "Dados insuficientes para leitura estratégica automática.",
+    recommendations,
+    warnings: filtered.warnings,
+  };
+}
+
+export function filterReportDataset(dataset: DashboardDataset, filters: ReportFilters): DashboardDataset {
+  const leaders = dataset.leaders.filter((item) =>
+    selectMatches(filters.estado, item.state) &&
+    selectMatches(filters.cidade, item.city) &&
+    selectMatches(filters.bairro, item.neighborhood) &&
+    selectMatches(filters.lideranca, item.full_name) &&
+    selectMatches(filters.responsavel, item.internal_responsible ?? "Não definido") &&
+    selectMatches(filters.prioridade, getLeaderPriority(item.validated_votes, item.declared_votes, item.confidence_level)) &&
+    selectMatches(filters.status, item.status) &&
+    matchesPeriod(filters.periodo, item.created_at),
+  );
+
+  return {
+    ...dataset,
+    leaders,
+    supporters: [],
+    prospects: [],
+    electoralZones: [],
+    fieldAgenda: [],
+    demands: [],
+    municipalities: dataset.municipalities.filter((item) => selectMatches(filters.estado, item.state) && selectMatches(filters.cidade, item.name)),
+    neighborhoods: dataset.neighborhoods.filter((item) => selectMatches(filters.estado, item.state) && selectMatches(filters.cidade, item.city) && selectMatches(filters.bairro, item.name)),
+  };
+}
+
+function buildRowsForReport(reportId: string, dataset: DashboardDataset, territoryRows: TerritoryReportRow[]) {
+  if (reportId === "municipio") return groupByCity(territoryRows);
 
   if (reportId === "lideranca") {
-    return dataset.leaders.map((item) => {
-      const supporters = dataset.supporters.filter((supporter) => supporter.leader_id === item.id).length;
-      const demands = dataset.demands.filter((demand) => demand.leader_id === item.id).length;
-      const actions = dataset.fieldAgenda.filter((action) => action.leader_id === item.id && normalize(action.status).includes("conclu")).length;
-      return {
-        Liderança: item.full_name,
-        Bairro: item.neighborhood,
-        Cidade: item.city,
-        Apoiadores: supporters || item.registered_supporters,
-        Estimados: Number(item.estimated_direct_supporters ?? 0) + Number(item.estimated_indirect_supporters ?? 0),
-        Declarados: item.declared_votes,
-        Validados: item.validated_votes,
-        "Taxa de validação": `${percent(item.validated_votes, item.declared_votes)}%`,
-        Confiança: item.confidence_level,
-        Demandas: demands,
-        Ações: actions,
-        "Próxima ação": item.next_action ?? "Validar base declarada",
-      };
-    });
-  }
-
-  if (reportId === "zona" || reportId === "secao") {
-    return dataset.electoralZones.map((item) => ({
-      Zona: item.zone_number,
-      Seção: item.section_number ?? "-",
-      "Local de votação": item.voting_place,
+    return dataset.leaders.map((item) => ({
+      Cadastro: item.full_name,
+      Papel: item.leader_type,
       Bairro: item.neighborhood,
       Cidade: item.city,
-      Eleitores: item.voters_count,
-      Meta: item.vote_goal,
-      Validados: item.validated_votes,
-      Cobertura: `${percent(item.validated_votes, item.voters_count)}%`,
-      Distância: Math.max(item.vote_goal - item.validated_votes, 0),
-      Prioridade: item.priority,
-      Status: item.status,
-    }));
-  }
-
-  if (reportId === "apoiadores") {
-    return dataset.supporters.map((item) => ({
-      Nome: item.full_name,
-      Bairro: item.neighborhood,
-      Cidade: item.city,
-      Tipo: item.person_type,
-      Status: item.political_status,
-      Confiança: item.data_confidence,
-      "Precisão geográfica": item.geographic_precision,
-      Responsável: item.internal_responsible ?? "Não definido",
-      "Próxima ação": item.next_action ?? "-",
-      Telefone: item.phone,
-      Email: item.email ?? "",
-    }));
-  }
-
-  if (reportId === "prospeccao") {
-    return dataset.prospects.map((item) => ({
-      Contato: item.contact_name,
-      Bairro: item.neighborhood,
-      Cidade: item.city,
-      Etapa: item.funnel_stage,
-      Origem: item.origin,
-      Prioridade: item.priority,
+      "Região/Distrito": item.territory_region ?? "-",
+      "Apoio estimado": leaderSupport(item),
+      "Votos declarados": item.declared_votes,
+      "Votos validados": item.validated_votes,
+      "Taxa de validação": `${percent(item.validated_votes, item.declared_votes)}%`,
       Confiança: item.confidence_level,
       Responsável: item.internal_responsible ?? "Não definido",
-      "Próxima ação": item.next_action ?? "-",
-      "Data próxima ação": item.next_action_date ?? "-",
+      "Próxima ação": item.next_action ?? "Validar estimativa",
     }));
   }
 
-  if (reportId === "demandas") {
-    return dataset.demands.map((item) => ({
-      Demanda: item.title,
-      Pessoa: item.person_name ?? "-",
-      Bairro: item.neighborhood,
-      Categoria: item.category,
-      Prioridade: item.priority,
-      Status: item.status,
-      Responsável: item.internal_responsible ?? "Não definido",
-      "Data abertura": formatDate(item.opening_date),
-      "Data retorno": item.return_date ? formatDate(item.return_date) : "-",
-    }));
-  }
-
-  if (reportId === "agenda") {
-    return dataset.fieldAgenda.map((item) => ({
-      Ação: item.title,
-      Tipo: item.action_type,
-      Data: formatDate(item.action_date),
-      Bairro: item.neighborhood,
+  if (reportId === "custos") {
+    return dataset.leaders.map((item) => ({
+      Cadastro: item.full_name,
+      Papel: item.leader_type,
       Cidade: item.city,
-      Responsável: item.internal_responsible ?? "Não definido",
-      "Público estimado": item.estimated_public ?? 0,
-      "Público presente": item.actual_public ?? 0,
-      Status: item.status,
-      Prioridade: item.priority,
-      Resultado: item.result ?? "-",
+      Bairro: item.neighborhood,
+      "Custo base mensal": "A definir",
+      "Teto mensal": "A definir",
+      "Despesa extra": "A definir",
+      Observação: "Preencher no centro de custos mensal",
     }));
   }
 
-  return [];
+  return territoryRows.map((item) => ({
+    Área: item.area,
+    Cidade: item.city,
+    "Região/Distrito": item.region,
+    Lideranças: item.leaders,
+    "Apoio estimado": item.supportEstimate,
+    "Votos declarados": item.declaredVotes,
+    "Votos validados": item.validatedVotes,
+    "Meta atual": item.voteGoal,
+    Cobertura: `${item.coverage}%`,
+    Conversão: `${item.validationRate}%`,
+    Distância: item.distanceToGoal,
+    Responsável: item.responsible,
+    Prioridade: item.priority,
+  }));
 }
 
-function buildMetricsForReport(reportId: string, dataset: DashboardDataset, summary: ReturnType<typeof buildComparisonComputedFromDataset>["summary"], rows: Array<Record<string, string | number>>) {
-  const resolvedDemands = dataset.demands.filter((item) => normalize(item.status).includes("resol")).length;
-  const completedActions = dataset.fieldAgenda.filter((item) => normalize(item.status).includes("conclu")).length;
-  const prospectStages = countBy(dataset.prospects, (item) => item.funnel_stage);
+function buildMetricsForReport(reportId: string, dataset: DashboardDataset, territoryRows: TerritoryReportRow[], rows: Array<Record<string, string | number>>) {
+  const supportEstimate = sumLeadersSupport(dataset.leaders);
+  const declaredVotes = sum(dataset.leaders, "declared_votes");
+  const validatedVotes = sum(dataset.leaders, "validated_votes");
+  const distance = Math.max(declaredVotes - validatedVotes, 0);
 
-  if (reportId === "demandas") {
+  if (reportId === "custos") {
     return [
-      metric("Total de demandas", dataset.demands.length),
-      metric("Abertas", dataset.demands.filter((item) => !normalize(item.status).includes("resol")).length),
-      metric("Resolvidas", resolvedDemands),
-      metric("Críticas", dataset.demands.filter((item) => normalize(item.priority).includes("crit")).length),
+      metric("Cadastros com custo", dataset.leaders.length),
+      metric("Custo base", "A definir"),
+      metric("Teto mensal", "A definir"),
+      metric("Extras", "A definir"),
     ];
   }
-  if (reportId === "agenda") {
-    return [
-      metric("Ações agendadas", dataset.fieldAgenda.length),
-      metric("Realizadas", completedActions),
-      metric("Público estimado", sum(dataset.fieldAgenda, "estimated_public")),
-      metric("Público presente", sum(dataset.fieldAgenda, "actual_public")),
-    ];
-  }
-  if (reportId === "prospeccao") {
-    return [
-      metric("Novos contatos", prospectStages["Novo contato"] ?? prospectStages["novo contato"] ?? 0),
-      metric("Simpatizantes", prospectStages.Simpatizante ?? 0),
-      metric("Confirmados", prospectStages["Apoiador confirmado"] ?? 0),
-      metric("Votos validados", prospectStages["Voto validado"] ?? 0),
-    ];
-  }
+
   return [
-    metric("Lideranças", dataset.leaders.length),
-    metric("Apoiadores", dataset.supporters.length),
-    metric("Votos validados", summary.validatedVotes),
-    metric("Distância até meta", summary.distanceToGoal || sum(rows, "Distância")),
+    metric("Cadastros", dataset.leaders.length),
+    metric("Territórios", territoryRows.length),
+    metric("Apoio estimado", supportEstimate),
+    metric("Votos validados", validatedVotes),
+    metric("Conversão", `${percent(validatedVotes, declaredVotes)}%`),
+    metric("Distância até meta", distance || sum(rows, "Distância")),
   ];
 }
 
-function buildChartForReport(reportId: string, rows: Array<Record<string, string | number>>, regionalRows: ReturnType<typeof buildComparisonComputedFromDataset>["rows"]) {
-  if (reportId === "demandas") return rows.slice(0, 8).map((row) => ({ name: String(row.Bairro ?? row.Categoria ?? row.Demanda), valor: Number(row.Prioridade === "Crítica" ? 2 : 1) }));
-  if (reportId === "agenda") return rows.slice(0, 8).map((row) => ({ name: String(row.Bairro ?? row.Ação), valor: Number(row["Público presente"] ?? row["Público estimado"] ?? 0) }));
-  if (reportId === "prospeccao") return Object.entries(countByKey(rows, "Etapa")).map(([name, valor]) => ({ name, valor }));
-  return regionalRows.slice(0, 8).map((item) => ({ name: item.neighborhood, meta: item.voteGoal, validados: item.validatedVotes, demandas: item.openDemands }));
+function buildChartForReport(reportId: string, territoryRows: TerritoryReportRow[]) {
+  const rows = reportId === "municipio" ? cityChartRows(territoryRows) : territoryRows;
+  return rows.slice(0, 8).map((item) => ({
+    name: item.area,
+    meta: item.voteGoal,
+    validados: item.validatedVotes,
+    apoio: item.supportEstimate,
+  }));
 }
 
-function buildRecommendations(dataset: DashboardDataset, rows: ReturnType<typeof buildComparisonComputedFromDataset>["rows"]) {
+function buildRecommendations(rows: TerritoryReportRow[]) {
   const critical = rows.filter((item) => item.priority === "Crítica" || item.priority === "Alta");
   const withoutLeader = rows.filter((item) => item.leaders === 0);
-  const openCriticalDemands = dataset.demands.filter((item) => normalize(item.priority).includes("crit") && !normalize(item.status).includes("resol"));
+  const topOpportunity = [...rows].sort((a, b) => b.distanceToGoal - a.distanceToGoal || b.supportEstimate - a.supportEstimate)[0];
   return [
-    critical[0] ? `${critical[0].neighborhood} exige prioridade: baixa cobertura, distância de ${critical[0].distanceToGoal.toLocaleString("pt-BR")} votos e oportunidade ${critical[0].opportunity.toLowerCase()}.` : "Manter acompanhamento das regiões já mapeadas e ampliar validação em campo.",
-    withoutLeader.length ? `Criar ou reforçar liderança em ${withoutLeader.length} região(ões) sem liderança vinculada.` : "Usar lideranças fortes para validar votos declarados e multiplicar apoiadores.",
-    openCriticalDemands.length ? `Resolver ${openCriticalDemands.length} demanda(s) crítica(s) antes da próxima rodada de agenda.` : "Registrar demandas recebidas nas próximas ações para melhorar leitura territorial.",
-    "Agendar ações nos próximos 7 dias nos bairros abaixo da meta.",
-    "Reforçar contato com indecisos e validar votos declarados por liderança.",
+    topOpportunity ? `${topOpportunity.area}, em ${topOpportunity.city}, tem maior distância operacional: ${topOpportunity.distanceToGoal.toLocaleString("pt-BR")} votos até a meta atual.` : "Manter atualização mensal das estimativas para alimentar mapas e indicadores.",
+    critical.length ? `Revisar ${critical.length} território(s) em prioridade alta ou crítica.` : "Os territórios do recorte estão sem alerta crítico no momento.",
+    withoutLeader.length ? `Criar ou vincular coordenação em ${withoutLeader.length} território(s) sem cadastro ativo.` : "Usar coordenações existentes para validar votos declarados.",
+    "Atualizar mensalmente apoio estimado, votos mínimos, votos máximos e centro de custos.",
   ];
 }
 
-function buildExecutiveSummary(reportId: string, dataset: DashboardDataset, summary: ReturnType<typeof buildComparisonComputedFromDataset>["summary"], rows: ReturnType<typeof buildComparisonComputedFromDataset>["rows"]) {
-  const top = rows.sort((a, b) => b.opportunityScore - a.opportunityScore)[0];
+function buildExecutiveSummary(reportId: string, dataset: DashboardDataset, territoryRows: TerritoryReportRow[]) {
   const campaign = dataset.campaigns[0];
-  const base = `A campanha possui ${summary.validatedVotes.toLocaleString("pt-BR")} votos validados de uma meta de ${summary.voteGoal.toLocaleString("pt-BR")}, com distância de ${summary.distanceToGoal.toLocaleString("pt-BR")} votos.`;
-  if (reportId === "demandas") return `${base} Há ${dataset.demands.length} demandas no recorte, sendo ${dataset.demands.filter((item) => normalize(item.priority).includes("crit")).length} críticas. Priorize retornos pendentes por bairro.`;
-  if (reportId === "agenda") return `${base} Existem ${dataset.fieldAgenda.length} ações de campo no recorte. O foco deve ser converter presença territorial em votos validados.`;
-  if (reportId === "prospeccao") return `${base} O funil tem ${dataset.prospects.length} contatos e precisa acelerar conversão de simpatizantes para apoiadores confirmados.`;
-  if (top) return `${base} ${top.neighborhood} apresenta alta oportunidade, ${top.coverage}% de cobertura e distância de ${top.distanceToGoal.toLocaleString("pt-BR")} votos até a meta. Recomenda-se ampliar lideranças e ações de campo.`;
-  return campaign ? `${base} O relatório usa a campanha ${campaign.name}.` : base;
+  const declaredVotes = sum(dataset.leaders, "declared_votes");
+  const validatedVotes = sum(dataset.leaders, "validated_votes");
+  const distance = Math.max(declaredVotes - validatedVotes, 0);
+  const supportEstimate = sumLeadersSupport(dataset.leaders);
+  const top = [...territoryRows].sort((a, b) => b.distanceToGoal - a.distanceToGoal || b.supportEstimate - a.supportEstimate)[0];
+  const base = `O recorte possui ${dataset.leaders.length} cadastros territoriais, ${supportEstimate.toLocaleString("pt-BR")} apoios estimados e ${validatedVotes.toLocaleString("pt-BR")} votos validados. A distância até a meta atual é de ${distance.toLocaleString("pt-BR")} votos.`;
+  if (reportId === "custos") return `${base} O centro de custos mensal deve consolidar custo base, teto e extras por coordenação ou liderança.`;
+  if (top) return `${base} O território mais sensível é ${top.area}, em ${top.city}, com prioridade ${top.priority.toLowerCase()} e ${top.distanceToGoal.toLocaleString("pt-BR")} votos de distância.`;
+  return campaign ? `${base} Relatório vinculado à campanha ${campaign.name}.` : base;
 }
 
-function groupByCity(rows: ReturnType<typeof buildComparisonComputedFromDataset>["rows"]) {
-  const map = new Map<string, { Cidade: string; Lideranças: number; Apoiadores: number; Declarados: number; Validados: number; Eleitores: number; Meta: number; Demandas: number; Ações: number }>();
-  rows.forEach((item) => {
-    const current = map.get(item.city) ?? { Cidade: item.city, Lideranças: 0, Apoiadores: 0, Declarados: 0, Validados: 0, Eleitores: 0, Meta: 0, Demandas: 0, Ações: 0 };
-    current.Lideranças += item.leaders;
-    current.Apoiadores += item.registeredSupporters;
-    current.Declarados += item.declaredVotes;
-    current.Validados += item.validatedVotes;
-    current.Eleitores += item.voters;
-    current.Meta += item.voteGoal;
-    current.Demandas += item.openDemands;
-    current.Ações += item.plannedActions;
-    map.set(item.city, current);
-  });
-  return Array.from(map.values()).map((item) => ({ ...item, Cobertura: `${percent(item.Validados, item.Eleitores)}%`, Distância: Math.max(item.Meta - item.Validados, 0) }));
-}
-
-function buildComparisonComputedFromDataset(dataset: DashboardDataset) {
-  const { buildComparisonComputed: build } = { buildComparisonComputed };
-  const keys = new Map<string, { neighborhood: string; city: string; state: string }>();
-  const add = (neighborhood: string, city: string, state = "RJ") => {
-    if (!neighborhood || !city) return;
-    keys.set(`${normalize(neighborhood)}|${normalize(city)}|${normalize(state)}`, { neighborhood, city, state });
+function buildTerritoryRows(dataset: DashboardDataset): TerritoryReportRow[] {
+  const keys = new Map<string, { area: string; city: string; state: string }>();
+  const add = (area: string, city: string, state = "RJ") => {
+    if (!area || !city) return;
+    keys.set(`${normalize(area)}|${normalize(city)}|${normalize(state)}`, { area, city, state });
   };
   dataset.neighborhoods.forEach((item) => add(item.name, item.city, item.state));
-  dataset.electoralZones.forEach((item) => add(item.neighborhood, item.city, item.state));
   dataset.leaders.forEach((item) => add(item.neighborhood, item.city, item.state));
-  dataset.supporters.forEach((item) => add(item.neighborhood, item.city, item.state));
-  dataset.prospects.forEach((item) => add(item.neighborhood, item.city));
-  dataset.demands.forEach((item) => add(item.neighborhood, item.city, item.state));
-  dataset.fieldAgenda.forEach((item) => add(item.neighborhood, item.city, item.state));
 
-  const rows: RegionalComparisonRow[] = Array.from(keys.values()).map((region) => {
-    const same = (item: { neighborhood: string; city: string; state?: string | null }) => normalize(item.neighborhood) === normalize(region.neighborhood) && normalize(item.city) === normalize(region.city);
-    const leaders = dataset.leaders.filter(same);
-    const supporters = dataset.supporters.filter(same);
-    const prospects = dataset.prospects.filter((item) => normalize(item.neighborhood) === normalize(region.neighborhood) && normalize(item.city) === normalize(region.city));
-    const zones = dataset.electoralZones.filter(same);
-    const demands = dataset.demands.filter(same);
-    const agenda = dataset.fieldAgenda.filter(same);
-    const neighborhoodData = dataset.neighborhoods.find((item) => normalize(item.name) === normalize(region.neighborhood) && normalize(item.city) === normalize(region.city));
-    const voters = Number(neighborhoodData?.estimated_voters ?? 0) || sum(zones, "voters_count");
-    const validatedVotes = sum(leaders, "validated_votes") + sum(zones, "validated_votes");
-    const declaredVotes = sum(leaders, "declared_votes") + sum(zones, "estimated_campaign_votes");
-    const voteGoal = sum(zones, "vote_goal") || Math.round(voters * 0.05);
-    const coverage = percent(validatedVotes, voters);
-    const goalCompletion = percent(validatedVotes, voteGoal);
-    const priority: ComparisonPriority = leaders.length === 0 && voters > 4000 ? "Crítica" : coverage < 2 ? "Alta" : coverage < 5 ? "Média" : "Manter";
-    const opportunity: OpportunityLevel = coverage < 1 && voters > 4000 ? "Crítico" : coverage < 3 ? "Alto" : coverage < 6 ? "Médio" : "Baixo";
-    const territorialStrength: TerritorialStrength = validatedVotes > 400 && leaders.length >= 3 ? "Muito forte" : leaders.length >= 2 ? "Forte" : leaders.length ? "Em desenvolvimento" : "Fraco";
-    const status: RegionStatus = leaders.length === 0 ? "Sem liderança" : goalCompletion >= 80 ? "Meta próxima" : coverage < 2 ? "Baixa cobertura" : "Em desenvolvimento";
+  return Array.from(keys.values()).map((territory) => {
+    const leaders = dataset.leaders.filter((item) => normalize(item.neighborhood) === normalize(territory.area) && normalize(item.city) === normalize(territory.city));
+    const neighborhoodData = dataset.neighborhoods.find((item) => normalize(item.name) === normalize(territory.area) && normalize(item.city) === normalize(territory.city));
+    const municipalityData = dataset.municipalities.find((item) => normalize(item.name) === normalize(territory.city));
+    const voters = Number(neighborhoodData?.estimated_voters ?? 0);
+    const supportEstimate = sumLeadersSupport(leaders);
+    const declaredVotes = sum(leaders, "declared_votes");
+    const validatedVotes = sum(leaders, "validated_votes");
+    const voteGoal = Math.max(declaredVotes, validatedVotes, Math.round(supportEstimate * 0.7));
+    const coverage = percent(validatedVotes, voters || voteGoal);
+    const validationRate = percent(validatedVotes, declaredVotes);
+    const priority = getTerritoryPriority(leaders.length, voters, coverage, validationRate, voteGoal, validatedVotes);
     return {
-      id: `${normalize(region.neighborhood)}-${normalize(region.city)}`,
-      neighborhood: region.neighborhood,
-      city: region.city,
-      state: region.state,
-      zones: unique(zones.map((item) => item.zone_number)),
-      sections: unique(zones.map((item) => item.section_number ?? "")),
-      votingPlaces: unique(zones.map((item) => item.voting_place)),
+      area: territory.area,
+      city: territory.city,
+      state: territory.state,
+      region: first(leaders.map((item) => item.territory_region)) ?? neighborhoodData?.region ?? municipalityData?.region ?? "-",
       voters,
       leaders: leaders.length,
-      registeredSupporters: supporters.length,
-      estimatedSupporters: leaders.reduce((total, item) => total + Number(item.estimated_direct_supporters ?? 0) + Number(item.estimated_indirect_supporters ?? 0), 0),
-      activeProspects: prospects.length,
-      undecided: supporters.filter((item) => normalize(item.political_status).includes("indeciso")).length,
-      openDemands: demands.filter((item) => !normalize(item.status).includes("resol")).length,
-      plannedActions: agenda.filter((item) => !normalize(item.status).includes("conclu")).length,
+      supportEstimate,
       declaredVotes,
       validatedVotes,
       voteGoal,
       distanceToGoal: Math.max(voteGoal - validatedVotes, 0),
       coverage,
-      goalCompletion,
-      validationRate: percent(validatedVotes, declaredVotes),
-      confidenceIndex: leaders.length ? Math.round(leaders.reduce((total, item) => total + confidenceScore(item.confidence_level), 0) / leaders.length) : 0,
-      unexploredPotential: Math.max(voters - validatedVotes, 0),
-      opportunity,
-      opportunityScore: Math.min(100, Math.round((voters / 250) + (100 - coverage * 10) + (leaders.length === 0 ? 20 : 0))),
-      territorialStrength,
-      territorialStrengthScore: Math.min(100, Math.round(leaders.length * 16 + supporters.length * 0.6 + validatedVotes * 0.08)),
+      validationRate,
       priority,
-      status,
-      responsible: first([...leaders.map((item) => item.internal_responsible), ...agenda.map((item) => item.internal_responsible), ...demands.map((item) => item.internal_responsible)]) ?? "Não definido",
-      linkedLeaders: leaders.map((item) => item.full_name),
-      strategicAnalysis: `${region.neighborhood} tem ${validatedVotes.toLocaleString("pt-BR")} votos validados, ${coverage}% de cobertura e ${Math.max(voteGoal - validatedVotes, 0).toLocaleString("pt-BR")} votos de distância até a meta.`,
-      recommendedActions: ["Ampliar lideranças locais", "Validar votos declarados", "Agendar ação de campo"],
+      responsible: first(leaders.map((item) => item.internal_responsible)) ?? "Não definido",
     };
+  }).sort((a, b) => b.distanceToGoal - a.distanceToGoal || b.supportEstimate - a.supportEstimate);
+}
+
+function groupByCity(rows: TerritoryReportRow[]) {
+  const map = new Map<string, TerritoryReportRow>();
+  rows.forEach((item) => {
+    const current = map.get(item.city) ?? {
+      area: item.city,
+      city: item.city,
+      state: item.state,
+      region: item.region,
+      voters: 0,
+      leaders: 0,
+      supportEstimate: 0,
+      declaredVotes: 0,
+      validatedVotes: 0,
+      voteGoal: 0,
+      distanceToGoal: 0,
+      coverage: 0,
+      validationRate: 0,
+      priority: "Média",
+      responsible: item.responsible,
+    };
+    current.voters += item.voters;
+    current.leaders += item.leaders;
+    current.supportEstimate += item.supportEstimate;
+    current.declaredVotes += item.declaredVotes;
+    current.validatedVotes += item.validatedVotes;
+    current.voteGoal += item.voteGoal;
+    current.distanceToGoal = Math.max(current.voteGoal - current.validatedVotes, 0);
+    current.coverage = percent(current.validatedVotes, current.voters || current.voteGoal);
+    current.validationRate = percent(current.validatedVotes, current.declaredVotes);
+    current.priority = getTerritoryPriority(current.leaders, current.voters, current.coverage, current.validationRate, current.voteGoal, current.validatedVotes);
+    map.set(item.city, current);
   });
-  return build(rows, dataset.warnings);
+  return Array.from(map.values()).map((item) => ({
+    Cidade: item.city,
+    Região: item.region,
+    Lideranças: item.leaders,
+    "Apoio estimado": item.supportEstimate,
+    "Votos declarados": item.declaredVotes,
+    "Votos validados": item.validatedVotes,
+    "Meta atual": item.voteGoal,
+    Cobertura: `${item.coverage}%`,
+    Conversão: `${item.validationRate}%`,
+    Distância: item.distanceToGoal,
+    Prioridade: item.priority,
+  }));
+}
+
+function cityChartRows(rows: TerritoryReportRow[]) {
+  const grouped = new Map<string, TerritoryReportRow>();
+  rows.forEach((item) => {
+    const current = grouped.get(item.city) ?? { ...item, area: item.city, voters: 0, leaders: 0, supportEstimate: 0, declaredVotes: 0, validatedVotes: 0, voteGoal: 0, distanceToGoal: 0 };
+    current.voters += item.voters;
+    current.leaders += item.leaders;
+    current.supportEstimate += item.supportEstimate;
+    current.declaredVotes += item.declaredVotes;
+    current.validatedVotes += item.validatedVotes;
+    current.voteGoal += item.voteGoal;
+    current.distanceToGoal = Math.max(current.voteGoal - current.validatedVotes, 0);
+    grouped.set(item.city, current);
+  });
+  return Array.from(grouped.values()).sort((a, b) => b.validatedVotes - a.validatedVotes);
 }
 
 function report(id: string, title: string, type: ReportType, description: string, scope: string): ReportDefinition {
@@ -563,6 +443,14 @@ function report(id: string, title: string, type: ReportType, description: string
 
 function metric(label: string, value: string | number) {
   return { label, value };
+}
+
+function getTerritoryPriority(leaders: number, voters: number, coverage: number, validationRate: number, voteGoal: number, validatedVotes: number) {
+  if (!leaders && voters > 0) return "Crítica";
+  if (voteGoal > 0 && validatedVotes / voteGoal < 0.25) return "Alta";
+  if (validationRate > 0 && validationRate < 35) return "Alta";
+  if (coverage < 2 && voters > 0) return "Média";
+  return "Manter";
 }
 
 function getLeaderPriority(validated: number, declared: number, confidence: string) {
@@ -590,26 +478,16 @@ function filterSummary(filters: ReportFilters) {
     filters.estado !== "todos" ? filters.estado : null,
     filters.cidade !== "todos" ? filters.cidade : null,
     filters.bairro !== "todos" ? filters.bairro : null,
-    filters.zona !== "todos" ? `Zona ${filters.zona}` : null,
-    filters.secao !== "todos" ? `Seção ${filters.secao}` : null,
     filters.lideranca !== "todos" ? filters.lideranca : null,
   ].filter(Boolean).join(" · ") || "Todos os dados disponíveis";
 }
 
-function countBy<T>(items: T[], getKey: (item: T) => string) {
-  return items.reduce<Record<string, number>>((acc, item) => {
-    const key = getKey(item) || "Não definido";
-    acc[key] = (acc[key] ?? 0) + 1;
-    return acc;
-  }, {});
+function leaderSupport(item: { registered_supporters: number; estimated_direct_supporters: number; estimated_indirect_supporters: number }) {
+  return Number(item.registered_supporters ?? 0) + Number(item.estimated_direct_supporters ?? 0) + Number(item.estimated_indirect_supporters ?? 0);
 }
 
-function countByKey(rows: Array<Record<string, string | number>>, key: string) {
-  return rows.reduce<Record<string, number>>((acc, row) => {
-    const value = String(row[key] ?? "Não definido");
-    acc[value] = (acc[value] ?? 0) + 1;
-    return acc;
-  }, {});
+function sumLeadersSupport(leaders: Array<{ registered_supporters: number; estimated_direct_supporters: number; estimated_indirect_supporters: number }>) {
+  return leaders.reduce((total, item) => total + leaderSupport(item), 0);
 }
 
 function sum<T>(records: T[], key: keyof T) {
@@ -618,14 +496,6 @@ function sum<T>(records: T[], key: keyof T) {
 
 function percent(value: number, base: number) {
   return base ? Math.round((value / base) * 1000) / 10 : 0;
-}
-
-function confidenceScore(value: string) {
-  const normalized = normalize(value);
-  if (normalized.includes("alto")) return 90;
-  if (normalized.includes("medio")) return 65;
-  if (normalized.includes("baixo")) return 35;
-  return 50;
 }
 
 function unique(values: string[]) {

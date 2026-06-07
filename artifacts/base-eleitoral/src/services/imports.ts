@@ -166,25 +166,40 @@ function applyDefaults(moduleKey: ImportModuleKey, payload: Record<string, strin
     payload.declared_votes ??= 0;
     payload.validated_votes ??= 0;
   }
-  if (moduleKey === "supporters") {
-    payload.geographic_precision ??= "Baixa";
-    payload.lgpd_consent ??= true;
-  }
-  if (moduleKey === "electoral_zones") {
-    payload.voters_count ??= 0;
-    payload.vote_goal ??= 0;
-    payload.estimated_campaign_votes ??= 0;
-    payload.validated_votes ??= 0;
-  }
 }
 
 const allowedFields: Record<ImportModuleKey, Set<string>> = {
-  leaders: new Set(["campaign_id", "full_name", "political_nickname", "phone", "email", "leader_type", "status", "cep", "street", "number", "complement", "neighborhood", "city", "state", "territory_region", "geographic_precision", "internal_responsible", "registered_supporters", "estimated_direct_supporters", "estimated_indirect_supporters", "declared_votes", "validated_votes", "confidence_level", "estimate_source", "proof_type", "next_action", "notes"]),
-  supporters: new Set(["campaign_id", "leader_id", "full_name", "nickname", "phone", "email", "cep", "street", "number", "complement", "neighborhood", "city", "state", "reference_point", "geographic_precision", "person_type", "political_status", "data_confidence", "source", "internal_responsible", "last_contact", "next_action", "next_action_date", "lgpd_consent", "notes"]),
-  prospects: new Set(["campaign_id", "supporter_id", "leader_id", "contact_name", "phone", "neighborhood", "city", "funnel_stage", "origin", "priority", "confidence_level", "internal_responsible", "next_action", "next_action_date", "notes"]),
-  electoral_zones: new Set(["campaign_id", "zone_number", "section_number", "voting_place", "cep", "street", "number", "complement", "neighborhood", "city", "state", "voters_count", "historical_votes", "vote_goal", "estimated_campaign_votes", "validated_votes", "regional_responsible", "priority", "status", "notes"]),
-  field_agenda: new Set(["campaign_id", "title", "action_type", "action_date", "neighborhood", "city", "state", "status", "priority", "internal_responsible", "estimated_public", "actual_public", "result", "notes"]),
-  demands: new Set(["campaign_id", "title", "description", "person_name", "phone", "category", "priority", "status", "neighborhood", "city", "state", "opening_date", "return_date", "internal_responsible", "next_action", "notes"]),
+  leaders: new Set([
+    "campaign_id",
+    "full_name",
+    "political_nickname",
+    "phone",
+    "email",
+    "leader_type",
+    "status",
+    "cep",
+    "street",
+    "number",
+    "complement",
+    "neighborhood",
+    "city",
+    "state",
+    "territory_region",
+    "geographic_precision",
+    "internal_responsible",
+    "registered_supporters",
+    "estimated_direct_supporters",
+    "estimated_indirect_supporters",
+    "declared_votes",
+    "validated_votes",
+    "confidence_level",
+    "estimate_source",
+    "proof_type",
+    "latitude",
+    "longitude",
+    "next_action",
+    "notes",
+  ]),
 };
 
 function escapeCsv(value: string) {

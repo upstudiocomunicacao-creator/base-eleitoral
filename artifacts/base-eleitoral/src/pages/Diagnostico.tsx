@@ -3,6 +3,7 @@ import {
   Activity,
   AlertTriangle,
   CheckCircle2,
+  Clipboard,
   Database,
   Loader2,
   PlayCircle,
@@ -44,14 +45,64 @@ const tableChecks = [
   { table: "import_history", label: "Histórico de importações" },
 ] as const;
 
+const monthlyMetricsSetupSql = `create or replace function set_updated_at()
+returns trigger as $$
+begin
+  new.updated_at = now();
+  return new;
+end;
+$$ language plpgsql;
+
+create table if not exists leader_monthly_metrics (
+  id uuid primary key default gen_random_uuid(),
+  campaign_id uuid not null references campaigns(id) on delete cascade,
+  leader_id uuid not null references leaders(id) on delete cascade,
+  month_ref date not null,
+  estimated_supporters integer not null default 0,
+  min_votes integer not null default 0,
+  max_votes integer not null default 0,
+  base_cost numeric not null default 0,
+  ceiling_cost numeric not null default 0,
+  extra_cost numeric not null default 0,
+  notes text,
+  created_at timestamp with time zone not null default now(),
+  updated_at timestamp with time zone not null default now(),
+  unique (leader_id, month_ref)
+);
+
+create index if not exists idx_leader_monthly_metrics_campaign on leader_monthly_metrics(campaign_id);
+create index if not exists idx_leader_monthly_metrics_leader on leader_monthly_metrics(leader_id);
+create index if not exists idx_leader_monthly_metrics_month on leader_monthly_metrics(month_ref);
+
+drop trigger if exists trg_leader_monthly_metrics_updated_at on leader_monthly_metrics;
+create trigger trg_leader_monthly_metrics_updated_at
+before update on leader_monthly_metrics
+for each row execute function set_updated_at();
+
+alter table leader_monthly_metrics enable row level security;
+
+drop policy if exists "mvp_public_select" on leader_monthly_metrics;
+drop policy if exists "mvp_public_insert" on leader_monthly_metrics;
+drop policy if exists "mvp_public_update" on leader_monthly_metrics;
+drop policy if exists "mvp_public_delete" on leader_monthly_metrics;
+
+create policy "mvp_public_select" on leader_monthly_metrics for select to anon using (true);
+create policy "mvp_public_insert" on leader_monthly_metrics for insert to anon with check (true);
+create policy "mvp_public_update" on leader_monthly_metrics for update to anon using (true) with check (true);
+create policy "mvp_public_delete" on leader_monthly_metrics for delete to anon using (true);
+
+notify pgrst, 'reload schema';`;
+
 export default function Diagnostico() {
   const { user, session, profile, refreshProfile } = useAuth();
   const [running, setRunning] = useState(false);
   const [cleanupRunning, setCleanupRunning] = useState(false);
+  const [setupCopied, setSetupCopied] = useState(false);
   const [results, setResults] = useState<DiagnosticResult[]>([]);
   const [lastRun, setLastRun] = useState<string | null>(null);
 
   const canUseDiagnostics = hasPermission(profile, "configuracoes", "view");
+  const needsMonthlyMetricsSetup = results.some((item) => item.detail.includes("leader_monthly_metrics"));
   const summary = useMemo(() => ({
     total: results.length,
     ok: results.filter((item) => item.status === "ok").length,
@@ -101,6 +152,7 @@ export default function Diagnostico() {
         const { count, error } = await supabase
           .from(item.table)
           .select("id", { count: "exact", head: true });
+        if (isLeaderMonthlyMetricsSchemaError(error)) throw new Error(getLeaderMonthlyMetricsSetupMessage());
         if (error) throw error;
         return `${count ?? 0} registro(s) acessíveis.`;
       });
@@ -161,7 +213,8 @@ export default function Diagnostico() {
       if (error) throw error;
       const ids = (temporaryLeaders ?? []).map((item) => item.id);
       if (ids.length) {
-        await supabase.from("leader_monthly_metrics").delete().in("leader_id", ids);
+        const { error: monthlyCleanupError } = await supabase.from("leader_monthly_metrics").delete().in("leader_id", ids);
+        if (monthlyCleanupError && !isLeaderMonthlyMetricsSchemaError(monthlyCleanupError)) throw monthlyCleanupError;
         await supabase.from("leaders").delete().in("id", ids);
       }
       setResults((current) => [
@@ -188,6 +241,12 @@ export default function Diagnostico() {
     } finally {
       setCleanupRunning(false);
     }
+  }
+
+  async function copyMonthlyMetricsSetupSql() {
+    await navigator.clipboard.writeText(monthlyMetricsSetupSql);
+    setSetupCopied(true);
+    window.setTimeout(() => setSetupCopied(false), 2200);
   }
 
   if (!canUseDiagnostics) {
@@ -226,6 +285,26 @@ export default function Diagnostico() {
         <MetricCard label="Com erro" value={summary.errors} icon={XCircle} tone="red" loading={running && !results.length} />
         <MetricCard label="Última execução" value={lastRun ?? "-"} icon={RefreshCw} tone="indigo" loading={false} />
       </section>
+
+      {needsMonthlyMetricsSetup ? (
+        <Card className="border-blue-200 bg-blue-50/80 shadow-sm">
+          <CardContent className="flex flex-col gap-4 p-5 text-blue-950 lg:flex-row lg:items-center lg:justify-between">
+            <div className="flex gap-3">
+              <Database className="mt-0.5 h-5 w-5 shrink-0 text-blue-700" />
+              <div>
+                <div className="font-extrabold">Ativação pendente no Supabase</div>
+                <p className="mt-1 max-w-3xl text-sm font-medium leading-6">
+                  A tabela mensal de votos e centro de custos ainda não está ativa na API. Copie o SQL abaixo, rode no SQL Editor do Supabase e depois execute o diagnóstico novamente.
+                </p>
+              </div>
+            </div>
+            <Button variant="outline" className="bg-white" onClick={copyMonthlyMetricsSetupSql}>
+              <Clipboard className="h-4 w-4" />
+              {setupCopied ? "SQL copiado" : "Copiar SQL"}
+            </Button>
+          </CardContent>
+        </Card>
+      ) : null}
 
       <Card className="premium-card">
         <CardHeader>

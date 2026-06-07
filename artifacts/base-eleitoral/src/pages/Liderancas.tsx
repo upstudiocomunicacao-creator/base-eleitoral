@@ -38,6 +38,21 @@ type AttentionLevel = "Crítico" | "Atenção" | "Estável" | "Forte";
 
 const rjCityOptions = [...rjCities] as string[];
 const maricaNeighborhoodOptions = [...maricaNeighborhoods] as string[];
+const leaderTypeOptions = [
+  "Coordenação Geral",
+  "Coordenação RJ",
+  "Coordenação Maricá",
+  "Liderança RJ",
+  "Liderança Maricá",
+  "Comunitária",
+  "Regional",
+  "Territorial",
+  "Juventude",
+  "Comerciante",
+  "Religiosa",
+  "Temática",
+  "Política",
+];
 
 type Filters = {
   search: string;
@@ -98,7 +113,7 @@ const emptyForm: LeaderFormState = {
   political_nickname: "",
   phone: "",
   email: "",
-  leader_type: "Comunitária",
+  leader_type: "Liderança Maricá",
   status: "Ativa",
   cep: "",
   street: "",
@@ -528,7 +543,8 @@ function LeadershipFormSheet({
     const isMarica = city === "Maricá";
     const neighborhood = isMarica ? "Centro" : "Todos";
     const territoryRegion = isMarica ? getMaricaDistrictForNeighborhood(neighborhood) : getRJRegionForCity(city);
-    setRecord({ ...record, city, state: "RJ", neighborhood, territory_region: territoryRegion });
+    const leaderType = normalizeLeadershipTypeForTerritory(record.leader_type, isMarica);
+    setRecord({ ...record, city, state: "RJ", neighborhood, territory_region: territoryRegion, leader_type: leaderType });
   }
 
   function updateNeighborhood(neighborhood: string) {
@@ -554,7 +570,7 @@ function LeadershipFormSheet({
               <TextField label="Apelido político" value={record.political_nickname} onChange={(value) => update("political_nickname", value)} />
               <TextField required label="Telefone/WhatsApp" value={record.phone} onChange={(value) => update("phone", value)} />
               <TextField label="E-mail" value={record.email} onChange={(value) => update("email", value)} />
-              <SelectTextField required label="Tipo de liderança" value={record.leader_type} values={["Comunitária", "Regional", "Territorial", "Juventude", "Comerciante", "Religiosa", "Temática", "Política"]} onChange={(value) => update("leader_type", value)} />
+              <SelectTextField required label="Tipo de liderança" value={record.leader_type} values={leaderTypeOptions} onChange={(value) => update("leader_type", value)} />
               <SelectTextField required label="Status" value={record.status} values={["Ativa", "Atenção", "Em validação", "Inativa"]} onChange={(value) => update("status", value)} />
               <TextField label="Responsável interno" value={record.internal_responsible} onChange={(value) => update("internal_responsible", value)} />
               <AreaField label="Observações" value={record.notes} onChange={(value) => update("notes", value)} />
@@ -577,9 +593,9 @@ function LeadershipFormSheet({
             </FormSection>
 
             <FormSection title="Potencial político">
-              <NumberField label="Apoiadores cadastrados" value={record.registered_supporters} onChange={(value) => update("registered_supporters", value)} />
-              <NumberField label="Estimados diretos" value={record.estimated_direct_supporters} onChange={(value) => update("estimated_direct_supporters", value)} />
-              <NumberField label="Estimados indiretos" value={record.estimated_indirect_supporters} onChange={(value) => update("estimated_indirect_supporters", value)} />
+              <NumberField label="Apoio estimado base" value={record.registered_supporters} onChange={(value) => update("registered_supporters", value)} />
+              <NumberField label="Estimativa direta" value={record.estimated_direct_supporters} onChange={(value) => update("estimated_direct_supporters", value)} />
+              <NumberField label="Estimativa indireta" value={record.estimated_indirect_supporters} onChange={(value) => update("estimated_indirect_supporters", value)} />
               <NumberField label="Votos declarados" value={record.declared_votes} onChange={(value) => update("declared_votes", value)} />
               <NumberField label="Votos validados" value={record.validated_votes} onChange={(value) => update("validated_votes", value)} />
               <SelectTextField required label="Grau de confiança" value={record.confidence_level} values={["Baixo", "Médio", "Alto"]} onChange={(value) => update("confidence_level", value)} />
@@ -675,9 +691,9 @@ function LeadershipDetailSheet({ open, record, onOpenChange }: { open: boolean; 
 
             <DetailCard title="Potencial político">
               <InfoGrid items={[
-                ["Apoiadores cadastrados", String(record.registered_supporters)],
-                ["Estimados diretos", String(record.estimated_direct_supporters)],
-                ["Estimados indiretos", String(record.estimated_indirect_supporters)],
+                ["Apoio estimado base", String(record.registered_supporters)],
+                ["Estimativa direta", String(record.estimated_direct_supporters)],
+                ["Estimativa indireta", String(record.estimated_indirect_supporters)],
                 ["Fonte", record.estimate_source ?? "-"],
                 ["Comprovação", record.proof_type ?? "-"],
                 ["Última atualização", record.last_update ?? "-"],
@@ -693,9 +709,9 @@ function LeadershipDetailSheet({ open, record, onOpenChange }: { open: boolean; 
           </div>
 
           <div className="grid gap-5 xl:grid-cols-3">
-            <DetailList title="Apoiadores vinculados" />
-            <DetailList title="Histórico de ações" />
-            <DetailList title="Demandas associadas" />
+            <DetailList title="Vínculos operacionais" />
+            <DetailList title="Histórico operacional" />
+            <DetailList title="Notas e pendências" />
           </div>
         </div>
       </SheetContent>
@@ -852,6 +868,7 @@ function toFormState(leader: Leader): LeaderFormState {
 
 function toInsertPayload(form: LeaderFormState): LeaderInsert {
   const territory = normalizeTerritory(form);
+  const leaderType = normalizeLeadershipTypeForTerritory(form.leader_type, territory.city === "Maricá");
 
   return {
     campaign_id: DEFAULT_CAMPAIGN_ID,
@@ -859,7 +876,7 @@ function toInsertPayload(form: LeaderFormState): LeaderInsert {
     political_nickname: nullable(form.political_nickname),
     phone: form.phone.trim(),
     email: nullable(form.email),
-    leader_type: form.leader_type,
+    leader_type: leaderType,
     status: form.status,
     cep: nullable(form.cep),
     street: nullable(form.street),
@@ -900,6 +917,15 @@ function normalizeTerritory(form: LeaderFormState) {
   };
 }
 
+function normalizeLeadershipTypeForTerritory(type: string, isMarica: boolean) {
+  if (type === "Coordenação Geral") return type;
+  if (isMarica && type === "Coordenação RJ") return "Coordenação Maricá";
+  if (isMarica && type === "Liderança RJ") return "Liderança Maricá";
+  if (!isMarica && type === "Coordenação Maricá") return "Coordenação RJ";
+  if (!isMarica && type === "Liderança Maricá") return "Liderança RJ";
+  return type;
+}
+
 function validateForm(form: LeaderFormState) {
   const required: Array<[keyof LeaderFormState, string]> = [
     ["full_name", "Nome completo"],
@@ -928,7 +954,7 @@ function buildSummary(items: Leader[]) {
 }
 
 function getPotentialTotal(leader: Leader) {
-  return (leader.estimated_direct_supporters ?? 0) + (leader.estimated_indirect_supporters ?? 0);
+  return (leader.registered_supporters ?? 0) + (leader.estimated_direct_supporters ?? 0) + (leader.estimated_indirect_supporters ?? 0);
 }
 
 function getValidationRate(leader: Leader) {

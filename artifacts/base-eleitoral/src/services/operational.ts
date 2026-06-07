@@ -4,6 +4,7 @@ export type ForceStatus = "Ativo" | "Atenção" | "Prioritário" | "Pendente";
 
 export type MonthlyProjection = {
   month: string;
+  estimatedSupporters: number;
   minVotes: number;
   maxVotes: number;
   baseCost: number;
@@ -35,6 +36,7 @@ export type OperationalSummary = {
   coordinatorsMarica: number;
   leaders: number;
   territories: number;
+  estimatedSupporters: number;
   minVotes: number;
   maxVotes: number;
   baseCost: number;
@@ -42,12 +44,15 @@ export type OperationalSummary = {
   extraCost: number;
   costPerMinVote: number;
   costPerMaxVote: number;
+  minVoteConversion: number;
+  maxVoteConversion: number;
   withoutCoordinates: number;
 };
 
 export type TerritoryPerformance = {
   territory: string;
   group: string;
+  estimatedSupporters: number;
   minVotes: number;
   maxVotes: number;
   cost: number;
@@ -167,6 +172,7 @@ export const minimalFields = [
   "Responsável/vínculo",
   "Latitude",
   "Longitude",
+  "Apoiadores estimados",
   "Votos mínimos",
   "Votos máximos",
   "Custo mínimo",
@@ -262,9 +268,10 @@ function leader(
   };
 }
 
-function buildMonthly(minVotes: number, maxVotes: number, baseCost: number, ceilingCost: number, extraCost: number) {
+function buildMonthly(minVotes: number, maxVotes: number, baseCost: number, ceilingCost: number, extraCost: number, estimatedSupporters = Math.max(maxVotes, Math.round(maxVotes * 1.25))) {
   return operationalMonths.map((month, index) => ({
     month,
+    estimatedSupporters: Math.round(estimatedSupporters * (1 + index * 0.08)),
     minVotes: Math.round(minVotes * (1 + index * 0.08)),
     maxVotes: Math.round(maxVotes * (1 + index * 0.1)),
     baseCost,
@@ -275,6 +282,7 @@ function buildMonthly(minVotes: number, maxVotes: number, baseCost: number, ceil
 
 export function computeOperationalSummary(actors: ForceActor[], month = operationalMonths[0]): OperationalSummary {
   const rows = actors.map((item) => getMonthly(item, month));
+  const estimatedSupporters = sum(rows, "estimatedSupporters");
   const minVotes = sum(rows, "minVotes");
   const maxVotes = sum(rows, "maxVotes");
   const baseCost = sum(rows, "baseCost");
@@ -287,6 +295,7 @@ export function computeOperationalSummary(actors: ForceActor[], month = operatio
     coordinatorsMarica: actors.filter((item) => item.role === "coord_marica").length,
     leaders: actors.filter((item) => item.role === "leader").length,
     territories,
+    estimatedSupporters,
     minVotes,
     maxVotes,
     baseCost,
@@ -294,6 +303,8 @@ export function computeOperationalSummary(actors: ForceActor[], month = operatio
     extraCost,
     costPerMinVote: minVotes ? Math.round((baseCost + extraCost) / minVotes) : 0,
     costPerMaxVote: maxVotes ? Math.round((ceilingCost + extraCost) / maxVotes) : 0,
+    minVoteConversion: estimatedSupporters ? Math.round((minVotes / estimatedSupporters) * 100) : 0,
+    maxVoteConversion: estimatedSupporters ? Math.round((maxVotes / estimatedSupporters) * 100) : 0,
     withoutCoordinates: actors.filter((item) => !item.latitude || !item.longitude).length,
   };
 }
@@ -332,7 +343,8 @@ export function groupTerritoryPerformance(actors: ForceActor[], month: string, s
     .reduce<Record<string, TerritoryPerformance>>((acc, item) => {
       const monthly = getMonthly(item, month);
       const key = item.territory;
-      acc[key] ??= { territory: key, group: getTerritoryGroup(item), minVotes: 0, maxVotes: 0, cost: 0, actors: 0 };
+      acc[key] ??= { territory: key, group: getTerritoryGroup(item), estimatedSupporters: 0, minVotes: 0, maxVotes: 0, cost: 0, actors: 0 };
+      acc[key].estimatedSupporters += monthly.estimatedSupporters;
       acc[key].minVotes += monthly.minVotes;
       acc[key].maxVotes += monthly.maxVotes;
       acc[key].cost += monthly.baseCost + monthly.extraCost;

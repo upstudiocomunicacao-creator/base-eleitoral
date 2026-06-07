@@ -70,6 +70,7 @@ export default function Operacional() {
     scope: "marica" as OperationalScope,
     territory: "Centro",
     status: "Ativo",
+    estimatedSupporters: "0",
     minVotes: "0",
     maxVotes: "0",
     baseCost: "0",
@@ -88,10 +89,11 @@ export default function Operacional() {
     const isMarica = draft.scope === "marica";
     const minVotes = Number(draft.minVotes) || 0;
     const maxVotes = Number(draft.maxVotes) || minVotes;
+    const estimatedSupporters = Number(draft.estimatedSupporters) || Math.max(maxVotes, minVotes);
     const baseCost = Number(draft.baseCost) || 0;
     const ceilingCost = Number(draft.ceilingCost) || baseCost;
     const extraCost = Number(draft.extraCost) || 0;
-    const monthly = operationalMonths.map((item) => ({ month: item, minVotes, maxVotes, baseCost, ceilingCost, extraCost }));
+    const monthly = operationalMonths.map((item) => ({ month: item, estimatedSupporters, minVotes, maxVotes, baseCost, ceilingCost, extraCost }));
 
     setActors((current) => [
       {
@@ -111,7 +113,7 @@ export default function Operacional() {
       },
       ...current,
     ]);
-    setDraft((current) => ({ ...current, name: "", phone: "", minVotes: "0", maxVotes: "0", baseCost: "0", ceilingCost: "0", extraCost: "0" }));
+    setDraft((current) => ({ ...current, name: "", phone: "", estimatedSupporters: "0", minVotes: "0", maxVotes: "0", baseCost: "0", ceilingCost: "0", extraCost: "0" }));
   }
 
   return (
@@ -134,10 +136,11 @@ export default function Operacional() {
         }
       />
 
-      <div className="grid grid-cols-2 gap-4 md:grid-cols-4 xl:grid-cols-6">
+      <div className="grid grid-cols-2 gap-4 md:grid-cols-4 xl:grid-cols-7">
         <MetricCard label="Coord. RJ" value={summary.coordinatorsRJ} icon={Building2} tone="blue" />
         <MetricCard label="Coord. Maricá" value={summary.coordinatorsMarica} icon={MapPin} tone="emerald" />
         <MetricCard label="Lideranças" value={summary.leaders} icon={Users} tone="violet" />
+        <MetricCard label="Apoiadores estim." value={summary.estimatedSupporters} icon={ClipboardList} tone="blue" />
         <MetricCard label="Votos mín." value={summary.minVotes} icon={Target} tone="green" />
         <MetricCard label="Votos máx." value={summary.maxVotes} icon={TrendingUp} tone="cyan" />
         <MetricCard label="Custo teto" value={currency(summary.ceilingCost + summary.extraCost)} icon={CircleDollarSign} tone="amber" />
@@ -208,6 +211,7 @@ export default function Operacional() {
           <div className="grid gap-5 xl:grid-cols-3">
             <AnalysisCard title="Custo por voto mínimo" value={currency(summary.costPerMinVote)} helper="Custo base + extras dividido pelo piso de votos." />
             <AnalysisCard title="Custo por voto máximo" value={currency(summary.costPerMaxVote)} helper="Teto + extras dividido pelo potencial máximo." />
+            <AnalysisCard title="Conversão estimada" value={`${summary.minVoteConversion}% a ${summary.maxVoteConversion}%`} helper="Apoiadores estimados convertidos em votos." />
             <AnalysisCard title="Registros sem mapa" value={summary.withoutCoordinates.toString()} helper="Cadastros que precisam de latitude e longitude." />
           </div>
           <div className="mt-5 grid gap-5 xl:grid-cols-2">
@@ -260,7 +264,9 @@ function ExecutiveReading({ summary }: { summary: ReturnType<typeof computeOpera
       </CardHeader>
       <CardContent className="space-y-3 text-sm font-medium leading-6 text-slate-600">
         <p>A campanha está organizada em {summary.territories} territórios, com leitura separada para RJ e Maricá.</p>
+        <p>Os apoiadores entram apenas como número estimado: <strong>{summary.estimatedSupporters.toLocaleString("pt-BR")}</strong> para conversão em voto.</p>
         <p>O piso mensal cadastrado é de <strong>{summary.minVotes.toLocaleString("pt-BR")} votos</strong> e o teto é de <strong>{summary.maxVotes.toLocaleString("pt-BR")} votos</strong>.</p>
+        <p>A conversão estimada fica entre <strong>{summary.minVoteConversion}%</strong> e <strong>{summary.maxVoteConversion}%</strong> dos apoiadores informados.</p>
         <p>O custo operacional mensal fica entre <strong>{currency(summary.baseCost)}</strong> e <strong>{currency(summary.ceilingCost + summary.extraCost)}</strong>, com custo por voto máximo estimado em <strong>{currency(summary.costPerMaxVote)}</strong>.</p>
       </CardContent>
     </Card>
@@ -395,6 +401,15 @@ function ActorCard({ actor, month, compact = false }: { actor: ForceActor; month
 
 function CadastroRapido({ draft, setDraft, onAdd }: { draft: Record<string, string>; setDraft: (value: any) => void; onAdd: () => void }) {
   const territories = draft.scope === "marica" ? maricaNeighborhoods : rjCities;
+  const setRole = (value: string) => {
+    const nextScope = value === "coord_rj" ? "rj" : value === "coord_marica" ? "marica" : draft.scope;
+    setDraft({
+      ...draft,
+      role: value,
+      scope: nextScope,
+      territory: nextScope === "marica" ? "Centro" : "Niterói",
+    });
+  };
 
   return (
     <Card className="premium-card">
@@ -407,7 +422,7 @@ function CadastroRapido({ draft, setDraft, onAdd }: { draft: Record<string, stri
         <Field label="Telefone/WhatsApp"><Input value={draft.phone} onChange={(e) => setDraft({ ...draft, phone: e.target.value })} /></Field>
         <div className="grid grid-cols-2 gap-3">
           <Field label="Tipo">
-            <Select value={draft.role} onValueChange={(value) => setDraft({ ...draft, role: value })}>
+            <Select value={draft.role} onValueChange={setRole}>
               <SelectTrigger><SelectValue /></SelectTrigger>
               <SelectContent>
                 <SelectItem value="coord_rj">Coord. RJ</SelectItem>
@@ -417,7 +432,7 @@ function CadastroRapido({ draft, setDraft, onAdd }: { draft: Record<string, stri
             </Select>
           </Field>
           <Field label="Recorte">
-            <Select value={draft.scope} onValueChange={(value) => setDraft({ ...draft, scope: value, territory: value === "marica" ? "Centro" : "Niterói" })}>
+            <Select value={draft.scope} onValueChange={(value) => setDraft({ ...draft, scope: value, territory: value === "marica" ? "Centro" : "Niterói", role: value === "marica" && draft.role === "coord_rj" ? "coord_marica" : value === "rj" && draft.role === "coord_marica" ? "coord_rj" : draft.role })}>
               <SelectTrigger><SelectValue /></SelectTrigger>
               <SelectContent>
                 <SelectItem value="marica">Maricá</SelectItem>
@@ -437,6 +452,9 @@ function CadastroRapido({ draft, setDraft, onAdd }: { draft: Record<string, stri
             ? `Distrito: ${getMaricaDistrictForNeighborhood(draft.territory)}`
             : `Região: ${getRJRegionForCity(draft.territory)}`}
         </div>
+        <Field label="Apoiadores estimados">
+          <Input type="number" value={draft.estimatedSupporters} onChange={(e) => setDraft({ ...draft, estimatedSupporters: e.target.value })} />
+        </Field>
         <div className="grid grid-cols-2 gap-3">
           <Field label="Votos mín."><Input type="number" value={draft.minVotes} onChange={(e) => setDraft({ ...draft, minVotes: e.target.value })} /></Field>
           <Field label="Votos máx."><Input type="number" value={draft.maxVotes} onChange={(e) => setDraft({ ...draft, maxVotes: e.target.value })} /></Field>
@@ -461,7 +479,7 @@ function ActorsTable({ actors, month }: { actors: ForceActor[]; month: string })
         <table className="w-full min-w-[900px] text-left text-sm">
           <thead className="bg-slate-50 text-xs font-black uppercase tracking-[0.08em] text-slate-500">
             <tr>
-              {["Nome", "Tipo", "Território", "Região/Distrito", "Status", "Votos mín.", "Votos máx.", "Custo mín.", "Custo máx.", "Mapa"].map((item) => <th key={item} className="px-4 py-3">{item}</th>)}
+              {["Nome", "Tipo", "Território", "Região/Distrito", "Status", "Apoiadores", "Votos mín.", "Votos máx.", "Custo mín.", "Custo máx.", "Mapa"].map((item) => <th key={item} className="px-4 py-3">{item}</th>)}
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-100">
@@ -474,6 +492,7 @@ function ActorsTable({ actors, month }: { actors: ForceActor[]; month: string })
                   <td className="px-4 py-3 font-bold text-slate-600">{actor.territory}<div className="text-xs font-semibold text-slate-400">{getScopeLabel(actor.scope)}</div></td>
                   <td className="px-4 py-3 font-bold text-slate-600">{getTerritoryGroup(actor)}</td>
                   <td className="px-4 py-3"><StatusBadge status={actor.status} /></td>
+                  <td className="px-4 py-3 font-bold">{monthly.estimatedSupporters.toLocaleString("pt-BR")}</td>
                   <td className="px-4 py-3 font-bold">{monthly.minVotes.toLocaleString("pt-BR")}</td>
                   <td className="px-4 py-3 font-bold">{monthly.maxVotes.toLocaleString("pt-BR")}</td>
                   <td className="px-4 py-3 font-bold">{currency(monthly.baseCost)}</td>

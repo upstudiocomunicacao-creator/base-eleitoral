@@ -4,18 +4,13 @@ import {
   AlertTriangle,
   BarChart2,
   Building2,
-  CalendarDays,
   CheckCircle2,
-  Clock,
-  Landmark,
   MapPin,
-  MessageSquareWarning,
   RefreshCw,
   ShieldCheck,
   Star,
   Target,
   TrendingUp,
-  UserPlus,
   Users,
   Zap,
 } from "lucide-react";
@@ -25,7 +20,6 @@ import {
   Bar,
   BarChart,
   CartesianGrid,
-  Cell,
   Legend,
   ResponsiveContainer,
   Tooltip,
@@ -62,14 +56,14 @@ const emptyFilters: DashboardFilters = {
 };
 
 const statCards = [
-  { key: "totalLeaders", label: "Lideranças", icon: Users, tone: "blue" },
+  { key: "totalLeaders", label: "Cadastros", icon: Users, tone: "blue" },
   { key: "activeLeaders", label: "Ativas", icon: ShieldCheck, tone: "emerald" },
   { key: "estimatedSupporters", label: "Apoio estim.", icon: BarChart2, tone: "violet" },
   { key: "declaredVotes", label: "Declarados", icon: Star, tone: "amber" },
   { key: "validatedVotes", label: "Validados", icon: CheckCircle2, tone: "green" },
   { key: "confidenceIndex", label: "Confiança", icon: TrendingUp, tone: "cyan" },
-  { key: "municipalitiesWithAction", label: "Municípios", icon: Building2, tone: "indigo" },
-  { key: "coveredNeighborhoods", label: "Bairros", icon: MapPin, tone: "rose" },
+  { key: "municipalitiesWithAction", label: "Cidades RJ", icon: Building2, tone: "indigo" },
+  { key: "coveredNeighborhoods", label: "Bairros Maricá", icon: MapPin, tone: "rose" },
   { key: "generalVoteGoal", label: "Meta geral", icon: Target, tone: "violet" },
   { key: "distanceToGoal", label: "Distância", icon: AlertCircle, tone: "orange" },
   { key: "priorityRegions", label: "Prioritárias", icon: AlertTriangle, tone: "red" },
@@ -132,7 +126,7 @@ export default function Dashboard() {
   return (
     <div className="space-y-8">
       <PageHeader
-        eyebrow="Dashboard Geral"
+        eyebrow="Painel Geral"
         title="Comando Geral"
         description={`${today} · visão executiva enxuta por coordenação, liderança, território, votos e custo estimado.`}
         actions={
@@ -246,9 +240,9 @@ function ExecutivePulse({ computed, loading }: { computed: DashboardComputed | n
       <div className="premium-card rounded-lg p-5">
         <div className="text-xs font-bold uppercase tracking-[0.14em] text-slate-500">Próxima leitura</div>
         <div className="mt-3 grid grid-cols-2 gap-3">
-          <MiniStat label="Municípios" value={computed?.summary.municipalitiesWithAction ?? 0} />
-          <MiniStat label="Bairros" value={computed?.summary.coveredNeighborhoods ?? 0} />
-          <MiniStat label="Zonas" value={computed?.summary.electoralZones ?? 0} />
+          <MiniStat label="Cidades RJ" value={computed?.summary.municipalitiesWithAction ?? 0} />
+          <MiniStat label="Bairros Maricá" value={computed?.summary.coveredNeighborhoods ?? 0} />
+          <MiniStat label="Cadastros" value={computed?.summary.totalLeaders ?? 0} />
           <MiniStat label="Prioridades" value={computed?.summary.priorityRegions ?? 0} />
         </div>
       </div>
@@ -273,10 +267,10 @@ function DashboardFiltersPanel({
         <FilterSelect label="Cidade" value={filters.city} options={options.cities} onChange={(value) => update("city", value)} />
         <FilterSelect label="Bairro" value={filters.neighborhood} options={options.neighborhoods} onChange={(value) => update("neighborhood", value)} />
         <FilterSelect label="Período" value={filters.period} options={[["todos", "Todos"], ["7", "Últimos 7 dias"], ["30", "Últimos 30 dias"], ["90", "Últimos 90 dias"]]} onChange={(value) => update("period", value)} />
-        <FilterSelect label="Liderança" value={filters.leaderId} options={options.leaders.map((item) => item)} onChange={(value) => update("leaderId", value)} />
+        <FilterSelect label="Cadastro" value={filters.leaderId} options={options.leaders.map((item) => item)} onChange={(value) => update("leaderId", value)} />
         <FilterSelect label="Responsável" value={filters.responsible} options={options.responsibles} onChange={(value) => update("responsible", value)} />
-        <FilterSelect label="Status político" value={filters.politicalStatus} options={options.politicalStatus} onChange={(value) => update("politicalStatus", value)} />
-        <FilterSelect label="Prioridade" value={filters.priority} options={options.priorities} onChange={(value) => update("priority", value)} />
+        <FilterSelect label="Tipo de cadastro" value={filters.politicalStatus} options={options.politicalStatus} onChange={(value) => update("politicalStatus", value)} />
+        <FilterSelect label="Confiança" value={filters.priority} options={options.priorities} onChange={(value) => update("priority", value)} />
         <div className="flex items-end xl:col-span-8">
           <Button variant="outline" onClick={() => setFilters(emptyFilters)}>Limpar filtros</Button>
         </div>
@@ -337,9 +331,9 @@ function RankingCard({ title, description, items, loading, colorClass, valueClas
 function CoverageCard({ rows, loading }: { rows: Array<{ nome: string; cobertura: number; apoiadores: number; liderancas: number; eleitores: number }>; loading: boolean }) {
   return (
     <Card className="premium-card">
-      <CardHeader><CardTitle className="text-base">Ranking de bairros por cobertura</CardTitle><p className="text-xs font-semibold text-slate-400">Apoiadores, lideranças e zonas por bairro</p></CardHeader>
+      <CardHeader><CardTitle className="text-base">Ranking territorial por validação</CardTitle><p className="text-xs font-semibold text-slate-400">Cidades do RJ e bairros de Maricá por força validada</p></CardHeader>
       <CardContent className="space-y-3">
-        {loading ? <SkeletonList /> : rows.length === 0 ? <EmptyState title="Sem cobertura calculada" description="Cadastre zonas, lideranças ou apoiadores." icon={MapPin} /> : rows.slice(0, 6).map((row) => (
+        {loading ? <SkeletonList /> : rows.length === 0 ? <EmptyState title="Sem cobertura calculada" description="Cadastre coordenações e lideranças para alimentar esta leitura." icon={MapPin} /> : rows.slice(0, 6).map((row) => (
           <div key={row.nome} className="rounded-lg bg-slate-50 p-3">
             <div className="flex items-center justify-between gap-3">
               <div className="font-bold text-slate-800">{row.nome}</div>
@@ -348,51 +342,7 @@ function CoverageCard({ rows, loading }: { rows: Array<{ nome: string; cobertura
             <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-white">
               <div className="h-full rounded-full bg-blue-600" style={{ width: `${Math.min(row.cobertura, 100)}%` }} />
             </div>
-            <div className="mt-2 text-xs font-semibold text-slate-500">{row.liderancas} lideranças · {row.apoiadores} apoiadores · {formatNumber(row.eleitores)} eleitores</div>
-          </div>
-        ))}
-      </CardContent>
-    </Card>
-  );
-}
-
-function SimpleBarCard({ title, data, loading, color }: { title: string; data: Array<{ name: string; value: number }>; loading: boolean; color: string }) {
-  return (
-    <Card className="premium-card">
-      <CardHeader><CardTitle className="text-base">{title}</CardTitle></CardHeader>
-      <CardContent className="h-72">
-        {loading ? <Skeleton className="h-full w-full rounded-lg" /> : data.length === 0 ? <EmptyState title="Sem dados suficientes" description="Este gráfico será preenchido com registros reais." icon={BarChart2} /> : (
-          <ResponsiveContainer width="100%" height="100%">
-            <BarChart data={data.slice(0, 7)} layout="vertical" margin={{ left: 6, right: 12 }}>
-              <CartesianGrid strokeDasharray="3 3" horizontal={false} />
-              <XAxis type="number" hide />
-              <YAxis dataKey="name" type="category" width={112} tick={{ fontSize: 11, fill: "#64748b", fontWeight: 700 }} />
-              <Tooltip />
-              <Bar dataKey="value" radius={[0, 8, 8, 0]} fill={color}>
-                {data.slice(0, 7).map((entry, index) => <Cell key={entry.name} fill={["#2563eb", "#10b981", "#f59e0b", "#ef4444", "#8b5cf6", "#06b6d4", "#64748b"][index] ?? color} />)}
-              </Bar>
-            </BarChart>
-          </ResponsiveContainer>
-        )}
-      </CardContent>
-    </Card>
-  );
-}
-
-function UpcomingAgendaCard({ rows, loading }: { rows: Array<{ title: string; date: string; neighborhood: string; priority: string; status: string }>; loading: boolean }) {
-  return (
-    <Card className="premium-card">
-      <CardHeader><CardTitle className="text-base">Agenda dos próximos 7 dias</CardTitle></CardHeader>
-      <CardContent className="space-y-3">
-        {loading ? <SkeletonList /> : rows.length === 0 ? <EmptyState title="Sem ações próximas" description="Cadastre ações de campo para alimentar este painel." icon={Clock} /> : rows.map((item) => (
-          <div key={`${item.title}-${item.date}`} className="rounded-lg border border-slate-100 bg-slate-50 p-3">
-            <div className="flex items-start justify-between gap-3">
-              <div>
-                <div className="font-bold text-slate-900">{item.title}</div>
-                <div className="text-xs font-semibold text-slate-500">{formatDate(item.date)} · {item.neighborhood}</div>
-              </div>
-              <StatusPill label={item.priority} tone={priorityTone(item.priority)} />
-            </div>
+            <div className="mt-2 text-xs font-semibold text-slate-500">{row.liderancas} cadastros · {formatNumber(row.apoiadores)} apoios estim. · {formatNumber(row.eleitores)} eleitores ref.</div>
           </div>
         ))}
       </CardContent>
@@ -405,7 +355,7 @@ function PriorityRegionsPanel({ rows, loading }: { rows: PriorityRegion[]; loadi
     <Card className="premium-card">
       <CardHeader>
         <CardTitle className="text-base">Regiões prioritárias</CardTitle>
-        <p className="text-xs font-semibold text-slate-400">Calculado por eleitores, cobertura, lideranças, demandas e agenda.</p>
+        <p className="text-xs font-semibold text-slate-400">Calculado por cadastros, apoio estimado, votos, validação e confiança.</p>
       </CardHeader>
       <CardContent className="space-y-3">
         {loading ? <SkeletonList /> : rows.length === 0 ? <EmptyState title="Sem regiões prioritárias" description="O painel será calculado quando houver dados territoriais." icon={MapPin} /> : rows.map((row) => (
@@ -419,11 +369,9 @@ function PriorityRegionsPanel({ rows, loading }: { rows: PriorityRegion[]; loadi
             </div>
             <div className="mt-3 grid grid-cols-3 gap-2 text-xs font-bold text-slate-600">
               <MiniStat label="Eleitores" value={row.estimatedVoters} />
-              <MiniStat label="Lideranças" value={row.leaders} />
-              <MiniStat label="Apoiadores" value={row.supporters} />
+              <MiniStat label="Cadastros" value={row.leaders} />
+              <MiniStat label="Apoio estim." value={row.supporters} />
               <MiniStat label="Validados" value={row.validatedVotes} />
-              <MiniStat label="Demandas" value={row.openDemands} />
-              <MiniStat label="Ações" value={row.upcomingActions} />
             </div>
             <p className="mt-3 text-sm font-medium leading-6 text-slate-600">{row.reading}</p>
           </div>
@@ -513,13 +461,13 @@ function ChartTooltip({ active, payload = [], label }: { active?: boolean; paylo
 
 function buildFilterOptions(dataset: DashboardDataset) {
   return {
-    states: unique([...dataset.leaders.map((item) => item.state), ...dataset.supporters.map((item) => item.state), ...dataset.electoralZones.map((item) => item.state), ...dataset.demands.map((item) => item.state)]),
-    cities: unique([...dataset.leaders.map((item) => item.city), ...dataset.supporters.map((item) => item.city), ...dataset.electoralZones.map((item) => item.city), ...dataset.demands.map((item) => item.city), ...dataset.municipalities.map((item) => item.name)]),
-    neighborhoods: unique([...dataset.leaders.map((item) => item.neighborhood), ...dataset.supporters.map((item) => item.neighborhood), ...dataset.electoralZones.map((item) => item.neighborhood), ...dataset.demands.map((item) => item.neighborhood), ...dataset.neighborhoods.map((item) => item.name)]),
+    states: unique(dataset.leaders.map((item) => item.state)),
+    cities: unique([...dataset.leaders.map((item) => item.city), ...dataset.municipalities.map((item) => item.name)]),
+    neighborhoods: unique([...dataset.leaders.map((item) => item.neighborhood), ...dataset.neighborhoods.map((item) => item.name)]),
     leaders: dataset.leaders.map((item) => [item.id, item.full_name] as [string, string]),
-    responsibles: unique([...dataset.leaders.map((item) => item.internal_responsible), ...dataset.supporters.map((item) => item.internal_responsible), ...dataset.prospects.map((item) => item.internal_responsible), ...dataset.fieldAgenda.map((item) => item.internal_responsible), ...dataset.demands.map((item) => item.internal_responsible)]),
-    politicalStatus: unique(dataset.supporters.map((item) => item.political_status)),
-    priorities: unique([...dataset.prospects.map((item) => item.priority), ...dataset.electoralZones.map((item) => item.priority), ...dataset.fieldAgenda.map((item) => item.priority), ...dataset.demands.map((item) => item.priority)]),
+    responsibles: unique(dataset.leaders.map((item) => item.internal_responsible)),
+    politicalStatus: unique(dataset.leaders.map((item) => item.leader_type)),
+    priorities: unique(dataset.leaders.map((item) => item.confidence_level)),
   };
 }
 
@@ -528,7 +476,7 @@ function emptyFilterOptions() {
 }
 
 function hasDatasetData(dataset: DashboardDataset) {
-  return Boolean(dataset.leaders.length || dataset.supporters.length || dataset.prospects.length || dataset.electoralZones.length || dataset.fieldAgenda.length || dataset.demands.length || dataset.municipalities.length || dataset.neighborhoods.length);
+  return Boolean(dataset.leaders.length || dataset.municipalities.length || dataset.neighborhoods.length);
 }
 
 function unique(values: Array<string | null | undefined>) {
@@ -553,11 +501,6 @@ function normalize(value: string | null | undefined) {
 
 function formatNumber(value: number) {
   return Number(value ?? 0).toLocaleString("pt-BR");
-}
-
-function formatDate(value: string) {
-  const date = new Date(`${value}T00:00:00`);
-  return date.toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit" });
 }
 
 function getErrorMessage(error: unknown) {

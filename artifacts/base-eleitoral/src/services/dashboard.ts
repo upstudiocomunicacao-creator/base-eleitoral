@@ -1,11 +1,6 @@
 import { getSupabaseClient, isSupabaseConfigured } from "@/lib/supabaseClient";
 import type { Campaign, Demand, ElectoralZone, FieldAgenda, Leader, Municipality, Neighborhood, Prospect, Supporter } from "@/types/database";
-import { listDemands } from "./demands";
-import { listElectoralZones } from "./electoralZones";
-import { listFieldAgenda } from "./fieldAgenda";
 import { listLeaders } from "./leaders";
-import { listProspects } from "./prospects";
-import { listSupporters } from "./supporters";
 
 export type DashboardDataset = {
   campaigns: Campaign[];
@@ -96,14 +91,9 @@ export function isDashboardSupabaseReady() {
 }
 
 export async function getDashboardDataset(): Promise<DashboardDataset> {
-  const [campaigns, leaders, supporters, prospects, electoralZones, fieldAgenda, demands, municipalities, neighborhoods] = await Promise.all([
+  const [campaigns, leaders, municipalities, neighborhoods] = await Promise.all([
     safeLoad("campaigns", listCampaigns()),
     safeLoad("leaders", listLeaders()),
-    safeLoad("supporters", listSupporters()),
-    safeLoad("prospects", listProspects()),
-    safeLoad("electoral_zones", listElectoralZones()),
-    safeLoad("field_agenda", listFieldAgenda()),
-    safeLoad("demands", listDemands()),
     safeLoad("municipalities", listMunicipalities()),
     safeLoad("neighborhoods", listNeighborhoods()),
   ]);
@@ -111,14 +101,14 @@ export async function getDashboardDataset(): Promise<DashboardDataset> {
   return {
     campaigns: campaigns.data,
     leaders: leaders.data,
-    supporters: supporters.data,
-    prospects: prospects.data,
-    electoralZones: electoralZones.data,
-    fieldAgenda: fieldAgenda.data,
-    demands: demands.data,
+    supporters: [],
+    prospects: [],
+    electoralZones: [],
+    fieldAgenda: [],
+    demands: [],
     municipalities: municipalities.data,
     neighborhoods: neighborhoods.data,
-    warnings: [campaigns, leaders, supporters, prospects, electoralZones, fieldAgenda, demands, municipalities, neighborhoods].flatMap((item) => item.warning ? [item.warning] : []),
+    warnings: [campaigns, leaders, municipalities, neighborhoods].flatMap((item) => item.warning ? [item.warning] : []),
   };
 }
 
@@ -173,6 +163,8 @@ export function getFilteredDataset(dataset: DashboardDataset, filters: Partial<D
     filterLocation(item) &&
     selectMatches(leaderId, item.id) &&
     selectMatches(responsible, item.internal_responsible ?? "Não definido") &&
+    selectMatches(politicalStatus, item.leader_type) &&
+    selectMatches(priority, item.confidence_level) &&
     matchesPeriod(period, item.created_at),
   );
   const leaderIds = new Set(leaders.map((item) => item.id));
@@ -232,13 +224,12 @@ export function getFilteredDataset(dataset: DashboardDataset, filters: Partial<D
 
 export function computeDashboard(dataset: DashboardDataset = emptyDataset): DashboardComputed {
   const totalValidatedFromLeaders = sum(dataset.leaders, "validated_votes");
-  const totalValidatedFromZones = sum(dataset.electoralZones, "validated_votes");
-  const validatedVotes = totalValidatedFromLeaders + totalValidatedFromZones;
-  const declaredVotes = sum(dataset.leaders, "declared_votes") + sum(dataset.electoralZones, "estimated_campaign_votes");
-  const mappedVoters = sum(dataset.electoralZones, "voters_count");
-  const generalVoteGoal = dataset.campaigns[0]?.general_vote_goal || sum(dataset.electoralZones, "vote_goal") || 0;
-  const activeCitySet = unique([...dataset.leaders.map((item) => item.city), ...dataset.supporters.map((item) => item.city)]);
-  const coveredNeighborhoods = unique([...dataset.leaders.map((item) => item.neighborhood), ...dataset.supporters.map((item) => item.neighborhood)]);
+  const validatedVotes = totalValidatedFromLeaders;
+  const declaredVotes = sum(dataset.leaders, "declared_votes");
+  const mappedVoters = dataset.neighborhoods.reduce((total, item) => total + Number(item.estimated_voters ?? 0), 0);
+  const generalVoteGoal = dataset.campaigns[0]?.general_vote_goal || declaredVotes || validatedVotes || 0;
+  const activeCitySet = unique(dataset.leaders.map((item) => item.city).filter((city) => normalize(city) !== "marica"));
+  const coveredNeighborhoods = unique(dataset.leaders.filter((item) => normalize(item.city) === "marica").map((item) => item.neighborhood));
   const estimatedSupporters = dataset.leaders.reduce((total, item) => total + Number(item.estimated_direct_supporters ?? 0) + Number(item.estimated_indirect_supporters ?? 0), 0);
   const confidenceIndex = dataset.leaders.length ? Math.round(dataset.leaders.reduce((total, item) => total + confidenceScore(item.confidence_level), 0) / dataset.leaders.length) : 0;
   const priorityRegions = buildPriorityRegions(dataset);
@@ -247,21 +238,21 @@ export function computeDashboard(dataset: DashboardDataset = emptyDataset): Dash
     summary: {
       totalLeaders: dataset.leaders.length,
       activeLeaders: dataset.leaders.filter((item) => normalize(item.status).includes("ativa") || normalize(item.status).includes("ativo")).length,
-      totalSupporters: dataset.supporters.length,
+      totalSupporters: estimatedSupporters,
       estimatedSupporters,
       declaredVotes,
       validatedVotes,
       confidenceIndex,
       municipalitiesWithAction: activeCitySet.length,
       coveredNeighborhoods: coveredNeighborhoods.length,
-      electoralZones: unique(dataset.electoralZones.map((item) => item.zone_number)).length,
+      electoralZones: 0,
       mappedVoters,
       generalVoteGoal,
       distanceToGoal: Math.max(generalVoteGoal - validatedVotes, 0),
-      openDemands: dataset.demands.filter((item) => !["resolvida", "cancelada"].includes(normalize(item.status))).length,
-      upcomingActions: getUpcomingAgenda(dataset.fieldAgenda).length,
+      openDemands: 0,
+      upcomingActions: 0,
       priorityRegions: priorityRegions.filter((item) => item.priority === "Crítica" || item.priority === "Alta").length,
-      generalCoverage: mappedVoters ? round((validatedVotes / mappedVoters) * 100) : 0,
+      generalCoverage: generalVoteGoal ? round((validatedVotes / generalVoteGoal) * 100) : 0,
       validationRate: declaredVotes ? round((validatedVotes / declaredVotes) * 100) : 0,
     },
     weeklyGrowth: getWeeklyGrowth(dataset),
@@ -320,46 +311,35 @@ function getWeeklyGrowth(dataset: DashboardDataset) {
     buckets.set(label, current);
   };
   dataset.leaders.forEach((item) => add(item.created_at, "liderancas"));
-  dataset.supporters.forEach((item) => add(item.created_at, "apoiadores"));
-  dataset.prospects.forEach((item) => add(item.created_at, "prospeccoes"));
   return Array.from(buckets.values()).slice(-8);
 }
 
 function getNeighborhoodCoverageRows(dataset: DashboardDataset) {
-  const names = unique([
-    ...dataset.neighborhoods.map((item) => item.name),
-    ...dataset.electoralZones.map((item) => item.neighborhood),
-    ...dataset.leaders.map((item) => item.neighborhood),
-    ...dataset.supporters.map((item) => item.neighborhood),
-  ]);
-
-  return names.map((name) => {
-    const zones = dataset.electoralZones.filter((item) => normalize(item.neighborhood) === normalize(name));
-    const eleitores = zones.reduce((total, item) => total + Number(item.voters_count ?? 0), 0);
-    const validados = zones.reduce((total, item) => total + Number(item.validated_votes ?? 0), 0) + dataset.leaders.filter((item) => normalize(item.neighborhood) === normalize(name)).reduce((total, item) => total + Number(item.validated_votes ?? 0), 0);
+  return getLeanTerritoryGroups(dataset).map(({ name, leaders }) => {
+    const votersReference = dataset.neighborhoods.find((item) => normalize(item.name) === normalize(name));
+    const eleitores = Number(votersReference?.estimated_voters ?? 0);
+    const validados = leaders.reduce((total, item) => total + Number(item.validated_votes ?? 0), 0);
+    const declarados = leaders.reduce((total, item) => total + Number(item.declared_votes ?? 0), 0);
+    const estimatedSupport = leaders.reduce((total, item) => total + Number(item.estimated_direct_supporters ?? 0) + Number(item.estimated_indirect_supporters ?? 0), 0);
     return {
       nome: name,
-      cobertura: eleitores ? round((validados / eleitores) * 100) : 0,
-      apoiadores: dataset.supporters.filter((item) => normalize(item.neighborhood) === normalize(name)).length,
-      liderancas: dataset.leaders.filter((item) => normalize(item.neighborhood) === normalize(name)).length,
+      cobertura: eleitores ? round((validados / eleitores) * 100) : declarados ? round((validados / declarados) * 100) : 0,
+      apoiadores: estimatedSupport,
+      liderancas: leaders.length,
       eleitores,
     };
   }).sort((a, b) => b.cobertura - a.cobertura).slice(0, 8);
 }
 
 function getVoteComparison(dataset: DashboardDataset) {
-  return [
-    {
-      nome: "Lideranças",
-      declarados: sum(dataset.leaders, "declared_votes"),
-      validados: sum(dataset.leaders, "validated_votes"),
-    },
-    {
-      nome: "Zonas",
-      declarados: sum(dataset.electoralZones, "estimated_campaign_votes"),
-      validados: sum(dataset.electoralZones, "validated_votes"),
-    },
-  ];
+  return getLeanTerritoryGroups(dataset)
+    .map(({ name, leaders }) => ({
+      nome: name,
+      declarados: leaders.reduce((total, item) => total + Number(item.declared_votes ?? 0), 0),
+      validados: leaders.reduce((total, item) => total + Number(item.validated_votes ?? 0), 0),
+    }))
+    .sort((a, b) => b.validados - a.validados)
+    .slice(0, 8);
 }
 
 function getUpcomingAgenda(actions: FieldAgenda[]) {
@@ -383,42 +363,45 @@ function getUpcomingAgenda(actions: FieldAgenda[]) {
 }
 
 function buildPriorityRegions(dataset: DashboardDataset): PriorityRegion[] {
-  const names = unique([
-    ...dataset.neighborhoods.map((item) => item.name),
-    ...dataset.electoralZones.map((item) => item.neighborhood),
-    ...dataset.leaders.map((item) => item.neighborhood),
-    ...dataset.supporters.map((item) => item.neighborhood),
-    ...dataset.demands.map((item) => item.neighborhood),
-  ]);
-
-  return names.map((name) => {
-    const neighborhood = dataset.neighborhoods.find((item) => normalize(item.name) === normalize(name));
-    const zones = dataset.electoralZones.filter((item) => normalize(item.neighborhood) === normalize(name));
-    const leaders = dataset.leaders.filter((item) => normalize(item.neighborhood) === normalize(name));
-    const supporters = dataset.supporters.filter((item) => normalize(item.neighborhood) === normalize(name));
-    const demands = dataset.demands.filter((item) => normalize(item.neighborhood) === normalize(name) && !["resolvida", "cancelada"].includes(normalize(item.status)));
-    const agenda = dataset.fieldAgenda.filter((item) => normalize(item.neighborhood) === normalize(name) && parseDate(item.action_date) >= startOfToday());
-    const estimatedVoters = Number(neighborhood?.estimated_voters ?? 0) || zones.reduce((total, item) => total + Number(item.voters_count ?? 0), 0);
-    const validatedVotes = leaders.reduce((total, item) => total + Number(item.validated_votes ?? 0), 0) + zones.reduce((total, item) => total + Number(item.validated_votes ?? 0), 0);
-    const coverage = estimatedVoters ? validatedVotes / estimatedVoters : 0;
-    const score = (estimatedVoters >= 2000 ? 3 : 0) + (coverage < 0.05 ? 3 : 0) + (leaders.length <= 1 ? 2 : 0) + (demands.length >= 2 ? 2 : 0) + (agenda.length === 0 ? 2 : 0);
-    const priority: PriorityRegion["priority"] = score >= 8 ? "Crítica" : score >= 5 ? "Alta" : score >= 3 ? "Média" : "Baixa";
-    const city = neighborhood?.city || zones[0]?.city || leaders[0]?.city || supporters[0]?.city || demands[0]?.city || "Maricá";
-    const reading = `${name} possui ${estimatedVoters ? "alto volume de eleitores mapeados" : "base eleitoral ainda pouco mapeada"}, ${coverage < 0.05 ? "baixa cobertura da campanha" : "cobertura em desenvolvimento"} e ${agenda.length === 0 ? "poucas ações previstas" : "ações já previstas"}. Recomenda-se ${leaders.length <= 1 ? "ampliar lideranças locais" : "validar votos e ampliar apoiadores"} nos próximos 7 dias.`;
+  return getLeanTerritoryGroups(dataset).map(({ name, city, leaders }) => {
+    const neighborhood = city === "Maricá" ? dataset.neighborhoods.find((item) => normalize(item.name) === normalize(name)) : null;
+    const estimatedVoters = Number(neighborhood?.estimated_voters ?? 0);
+    const validatedVotes = leaders.reduce((total, item) => total + Number(item.validated_votes ?? 0), 0);
+    const declaredVotes = leaders.reduce((total, item) => total + Number(item.declared_votes ?? 0), 0);
+    const supporters = leaders.reduce((total, item) => total + Number(item.estimated_direct_supporters ?? 0) + Number(item.estimated_indirect_supporters ?? 0), 0);
+    const coverage = estimatedVoters ? validatedVotes / estimatedVoters : declaredVotes ? validatedVotes / declaredVotes : 0;
+    const confidence = leaders.length ? leaders.reduce((total, item) => total + confidenceScore(item.confidence_level), 0) / leaders.length : 0;
+    const score = (leaders.length <= 1 ? 3 : 0) + (coverage < 0.35 ? 3 : 0) + (supporters >= 200 && validatedVotes < 80 ? 2 : 0) + (confidence < 60 ? 2 : 0);
+    const priority: PriorityRegion["priority"] = score >= 7 ? "Crítica" : score >= 5 ? "Alta" : score >= 3 ? "Média" : "Baixa";
+    const reading = `${name} tem ${leaders.length} cadastro(s), ${supporters.toLocaleString("pt-BR")} apoios estimados e ${validatedVotes.toLocaleString("pt-BR")} votos validados. Recomenda-se ${coverage < 0.35 ? "validar a base declarada e reforçar responsáveis locais" : "manter acompanhamento mensal e comparar custo por voto"}.`;
 
     return {
       name,
       city,
       estimatedVoters,
       leaders: leaders.length,
-      supporters: supporters.length,
+      supporters,
       validatedVotes,
-      openDemands: demands.length,
-      upcomingActions: agenda.length,
+      openDemands: 0,
+      upcomingActions: 0,
       priority,
       reading,
     };
   }).sort((a, b) => priorityWeight(b.priority) - priorityWeight(a.priority) || b.estimatedVoters - a.estimatedVoters).slice(0, 8);
+}
+
+function getLeanTerritoryGroups(dataset: DashboardDataset) {
+  const groups = new Map<string, { name: string; city: string; leaders: Leader[] }>();
+  dataset.leaders.forEach((leader) => {
+    const isMarica = normalize(leader.city) === "marica";
+    const name = isMarica ? (leader.neighborhood || "Bairro não definido") : (leader.city || "Cidade não definida");
+    const city = isMarica ? "Maricá" : name;
+    const key = `${city}:${name}`;
+    const current = groups.get(key) ?? { name, city, leaders: [] };
+    current.leaders.push(leader);
+    groups.set(key, current);
+  });
+  return Array.from(groups.values());
 }
 
 function countSeries(values: Array<string | null | undefined>) {

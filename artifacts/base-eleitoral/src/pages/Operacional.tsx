@@ -33,15 +33,20 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   computeOperationalSummary,
+  getMaricaDistrictForNeighborhood,
   getMonthly,
+  getRJRegionForCity,
   getRoleLabel,
   getScopeLabel,
+  getTerritoryGroup,
   groupTerritoryPerformance,
+  maricaDistricts,
   maricaNeighborhoods,
   minimalFields,
   operationalActors,
   operationalMonths,
   rjCities,
+  rjRegions,
   type ForceActor,
   type ForceRole,
   type OperationalScope,
@@ -49,8 +54,8 @@ import {
 
 const statusTone: Record<string, string> = {
   Ativo: "border-emerald-200 bg-emerald-50 text-emerald-700",
-  Atenção: "border-amber-200 bg-amber-50 text-amber-700",
-  Prioritário: "border-blue-200 bg-blue-50 text-blue-700",
+  ["Aten\u00e7\u00e3o"]: "border-amber-200 bg-amber-50 text-amber-700",
+  ["Priorit\u00e1rio"]: "border-blue-200 bg-blue-50 text-blue-700",
   Pendente: "border-rose-200 bg-rose-50 text-rose-700",
 };
 
@@ -96,8 +101,10 @@ export default function Operacional() {
         role: draft.role,
         scope: draft.scope,
         territory: draft.territory,
-        city: isMarica ? "Maricá" : draft.territory,
+        city: isMarica ? "Maric\u00e1" : draft.territory,
         neighborhood: isMarica ? draft.territory : undefined,
+        region: isMarica ? undefined : getRJRegionForCity(draft.territory),
+        district: isMarica ? getMaricaDistrictForNeighborhood(draft.territory) : undefined,
         status: draft.status as ForceActor["status"],
         notes: "Cadastro criado no modo operacional.",
         monthly,
@@ -111,8 +118,8 @@ export default function Operacional() {
     <div className="space-y-7">
       <PageHeader
         eyebrow="Modo operacional"
-        title="Campanha enxuta por território"
-        description="Leitura simplificada por cidades do RJ e bairros de Maricá, com mapa de força, votos estimados e centro de custos mensal."
+        title="Campanha enxuta por territ\u00f3rio"
+        description="Leitura simplificada por cidades do RJ e bairros de Maric\u00e1, com mapa de for\u00e7a, votos estimados e centro de custos mensal."
         actions={
           <div className="flex flex-wrap gap-2">
             <Select value={month} onValueChange={setMonth}>
@@ -129,36 +136,37 @@ export default function Operacional() {
 
       <div className="grid grid-cols-2 gap-4 md:grid-cols-4 xl:grid-cols-6">
         <MetricCard label="Coord. RJ" value={summary.coordinatorsRJ} icon={Building2} tone="blue" />
-        <MetricCard label="Coord. Maricá" value={summary.coordinatorsMarica} icon={MapPin} tone="emerald" />
-        <MetricCard label="Lideranças" value={summary.leaders} icon={Users} tone="violet" />
-        <MetricCard label="Votos mín." value={summary.minVotes} icon={Target} tone="green" />
-        <MetricCard label="Votos máx." value={summary.maxVotes} icon={TrendingUp} tone="cyan" />
+        <MetricCard label="Coord. Maric\u00e1" value={summary.coordinatorsMarica} icon={MapPin} tone="emerald" />
+        <MetricCard label="Lideran\u00e7as" value={summary.leaders} icon={Users} tone="violet" />
+        <MetricCard label="Votos m\u00edn." value={summary.minVotes} icon={Target} tone="green" />
+        <MetricCard label="Votos m\u00e1x." value={summary.maxVotes} icon={TrendingUp} tone="cyan" />
         <MetricCard label="Custo teto" value={currency(summary.ceilingCost + summary.extraCost)} icon={CircleDollarSign} tone="amber" />
       </div>
 
       <Tabs defaultValue="dashboard" className="space-y-5">
         <TabsList className="grid h-auto grid-cols-2 gap-2 bg-white/80 p-1 shadow-sm md:grid-cols-6">
           <TabsTrigger value="dashboard">Dashboard</TabsTrigger>
-          <TabsTrigger value="forca">Mapa de força</TabsTrigger>
+          <TabsTrigger value="forca">Mapa de for\u00e7a</TabsTrigger>
           <TabsTrigger value="cadastros">Cadastros</TabsTrigger>
           <TabsTrigger value="mapas">Mapas</TabsTrigger>
-          <TabsTrigger value="analises">Análises</TabsTrigger>
+          <TabsTrigger value="analises">An\u00e1lises</TabsTrigger>
           <TabsTrigger value="custos">Custos</TabsTrigger>
         </TabsList>
 
         <TabsContent value="dashboard" className="space-y-5">
           <div className="grid gap-5 xl:grid-cols-[minmax(0,1.2fr)_minmax(360px,0.8fr)]">
-            <ChartCard title="Potencial por cidade do RJ" description="Votos mínimos e máximos cadastrados manualmente">
+            <ChartCard title="Potencial por cidade do RJ" description="Votos m\u00ednimos e m\u00e1ximos cadastrados manualmente">
               <TerritoryChart rows={rjPerformance} />
             </ChartCard>
             <ExecutiveReading summary={summary} />
           </div>
           <div className="grid gap-5 xl:grid-cols-2">
-            <ChartCard title="Potencial por bairro de Maricá" description="Base eleitoral do domicílio do candidato">
+            <ChartCard title="Potencial por bairro de Maric\u00e1" description="Base eleitoral do domic\u00edlio do candidato">
               <TerritoryChart rows={maricaPerformance} />
             </ChartCard>
-            <MinimumDataCard />
+            <TerritoryStructureCard />
           </div>
+          <MinimumDataCard />
         </TabsContent>
 
         <TabsContent value="forca">
@@ -177,13 +185,13 @@ export default function Operacional() {
             <Card className="premium-card">
               <CardHeader className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                 <div>
-                  <CardTitle>Mapa estratégico enxuto</CardTitle>
-                  <p className="text-sm font-medium text-slate-500">Use RJ para cidades e Maricá para bairros.</p>
+                  <CardTitle>Mapa estrat\u00e9gico enxuto</CardTitle>
+                  <p className="text-sm font-medium text-slate-500">Use RJ para cidades e Maric\u00e1 para bairros.</p>
                 </div>
                 <Select value={scope} onValueChange={(value) => setScope(value as OperationalScope)}>
                   <SelectTrigger className="w-48 bg-white"><SelectValue /></SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="marica">Maricá por bairros</SelectItem>
+                    <SelectItem value="marica">Maric\u00e1 por bairros</SelectItem>
                     <SelectItem value="rj">RJ por cidades</SelectItem>
                   </SelectContent>
                 </Select>
@@ -198,8 +206,8 @@ export default function Operacional() {
 
         <TabsContent value="analises">
           <div className="grid gap-5 xl:grid-cols-3">
-            <AnalysisCard title="Custo por voto mínimo" value={currency(summary.costPerMinVote)} helper="Custo base + extras dividido pelo piso de votos." />
-            <AnalysisCard title="Custo por voto máximo" value={currency(summary.costPerMaxVote)} helper="Teto + extras dividido pelo potencial máximo." />
+            <AnalysisCard title="Custo por voto m\u00ednimo" value={currency(summary.costPerMinVote)} helper="Custo base + extras dividido pelo piso de votos." />
+            <AnalysisCard title="Custo por voto m\u00e1ximo" value={currency(summary.costPerMaxVote)} helper="Teto + extras dividido pelo potencial m\u00e1ximo." />
             <AnalysisCard title="Registros sem mapa" value={summary.withoutCoordinates.toString()} helper="Cadastros que precisam de latitude e longitude." />
           </div>
           <div className="mt-5 grid gap-5 xl:grid-cols-2">
@@ -277,6 +285,43 @@ function MinimumDataCard() {
   );
 }
 
+function TerritoryStructureCard() {
+  return (
+    <Card className="premium-card">
+      <CardHeader>
+        <CardTitle>Base territorial oficial</CardTitle>
+        <p className="text-sm font-medium text-slate-500">RJ por regi\u00f5es e Maric\u00e1 por distritos.</p>
+      </CardHeader>
+      <CardContent className="grid gap-4 lg:grid-cols-2">
+        <div className="rounded-xl border border-blue-100 bg-blue-50/70 p-4">
+          <div className="text-xs font-black uppercase tracking-[0.12em] text-blue-600">Estado do RJ</div>
+          <div className="mt-1 text-2xl font-black text-slate-950">8 regi\u00f5es · {rjCities.length} cidades</div>
+          <div className="mt-3 grid gap-2">
+            {rjRegions.map((region) => (
+              <div key={region.name} className="flex items-center justify-between rounded-lg bg-white px-3 py-2 text-sm font-bold text-slate-700">
+                <span>{region.name}</span>
+                <span>{region.cities.length}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+        <div className="rounded-xl border border-emerald-100 bg-emerald-50/70 p-4">
+          <div className="text-xs font-black uppercase tracking-[0.12em] text-emerald-600">Maric\u00e1</div>
+          <div className="mt-1 text-2xl font-black text-slate-950">4 distritos · {maricaNeighborhoods.length} bairros</div>
+          <div className="mt-3 grid gap-2">
+            {maricaDistricts.map((district) => (
+              <div key={district.name} className="flex items-center justify-between rounded-lg bg-white px-3 py-2 text-sm font-bold text-slate-700">
+                <span>{district.name}</span>
+                <span>{district.neighborhoods.length}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
+
 function ForceMap({ actors, month }: { actors: ForceActor[]; month: string }) {
   const general = actors.filter((item) => item.role !== "leader");
   const leaders = actors.filter((item) => item.role === "leader");
@@ -332,7 +377,8 @@ function ActorCard({ actor, month, compact = false }: { actor: ForceActor; month
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
           <div className="truncate text-sm font-black text-slate-950">{actor.name}</div>
-          <div className="text-xs font-bold text-slate-500">{getRoleLabel(actor.role)} · {actor.territory}</div>
+          <div className="text-xs font-bold text-slate-500">{getRoleLabel(actor.role)} - {actor.territory}</div>
+          <div className="text-[11px] font-semibold text-slate-400">{getTerritoryGroup(actor)}</div>
         </div>
         <StatusBadge status={actor.status} />
       </div>
@@ -383,9 +429,14 @@ function CadastroRapido({ draft, setDraft, onAdd }: { draft: Record<string, stri
         <Field label={draft.scope === "marica" ? "Bairro" : "Cidade"}>
           <Select value={draft.territory} onValueChange={(value) => setDraft({ ...draft, territory: value })}>
             <SelectTrigger><SelectValue /></SelectTrigger>
-            <SelectContent>{territories.map((item) => <SelectItem key={item} value={item}>{item}</SelectItem>)}</SelectContent>
+            <SelectContent className="max-h-80">{territories.map((item) => <SelectItem key={item} value={item}>{item}</SelectItem>)}</SelectContent>
           </Select>
         </Field>
+        <div className="rounded-lg border border-blue-100 bg-blue-50 px-3 py-2 text-xs font-bold text-blue-700">
+          {draft.scope === "marica"
+            ? `Distrito: ${getMaricaDistrictForNeighborhood(draft.territory)}`
+            : `Regi\u00e3o: ${getRJRegionForCity(draft.territory)}`}
+        </div>
         <div className="grid grid-cols-2 gap-3">
           <Field label="Votos mín."><Input type="number" value={draft.minVotes} onChange={(e) => setDraft({ ...draft, minVotes: e.target.value })} /></Field>
           <Field label="Votos máx."><Input type="number" value={draft.maxVotes} onChange={(e) => setDraft({ ...draft, maxVotes: e.target.value })} /></Field>
@@ -410,7 +461,7 @@ function ActorsTable({ actors, month }: { actors: ForceActor[]; month: string })
         <table className="w-full min-w-[900px] text-left text-sm">
           <thead className="bg-slate-50 text-xs font-black uppercase tracking-[0.08em] text-slate-500">
             <tr>
-              {["Nome", "Tipo", "Território", "Status", "Votos mín.", "Votos máx.", "Custo mín.", "Custo máx.", "Mapa"].map((item) => <th key={item} className="px-4 py-3">{item}</th>)}
+              {["Nome", "Tipo", "Território", "Região/Distrito", "Status", "Votos mín.", "Votos máx.", "Custo mín.", "Custo máx.", "Mapa"].map((item) => <th key={item} className="px-4 py-3">{item}</th>)}
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-100">
@@ -421,6 +472,7 @@ function ActorsTable({ actors, month }: { actors: ForceActor[]; month: string })
                   <td className="px-4 py-3 font-black text-slate-900">{actor.name}<div className="text-xs font-semibold text-slate-400">{actor.phone}</div></td>
                   <td className="px-4 py-3 font-bold text-slate-600">{getRoleLabel(actor.role)}</td>
                   <td className="px-4 py-3 font-bold text-slate-600">{actor.territory}<div className="text-xs font-semibold text-slate-400">{getScopeLabel(actor.scope)}</div></td>
+                  <td className="px-4 py-3 font-bold text-slate-600">{getTerritoryGroup(actor)}</td>
                   <td className="px-4 py-3"><StatusBadge status={actor.status} /></td>
                   <td className="px-4 py-3 font-bold">{monthly.minVotes.toLocaleString("pt-BR")}</td>
                   <td className="px-4 py-3 font-bold">{monthly.maxVotes.toLocaleString("pt-BR")}</td>
@@ -583,7 +635,7 @@ function PriorityCard({ rows }: { rows: Array<{ territory: string; minVotes: num
               <div className="mt-2 grid grid-cols-3 gap-2 text-center">
                 <MiniStat label="cad." value={item.actors} />
                 <MiniStat label="pot." value={item.maxVotes} />
-                <MiniStat label="índice" value={item.score} />
+                <MiniStat label="Índice" value={item.score} />
               </div>
             </div>
           ))}

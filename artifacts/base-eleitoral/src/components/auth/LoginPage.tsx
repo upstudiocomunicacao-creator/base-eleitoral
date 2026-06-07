@@ -68,7 +68,7 @@ export function LoginPage() {
               Acesso seguro ao comando territorial da campanha
             </h1>
             <p className="mt-4 max-w-lg text-base font-medium leading-7 text-slate-600">
-              Entre para acompanhar lideranças, apoiadores, prospecção, zonas, agenda, demandas e relatórios com permissões por perfil.
+              Entre para acompanhar coordenações, lideranças, mapas, indicadores, custos e relatórios com permissões por perfil.
             </p>
             <div className="mt-6 grid gap-3 sm:grid-cols-3">
               <LoginFeature icon={ShieldCheck} label="Auth real" />

@@ -143,17 +143,15 @@ export function GeocodingPanel() {
       {!isGeocodingSupabaseReady() ? <Warning message="Supabase não está configurado. A geocodificação precisa da anon key para salvar coordenadas." /> : null}
       {error ? <Warning danger message={error} /> : null}
 
-      <section className="grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
+      <section className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
         <MetricCard label="Com coordenadas" value={stats?.withCoordinates ?? 0} icon={MapPin} tone="green" loading={loading} />
         <MetricCard label="Pendentes" value={stats?.pending ?? 0} icon={RefreshCw} tone="blue" loading={loading} />
         <MetricCard label="Aproximados" value={stats?.approximate ?? 0} icon={Crosshair} tone="amber" loading={loading} />
         <MetricCard label="Com erro" value={stats?.failed ?? 0} icon={AlertTriangle} tone="red" loading={loading} />
         <MetricCard label="Manuais" value={stats?.manual ?? 0} icon={Edit} tone="violet" loading={loading} />
         <MetricCard label="Precisão média" value={`${stats?.averagePrecision ?? 0}%`} icon={CheckCircle2} tone="emerald" loading={loading} />
-        <MetricCard label="Lideranças" value={stats?.leaders ?? 0} icon={DatabaseZap} tone="indigo" loading={loading} />
-        <MetricCard label="Apoiadores" value={stats?.supporters ?? 0} icon={DatabaseZap} tone="cyan" loading={loading} />
-        <MetricCard label="Zonas" value={stats?.zones ?? 0} icon={DatabaseZap} tone="orange" loading={loading} />
-        <MetricCard label="Demandas" value={stats?.demands ?? 0} icon={DatabaseZap} tone="rose" loading={loading} />
+        <MetricCard label="Cadastros" value={stats?.total ?? 0} icon={DatabaseZap} tone="indigo" loading={loading} />
+        <MetricCard label="Prontos para mapa" value={stats?.leaders ?? 0} icon={DatabaseZap} tone="cyan" loading={loading} />
       </section>
 
       <Card className="premium-card">
@@ -168,7 +166,7 @@ export function GeocodingPanel() {
           </div>
         </CardHeader>
         <CardContent className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-          <Select label="Tipo" value={filters.type} options={[["all", "Todos"], ["leaders", "Lideranças"], ["supporters", "Apoiadores"], ["electoral_zones", "Zonas"], ["field_agenda", "Agenda"], ["demands", "Demandas"]]} onChange={(value) => setFilters({ ...filters, type: value as Filters["type"] })} />
+          <Select label="Tipo" value={filters.type} options={[["all", "Todos"], ["leaders", "Cadastros territoriais"]]} onChange={(value) => setFilters({ ...filters, type: value as Filters["type"] })} />
           <Select label="Cidade" value={filters.city} options={options.cities.map((item) => [item, item])} onChange={(value) => setFilters({ ...filters, city: value })} />
           <Select label="Bairro" value={filters.neighborhood} options={options.neighborhoods.map((item) => [item, item])} onChange={(value) => setFilters({ ...filters, neighborhood: value })} />
           <Select label="Status" value={filters.status} options={options.statuses.map((item) => [item, item])} onChange={(value) => setFilters({ ...filters, status: value })} />
@@ -218,7 +216,7 @@ export function GeocodingPanel() {
                 </TableBody>
               </Table>
             </div>
-          ) : <EmptyState title="Nenhum registro encontrado" description="Ajuste os filtros ou cadastre endereços nos módulos." icon={MapPin} />}
+          ) : <EmptyState title="Nenhum registro encontrado" description="Ajuste os filtros ou cadastre território em Lideranças." icon={MapPin} />}
         </CardContent>
       </Card>
 

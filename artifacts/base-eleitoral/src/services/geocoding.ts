@@ -262,9 +262,9 @@ export async function getGeocodingStats() {
     manual: records.filter((item) => statusOf(item) === "manual").length,
     averagePrecision: confidenceValues.length ? Math.round((confidenceValues.reduce((a, b) => a + b, 0) / confidenceValues.length) * 100) : 0,
     leaders: records.filter((item) => item.tableName === "leaders" && hasCoordinates(item)).length,
-    supporters: records.filter((item) => item.tableName === "supporters" && hasCoordinates(item)).length,
-    zones: records.filter((item) => item.tableName === "electoral_zones" && hasCoordinates(item)).length,
-    demands: records.filter((item) => item.tableName === "demands" && hasCoordinates(item)).length,
+    supporters: 0,
+    zones: 0,
+    demands: 0,
     total: records.length,
   };
 }
@@ -274,19 +274,9 @@ export async function getPendingGeocodingRecords() {
 }
 
 export async function getAllGeocodingRecords(): Promise<GeocodingRecord[]> {
-  const [leaders, supporters, zones, agenda, demands] = await Promise.all([
-    listTable("leaders"),
-    listTable("supporters"),
-    listTable("electoral_zones"),
-    listTable("field_agenda"),
-    listTable("demands"),
-  ]);
+  const leaders = await listTable("leaders");
   return [
     ...leaders.map((item) => normalizeRecord("leaders", item)),
-    ...supporters.map((item) => normalizeRecord("supporters", item)),
-    ...zones.map((item) => normalizeRecord("electoral_zones", item)),
-    ...agenda.map((item) => normalizeRecord("field_agenda", item)),
-    ...demands.map((item) => normalizeRecord("demands", item)),
   ];
 }
 

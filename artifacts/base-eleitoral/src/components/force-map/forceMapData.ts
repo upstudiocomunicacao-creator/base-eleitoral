@@ -29,7 +29,7 @@ export const forceMapLevels: ForceNode[][] = [
         { label: "Coordenações RJ", value: "4" },
         { label: "Coordenações Maricá", value: "4" },
         { label: "Lideranças", value: "5" },
-        { label: "Apoiadores estimados", value: "6.603", helper: "Número auxiliar para conversão em voto, sem cadastro de pessoas." },
+        { label: "Apoio estimado", value: "6.603", helper: "Número auxiliar para conversão em voto, sem cadastro de pessoas." },
         { label: "Votos mínimos", value: "2.950" },
         { label: "Votos máximos", value: "5.280" },
       ],
@@ -131,10 +131,10 @@ export const forceMapLevels: ForceNode[][] = [
       metrics: [
         { label: "Vínculo à coordenação", value: "Opcional" },
         { label: "Distrito", value: "Automático" },
-        { label: "Apoiadores estimados", value: "Número" },
+        { label: "Apoio estimado", value: "Número" },
         { label: "Estimativa de votos", value: "Mensal" },
       ],
-      insights: ["Bairros sem liderança ficam visíveis nos mapas.", "A estimativa de apoiadores serve apenas para calcular conversão em votos."],
+      insights: ["Bairros sem liderança ficam visíveis nos mapas.", "A estimativa de apoio serve apenas para calcular conversão em votos."],
       progress: { label: "Simplicidade do cadastro", value: 88 },
     },
   ],
@@ -152,10 +152,10 @@ export const forceMapLevels: ForceNode[][] = [
       metrics: [
         { label: "Votos mínimos", value: "Manual" },
         { label: "Votos máximos", value: "Manual" },
-        { label: "Apoiadores estimados", value: "Conversão" },
+        { label: "Apoio estimado", value: "Conversão" },
         { label: "Atualização", value: "Mês a mês" },
       ],
-      insights: ["A régua mínimo/máximo deixa a leitura realista.", "A conversão de apoiadores em votos mostra expectativa contra capacidade."],
+      insights: ["A régua mínimo/máximo deixa a leitura realista.", "A conversão de apoio em votos mostra expectativa contra capacidade."],
       progress: { label: "Métrica central", value: 90 },
     },
     {
@@ -228,7 +228,7 @@ export const forceMapLevels: ForceNode[][] = [
       count: "KPI",
       countLabel: "operacional",
       status: "Ativo",
-      summary: "A análise cruza território, votos mínimos/máximos, apoiadores estimados e centro de custos.",
+      summary: "A análise cruza território, votos mínimos/máximos, apoio estimado e centro de custos.",
       metrics: [
         { label: "Força territorial", value: "Calculada" },
         { label: "Conversão em voto", value: "Calculada" },
@@ -247,7 +247,7 @@ export const forceMapLevels: ForceNode[][] = [
       count: "12",
       countLabel: "campos-chave",
       status: "Ativo",
-      summary: "O cadastro centraliza identidade, tipo, cidade/bairro, vínculo, apoiadores estimados, votos e custos.",
+      summary: "O cadastro centraliza identidade, tipo, cidade/bairro, vínculo, apoio estimado, votos e custos.",
       metrics: [
         { label: "Nome e telefone", value: "Obrigatórios" },
         { label: "Cidade ou bairro", value: "Lista" },

@@ -71,16 +71,16 @@ type AccessProfile = {
   status: ProfileStatus;
 };
 
-const modules = ["Dashboard Geral", "Mapa de Força", "Lideranças", "Apoiadores/Pessoas", "Prospecção", "Mapa RJ", "Mapa Maricá", "Zonas Eleitorais", "Comparativo Eleitoral", "Agenda de Campo", "Demandas", "Relatórios", "Configurações"];
+const modules = ["Dashboard Geral", "Modo Operacional", "Mapa de Força", "Lideranças", "Mapa RJ", "Mapa Maricá", "Comparativo Eleitoral", "Relatórios", "Importação", "Geocodificação", "Diagnóstico", "Configurações"];
 const actions = ["Visualizar", "Criar", "Editar", "Excluir", "Exportar", "Importar", "Ver dados sensíveis"];
 const neighborhoods = ["Centro", "Araçatiba", "Flamengo", "Mumbuca", "Itapeba", "Parque Nanci", "Barra de Maricá", "Jacaroá", "São José do Imbassaí", "Cordeirinho", "Jaconé", "Caju", "Espraiado", "Guaratiba", "Inoã", "Bosque Fundo", "Santa Paula", "Itaipuaçu", "Jardim Atlântico", "Recanto", "Barroco"];
 
 const accessProfiles: AccessProfile[] = [
   { name: "Administrador", description: "Acesso total ao sistema, usuários, permissões e configurações críticas.", users: 2, level: "Total", status: "Ativo" },
-  { name: "Coordenação Geral", description: "Dashboards, relatórios, mapas, lideranças, apoiadores, prospecção, zonas, demandas e agenda.", users: 4, level: "Estratégico", status: "Ativo" },
+  { name: "Coordenação Geral", description: "Dashboards, relatórios, mapas, lideranças, custos, importação e análise territorial.", users: 4, level: "Estratégico", status: "Ativo" },
   { name: "Coordenador Regional", description: "Acesso aos dados da região vinculada e indicadores territoriais.", users: 6, level: "Regional", status: "Ativo" },
-  { name: "Operador de Campo", description: "Cadastro de pessoas, demandas, agenda e atualização de prospecção.", users: 12, level: "Operacional", status: "Ativo" },
-  { name: "Liderança", description: "Visualiza seus apoiadores, ações e demandas vinculadas.", users: 28, level: "Restrito", status: "Restrito" },
+  { name: "Operador de Campo", description: "Atualiza cadastros territoriais, geocodificação e dados mensais autorizados.", users: 12, level: "Operacional", status: "Ativo" },
+  { name: "Liderança", description: "Visualiza seu território, metas e estimativas vinculadas.", users: 28, level: "Restrito", status: "Restrito" },
   { name: "Visualizador", description: "Leitura de dashboards e relatórios autorizados.", users: 5, level: "Leitura", status: "Ativo" },
 ];
 
@@ -96,11 +96,11 @@ const initialUsers: SystemUser[] = [
 const auditLogs = [
   ["05/06/2026 09:12", "Eduardo Silva", "Exportou relatério", "Relatórios", "Semanal Executivo", "Exportação", "Desktop ? 127.0.0.1", "Sucesso"],
   ["05/06/2026 08:44", "Mariana Costa", "Criou liderança", "Lideranças", "Centro", "Criação", "Notebook ? 10.0.0.22", "Sucesso"],
-  ["04/06/2026 18:21", "Cláudia Menezes", "Editou apoiador", "Apoiadores", "Itaipuaçu", "Edição", "Mobile ? 10.0.0.31", "Sucesso"],
-  ["04/06/2026 15:10", "Rafael Almeida", "Alterou status de prospecção", "Prospecção", "Patrícia Lima", "Edição", "Mobile ? 10.0.0.41", "Sucesso"],
-  ["04/06/2026 11:05", "Ana Paula", "Visualizou dados sensíveis", "Apoiadores", "Telefone", "Leitura", "Desktop ? 10.0.0.18", "Alerta"],
-  ["03/06/2026 17:44", "Equipe Campo", "Excluiu demanda", "Demandas", "Iluminação pública", "Exclusão", "Tablet ? 10.0.0.50", "Bloqueado"],
-  ["03/06/2026 10:25", "Mariana Costa", "Atualizou zona eleitoral", "Zonas Eleitorais", "Zona 55", "Edição", "Desktop ? 10.0.0.11", "Sucesso"],
+  ["04/06/2026 18:21", "Cláudia Menezes", "Editou apoio estimado", "Modo Operacional", "Itaipuaçu", "Edição", "Mobile ? 10.0.0.31", "Sucesso"],
+  ["04/06/2026 15:10", "Rafael Almeida", "Atualizou custo mensal", "Modo Operacional", "Niterói", "Edição", "Mobile ? 10.0.0.41", "Sucesso"],
+  ["04/06/2026 11:05", "Ana Paula", "Visualizou dados sensíveis", "Lideranças", "Telefone", "Leitura", "Desktop ? 10.0.0.18", "Alerta"],
+  ["03/06/2026 17:44", "Equipe Campo", "Tentou excluir cadastro", "Lideranças", "Centro", "Exclusão", "Tablet ? 10.0.0.50", "Bloqueado"],
+  ["03/06/2026 10:25", "Mariana Costa", "Atualizou geocodificação", "Geocodificação", "Maricá", "Edição", "Desktop ? 10.0.0.11", "Sucesso"],
 ] satisfies Array<[string, string, string, string, string, string, string, AuditStatus]>;
 
 export default function Configuracoes() {
@@ -430,7 +430,7 @@ function CampaignTab({ onSave }: { onSave: (label: string) => void }) {
         <Field label="Município base" defaultValue="Maricá" />
         <Field label="Meta geral de votos" defaultValue="7410" type="number" />
         <Field label="Meta de lideranças" defaultValue="180" type="number" />
-        <Field label="Meta de apoiadores" defaultValue="5000" type="number" />
+        <Field label="Meta de apoio estimado" defaultValue="5000" type="number" />
         <Field label="Meta de votos validados" defaultValue="7410" type="number" />
         <Field label="Data de início" defaultValue="2026-05-01" type="date" />
         <Field label="Data da eleição" defaultValue="2026-10-04" type="date" />
@@ -447,9 +447,8 @@ function TerritoriesTab() {
     ["Cidades", ["Maricá", "Niterói", "São Gonçalo", "Itaboraí", "Rio de Janeiro", "Saquarema", "Araruama"]],
     ["Regiões", ["Região Central", "Litoral Norte", "Litoral Sul", "Interior", "Eixo Rodoviário"]],
     ["Bairros", neighborhoods],
-    ["Zonas eleitorais", ["55", "56", "57"]],
-    ["Seções eleitorais", ["102", "118", "134", "145", "151", "166", "172", "188", "219", "231"]],
-    ["Locais de votação", ["C.E. Elisiário Matta", "E.M. Darcy Ribeiro", "CIEP Inoã", "E.M. São José", "C.E. Jardim Atlântico"]],
+    ["Distritos de Maricá", ["Sede / Maricá", "Ponta Negra", "Inoã", "Itaipuaçu"]],
+    ["Regiões de governo RJ", ["Metropolitana", "Costa Verde", "Médio Paraíba", "Centro-Sul Fluminense", "Serrana", "Baixadas Litorâneas", "Norte Fluminense", "Noroeste Fluminense"]],
   ];
   return (
     <div className="grid gap-4 lg:grid-cols-2">
@@ -459,14 +458,14 @@ function TerritoriesTab() {
 }
 
 function SecurityTab({ onSave }: { onSave: (label: string) => void }) {
-  const switches = ["Exigir consentimento ao cadastrar pessoa", "Bloquear exportação para operadores", "Ocultar telefone para visualizadores", "Registrar alterações em auditoria", "Exigir motivo para exclusão", "Permitir anonimização futura"];
+  const switches = ["Exigir autorização para cadastrar usuário", "Bloquear exportação para operadores", "Ocultar telefone para visualizadores", "Registrar alterações em auditoria", "Exigir motivo para exclusão", "Permitir anonimização futura"];
   return (
     <div className="space-y-5">
       <section className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
         {["Consentimento de cadastro", "Dados sensíveis", "Exportações controladas", "Auditoria de alterações", "Backup futuro", "Controle de acesso"].map((title, index) => <InfoCard key={title} title={title} icon={index < 3 ? ShieldCheck : LockKeyhole} tone={index < 3 ? "blue" : "amber"} />)}
       </section>
       <SettingsPanel title="Segurança e LGPD" description="Políticas operacionais para tratamento de dados pessoais e controle de acesso.">
-        <label className="block md:col-span-2"><FieldLabel>Termo de consentimento padrão</FieldLabel><Textarea defaultValue="Autorizo o cadastro dos meus dados para contato de campanha, acompanhamento de demandas e ações territoriais." rows={3} /></label>
+        <label className="block md:col-span-2"><FieldLabel>Termo de consentimento padrão</FieldLabel><Textarea defaultValue="Autorizo o uso dos meus dados para contato autorizado da campanha e acompanhamento territorial." rows={3} /></label>
         <label className="block"><FieldLabel>Aviso de uso de dados</FieldLabel><Textarea defaultValue="Dados usados apenas pela equipe autorizada." rows={3} /></label>
         <label className="block"><FieldLabel>Política de retenção</FieldLabel><Textarea defaultValue="Retenção até encerramento do ciclo eleitoral e posterior revisão." rows={3} /></label>
         <label className="block"><FieldLabel>Restrição de exportação</FieldLabel><Textarea defaultValue="Exportações sensíveis exigem perfil de coordenação." rows={3} /></label>
@@ -483,7 +482,7 @@ function IntegrationsTab({ onSave }: { onSave: (label: string) => void }) {
     ["Supabase", "Banco de dados, autenticação e storage.", "Planejado", Database],
     ["Mapbox", "Mapas reais, pins, rotas e mapa de calor.", "Em análise", Map],
     ["Google Maps", "Geocodificação, CEP, rua, bairro e localização.", "Futuro", Globe2],
-    ["Importação CSV/XLSX", "Importar lideranças, apoiadores e zonas eleitorais.", "Planejado", FileSpreadsheet],
+    ["Importação CSV/XLSX", "Importar coordenações, lideranças, apoio estimado, votos e custos.", "Planejado", FileSpreadsheet],
     ["Exportação PDF/Excel", "Relatórios estratégicos exportáveis.", "Planejado", FileSpreadsheet],
     ["WhatsApp", "Envio futuro de mensagens e lembretes.", "Futuro", Activity],
     ["TSE/TRE", "Possível importação de dados públicos eleitorais.", "Em análise", Landmark],
@@ -613,8 +612,8 @@ function permission(profile: string, moduleName: string, action: string) {
   if (profile === "Administrador") return true;
   if (profile === "Coordenação Geral") return !["Configurações"].includes(moduleName) || ["Visualizar", "Exportar"].includes(action);
   if (profile === "Coordenador Regional") return ["Visualizar", "Criar", "Editar", "Exportar"].includes(action) && moduleName !== "Configurações";
-  if (profile === "Operador de Campo") return ["Visualizar", "Criar", "Editar"].includes(action) && ["Apoiadores/Pessoas", "Prospecção", "Agenda de Campo", "Demandas"].includes(moduleName);
-  if (profile === "Liderança") return action === "Visualizar" && ["Apoiadores/Pessoas", "Agenda de Campo", "Demandas", "Relatórios"].includes(moduleName);
+  if (profile === "Operador de Campo") return ["Visualizar", "Criar", "Editar"].includes(action) && ["Modo Operacional", "Lideranças", "Geocodificação"].includes(moduleName);
+  if (profile === "Liderança") return action === "Visualizar" && ["Dashboard Geral", "Mapa de Força", "Lideranças", "Mapa Maricá", "Relatórios"].includes(moduleName);
   return action === "Visualizar" && ["Dashboard Geral", "Relatórios"].includes(moduleName);
 }
 

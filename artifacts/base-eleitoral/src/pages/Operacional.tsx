@@ -247,7 +247,7 @@ export default function Operacional() {
         <MetricCard label="Coord. RJ" value={summary.coordinatorsRJ} icon={Building2} tone="blue" />
         <MetricCard label="Coord. Maricá" value={summary.coordinatorsMarica} icon={MapPin} tone="emerald" />
         <MetricCard label="Lideranças" value={summary.leaders} icon={Users} tone="violet" />
-        <MetricCard label="Apoiadores estim." value={summary.estimatedSupporters} icon={ClipboardList} tone="blue" />
+        <MetricCard label="Apoio estimado" value={summary.estimatedSupporters} icon={ClipboardList} tone="blue" />
         <MetricCard label="Votos mín." value={summary.minVotes} icon={Target} tone="green" />
         <MetricCard label="Votos máx." value={summary.maxVotes} icon={TrendingUp} tone="cyan" />
         <MetricCard label="Custo teto" value={currency(summary.ceilingCost + summary.extraCost)} icon={CircleDollarSign} tone="amber" />
@@ -318,7 +318,7 @@ export default function Operacional() {
           <div className="grid gap-5 xl:grid-cols-3">
             <AnalysisCard title="Custo por voto mínimo" value={currency(summary.costPerMinVote)} helper="Custo base + extras dividido pelo piso de votos." />
             <AnalysisCard title="Custo por voto máximo" value={currency(summary.costPerMaxVote)} helper="Teto + extras dividido pelo potencial máximo." />
-            <AnalysisCard title="Conversão estimada" value={`${summary.minVoteConversion}% a ${summary.maxVoteConversion}%`} helper="Apoiadores estimados convertidos em votos." />
+            <AnalysisCard title="Conversão estimada" value={`${summary.minVoteConversion}% a ${summary.maxVoteConversion}%`} helper="Apoio estimado convertido em votos." />
             <AnalysisCard title="Registros sem mapa" value={summary.withoutCoordinates.toString()} helper="Cadastros que precisam de latitude e longitude." />
           </div>
           <div className="mt-5 grid gap-5 xl:grid-cols-2">
@@ -374,9 +374,9 @@ function ExecutiveReading({ summary }: { summary: ReturnType<typeof computeOpera
       </CardHeader>
       <CardContent className="space-y-3 text-sm font-medium leading-6 text-slate-600">
         <p>A campanha está organizada em {summary.territories} territórios, com leitura separada para RJ e Maricá.</p>
-        <p>Os apoiadores entram apenas como número estimado: <strong>{summary.estimatedSupporters.toLocaleString("pt-BR")}</strong> para conversão em voto.</p>
+        <p>O apoio entra apenas como número estimado: <strong>{summary.estimatedSupporters.toLocaleString("pt-BR")}</strong> para conversão em voto.</p>
         <p>O piso mensal cadastrado é de <strong>{summary.minVotes.toLocaleString("pt-BR")} votos</strong> e o teto é de <strong>{summary.maxVotes.toLocaleString("pt-BR")} votos</strong>.</p>
-        <p>A conversão estimada fica entre <strong>{summary.minVoteConversion}%</strong> e <strong>{summary.maxVoteConversion}%</strong> dos apoiadores informados.</p>
+        <p>A conversão estimada fica entre <strong>{summary.minVoteConversion}%</strong> e <strong>{summary.maxVoteConversion}%</strong> do apoio informado.</p>
         <p>O custo operacional mensal fica entre <strong>{currency(summary.baseCost)}</strong> e <strong>{currency(summary.ceilingCost + summary.extraCost)}</strong>, com custo por voto máximo estimado em <strong>{currency(summary.costPerMaxVote)}</strong>.</p>
       </CardContent>
     </Card>
@@ -562,7 +562,7 @@ function CadastroRapido({ draft, setDraft, onAdd }: { draft: Record<string, stri
             ? `Distrito: ${getMaricaDistrictForNeighborhood(draft.territory)}`
             : `Região: ${getRJRegionForCity(draft.territory)}`}
         </div>
-        <Field label="Apoiadores estimados">
+        <Field label="Apoio estimado">
           <Input type="number" value={draft.estimatedSupporters} onChange={(e) => setDraft({ ...draft, estimatedSupporters: e.target.value })} />
         </Field>
         <div className="grid grid-cols-2 gap-3">
@@ -589,7 +589,7 @@ function ActorsTable({ actors, month }: { actors: ForceActor[]; month: string })
         <table className="w-full min-w-[900px] text-left text-sm">
           <thead className="bg-slate-50 text-xs font-black uppercase tracking-[0.08em] text-slate-500">
             <tr>
-              {["Nome", "Tipo", "Território", "Região/Distrito", "Status", "Apoiadores", "Votos mín.", "Votos máx.", "Custo mín.", "Custo máx.", "Mapa"].map((item) => <th key={item} className="px-4 py-3">{item}</th>)}
+              {["Nome", "Tipo", "Território", "Região/Distrito", "Status", "Apoio", "Votos mín.", "Votos máx.", "Custo mín.", "Custo máx.", "Mapa"].map((item) => <th key={item} className="px-4 py-3">{item}</th>)}
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-100">

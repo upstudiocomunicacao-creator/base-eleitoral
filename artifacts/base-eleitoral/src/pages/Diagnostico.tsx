@@ -37,12 +37,8 @@ type DiagnosticResult = {
 };
 
 const tableChecks = [
-  { table: "leaders", label: "Lideranças" },
-  { table: "supporters", label: "Apoiadores" },
-  { table: "prospects", label: "Prospecção" },
-  { table: "electoral_zones", label: "Zonas eleitorais" },
-  { table: "field_agenda", label: "Agenda de campo" },
-  { table: "demands", label: "Demandas" },
+  { table: "leaders", label: "Cadastros territoriais" },
+  { table: "leader_monthly_metrics", label: "Métricas mensais" },
   { table: "report_history", label: "Histórico de relatórios" },
   { table: "import_history", label: "Histórico de importações" },
 ] as const;
@@ -90,9 +86,9 @@ export default function Diagnostico() {
     });
 
     await runCheck(add, "permissions", "Permissões", "Permissões administrativas", async () => {
-      const canCreate = hasPermission(profile, "prospeccao", "create");
-      const canEdit = hasPermission(profile, "prospeccao", "edit");
-      const canDelete = hasPermission(profile, "prospeccao", "delete");
+      const canCreate = hasPermission(profile, "liderancas", "create");
+      const canEdit = hasPermission(profile, "liderancas", "edit");
+      const canDelete = hasPermission(profile, "liderancas", "delete");
       const canConfig = hasPermission(profile, "configuracoes", "view");
       if (!canConfig) throw new Error("Perfil sem acesso às áreas administrativas.");
       return `Criar: ${yesNo(canCreate)} · Editar: ${yesNo(canEdit)} · Excluir: ${yesNo(canDelete)} · Configurações: ${yesNo(canConfig)}`;
@@ -109,9 +105,7 @@ export default function Diagnostico() {
       });
     }
 
-    await runCheck(add, "crud-prospects", "CRUD temporário", "Prospecção", runProspectCrud);
-    await runCheck(add, "crud-agenda", "CRUD temporário", "Agenda de campo", runAgendaCrud);
-    await runCheck(add, "crud-demands", "CRUD temporário", "Demandas", runDemandCrud);
+    await runCheck(add, "crud-leaders", "CRUD temporário", "Cadastros territoriais", runLeaderCrud);
 
     await runCheck(add, "mapbox", "Mapas", "Mapbox", async () => {
       const token = import.meta.env.VITE_MAPBOX_ACCESS_TOKEN;
@@ -160,9 +154,7 @@ export default function Diagnostico() {
     try {
       const supabase = getSupabaseClient();
       await Promise.all([
-        supabase.from("prospects").delete().ilike("contact_name", "Teste Diagnóstico%"),
-        supabase.from("field_agenda").delete().ilike("title", "Teste Diagnóstico%"),
-        supabase.from("demands").delete().ilike("title", "Teste Diagnóstico%"),
+        supabase.from("leaders").delete().ilike("full_name", "Teste Diagnóstico%"),
       ]);
       setResults((current) => [
         {
@@ -205,7 +197,7 @@ export default function Diagnostico() {
       <PageHeader
         eyebrow="Sistema"
         title="Diagnóstico do Sistema"
-        description="Validação administrativa de Supabase, sessão, permissões, dados reais, CRUD temporário, mapas e geocodificação."
+        description="Validação administrativa de Supabase, sessão, permissões, cadastros territoriais, mapas e geocodificação."
         actions={
           <div className="flex flex-wrap gap-2">
             <Button variant="outline" onClick={cleanupTemporaryRecords} disabled={cleanupRunning || running}>
@@ -238,7 +230,7 @@ export default function Diagnostico() {
           {!results.length ? (
             <EmptyState
               title="Nenhum diagnóstico executado"
-              description="Clique em Rodar diagnóstico para verificar conexão, permissões e operações reais com registros temporários."
+              description="Clique em Rodar diagnóstico para verificar conexão, permissões e operações reais da versão enxuta."
               icon={Activity}
             />
           ) : (
@@ -276,7 +268,7 @@ export default function Diagnostico() {
           <div>
             <div className="font-extrabold">Como funciona</div>
             <p className="mt-1 text-sm font-medium leading-6">
-              O teste de CRUD cria registros temporários em Prospecção, Agenda e Demandas, edita os registros e remove tudo ao final. Se alguma etapa falhar, o detalhe aparece na tabela para orientar a correção.
+              O teste de CRUD cria um cadastro territorial temporário em Lideranças, edita o registro e remove tudo ao final. Se alguma etapa falhar, o detalhe aparece na tabela para orientar a correção.
             </p>
           </div>
         </CardContent>
@@ -302,97 +294,43 @@ async function runCheck(
   }
 }
 
-async function runProspectCrud() {
+async function runLeaderCrud() {
   const supabase = getSupabaseClient();
   const stamp = Date.now();
-  const { data, error } = await supabase.from("prospects").insert({
+  const { data, error } = await supabase.from("leaders").insert({
     campaign_id: DEFAULT_CAMPAIGN_ID,
-    contact_name: `Teste Diagnóstico Prospecção ${stamp}`,
+    full_name: `Teste Diagnóstico Liderança ${stamp}`,
+    political_nickname: "Teste automático",
     phone: "(21) 90000-0101",
+    email: null,
+    leader_type: "Liderança Maricá",
+    status: "Em validação",
     neighborhood: "Centro",
     city: "Maricá",
-    funnel_stage: "Novo contato",
-    origin: "Indicação",
-    priority: "Média",
+    state: "RJ",
+    territory_region: "Sede / Maricá",
+    geographic_precision: "Média",
+    internal_responsible: "Diagnóstico do Sistema",
+    registered_supporters: 10,
+    estimated_direct_supporters: 15,
+    estimated_indirect_supporters: 5,
+    declared_votes: 20,
+    validated_votes: 8,
     confidence_level: "Médio",
-    internal_responsible: "Diagnóstico do Sistema",
+    estimate_source: "Teste automático",
+    proof_type: "Sem comprovação",
+    last_update: "2026-06-05",
     next_action: "Remover teste",
-    next_action_date: "2026-06-12",
     notes: "Registro temporário criado pelo diagnóstico.",
   }).select("*").single();
   if (error) throw error;
 
   try {
-    const { error: updateError } = await supabase.from("prospects").update({ funnel_stage: "Simpatizante", priority: "Alta" }).eq("id", data.id);
+    const { error: updateError } = await supabase.from("leaders").update({ status: "Ativa", validated_votes: 12 }).eq("id", data.id);
     if (updateError) throw updateError;
-    return "Criou, editou e removeu registro temporário.";
+    return "Criou, editou e removeu cadastro territorial temporário.";
   } finally {
-    await supabase.from("prospects").delete().eq("id", data.id);
-  }
-}
-
-async function runAgendaCrud() {
-  const supabase = getSupabaseClient();
-  const stamp = Date.now();
-  const { data, error } = await supabase.from("field_agenda").insert({
-    campaign_id: DEFAULT_CAMPAIGN_ID,
-    title: `Teste Diagnóstico Agenda ${stamp}`,
-    action_type: "Visita de campo",
-    action_date: "2026-06-12",
-    start_time: "10:00",
-    end_time: "11:00",
-    location: "Centro de Maricá",
-    neighborhood: "Centro",
-    city: "Maricá",
-    state: "RJ",
-    internal_responsible: "Diagnóstico do Sistema",
-    estimated_public: 12,
-    objective: "Validar CRUD temporário",
-    status: "Agendada",
-    priority: "Média",
-    next_step: "Remover teste",
-    notes: "Registro temporário criado pelo diagnóstico.",
-  }).select("*").single();
-  if (error) throw error;
-
-  try {
-    const { error: updateError } = await supabase.from("field_agenda").update({ status: "Concluída", actual_public: 9 }).eq("id", data.id);
-    if (updateError) throw updateError;
-    return "Criou, editou e removeu registro temporário.";
-  } finally {
-    await supabase.from("field_agenda").delete().eq("id", data.id);
-  }
-}
-
-async function runDemandCrud() {
-  const supabase = getSupabaseClient();
-  const stamp = Date.now();
-  const { data, error } = await supabase.from("demands").insert({
-    campaign_id: DEFAULT_CAMPAIGN_ID,
-    title: `Teste Diagnóstico Demanda ${stamp}`,
-    description: "Demanda temporária criada para validar CRUD.",
-    person_name: "Pessoa Teste Diagnóstico",
-    phone: "(21) 90000-0102",
-    category: "Saúde",
-    priority: "Média",
-    status: "Aberta",
-    neighborhood: "Centro",
-    city: "Maricá",
-    state: "RJ",
-    opening_date: "2026-06-05",
-    return_date: "2026-06-12",
-    next_action: "Remover teste",
-    internal_responsible: "Diagnóstico do Sistema",
-    notes: "Registro temporário criado pelo diagnóstico.",
-  }).select("*").single();
-  if (error) throw error;
-
-  try {
-    const { error: updateError } = await supabase.from("demands").update({ status: "Em andamento", priority: "Alta" }).eq("id", data.id);
-    if (updateError) throw updateError;
-    return "Criou, editou e removeu registro temporário.";
-  } finally {
-    await supabase.from("demands").delete().eq("id", data.id);
+    await supabase.from("leaders").delete().eq("id", data.id);
   }
 }
 

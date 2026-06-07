@@ -33,8 +33,9 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Skeleton } from "@/components/ui/skeleton";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { isLeadersSupabaseReady, listLeaders } from "@/services/leaders";
-import { getMaricaDistrictForNeighborhood, getRJRegionForCity } from "@/services/operational";
-import type { Leader } from "@/types/database";
+import { listLeaderMonthlyMetrics } from "@/services/leaderMonthlyMetrics";
+import { getMaricaDistrictForNeighborhood, getRJRegionForCity, operationalMonths } from "@/services/operational";
+import type { Leader, LeaderMonthlyMetric } from "@/types/database";
 
 type TerritoryScope = "todos" | "rj" | "marica";
 type Priority = "Crítica" | "Alta" | "Média" | "Baixa" | "Manter";
@@ -44,6 +45,7 @@ type Filters = {
   scope: TerritoryScope;
   city: string;
   neighborhood: string;
+  month: string;
   priority: string;
   status: string;
 };
@@ -60,11 +62,18 @@ type TerritoryRow = {
   actors: number;
   estimatedSupporters: number;
   declaredVotes: number;
+  minVotes: number;
+  maxVotes: number;
   validatedVotes: number;
   validationRate: number;
   conversionRate: number;
   confidenceIndex: number;
   distanceToDeclared: number;
+  baseCost: number;
+  ceilingCost: number;
+  extraCost: number;
+  monthlyCost: number;
+  costPerMaxVote: number;
   priority: Priority;
   status: string;
   linkedNames: string[];
@@ -75,12 +84,14 @@ const emptyFilters: Filters = {
   scope: "todos",
   city: "todos",
   neighborhood: "todos",
+  month: "todos",
   priority: "todos",
   status: "todos",
 };
 
 export default function Comparativo() {
   const [leaders, setLeaders] = useState<Leader[]>([]);
+  const [monthlyMetrics, setMonthlyMetrics] = useState<LeaderMonthlyMetric[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [filters, setFilters] = useState<Filters>(emptyFilters);
@@ -97,9 +108,15 @@ export default function Comparativo() {
     }
 
     try {
-      setLeaders(await listLeaders());
+      const [leaderRows, metricRows] = await Promise.all([
+        listLeaders(),
+        listLeaderMonthlyMetrics().catch(() => [] as LeaderMonthlyMetric[]),
+      ]);
+      setLeaders(leaderRows);
+      setMonthlyMetrics(metricRows);
     } catch (err) {
       setLeaders([]);
+      setMonthlyMetrics([]);
       setError(getErrorMessage(err));
     } finally {
       setLoading(false);
@@ -110,10 +127,10 @@ export default function Comparativo() {
     void loadData();
   }, []);
 
-  const rows = useMemo(() => buildTerritoryRows(leaders), [leaders]);
+  const rows = useMemo(() => buildTerritoryRows(leaders, monthlyMetrics, filters.month), [leaders, monthlyMetrics, filters.month]);
   const filteredRows = useMemo(() => rows.filter((row) => matchesFilters(row, filters)), [rows, filters]);
   const summary = useMemo(() => buildSummary(filteredRows), [filteredRows]);
-  const options = useMemo(() => buildOptions(rows), [rows]);
+  const options = useMemo(() => buildOptions(rows, monthlyMetrics), [rows, monthlyMetrics]);
   const today = new Date().toLocaleDateString("pt-BR", { weekday: "long", day: "numeric", month: "long" });
 
   return (
@@ -121,7 +138,7 @@ export default function Comparativo() {
       <PageHeader
         eyebrow="Comparativo"
         title="Análise Territorial Enxuta"
-        description={`${today} · comparação por cidades do RJ e bairros de Maricá, usando coordenações, lideranças, apoio estimado e votos.`}
+        description={`${today} · comparação por cidades do RJ e bairros de Maricá, usando coordenações, lideranças, apoio estimado, votos e centro de custos.`}
         actions={
           <Button variant="outline" onClick={() => void loadData()} disabled={loading}>
             <RefreshCw className={`h-4 w-4 ${loading ? "animate-spin" : ""}`} /> Atualizar
@@ -131,14 +148,16 @@ export default function Comparativo() {
 
       {error ? <ConnectionWarning message={error} onRetry={() => void loadData()} /> : null}
 
-      <section className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-8">
+      <section className="grid gap-3 sm:grid-cols-2 lg:grid-cols-5 xl:grid-cols-10">
         <MetricCard label="Territórios" value={summary.territories} icon={MapPin} tone="blue" loading={loading} />
         <MetricCard label="Coordenações" value={summary.coordinators} icon={Building2} tone="indigo" loading={loading} />
         <MetricCard label="Lideranças" value={summary.leaders} icon={Users} tone="violet" loading={loading} />
         <MetricCard label="Apoio estim." value={summary.estimatedSupporters} icon={Radar} tone="cyan" loading={loading} />
-        <MetricCard label="Declarados" value={summary.declaredVotes} icon={Target} tone="amber" loading={loading} />
+        <MetricCard label="Votos mín." value={summary.minVotes} icon={Target} tone="amber" loading={loading} />
+        <MetricCard label="Votos máx." value={summary.maxVotes} icon={Target} tone="orange" loading={loading} />
         <MetricCard label="Validados" value={summary.validatedVotes} icon={CheckCircle2} tone="green" loading={loading} />
-        <MetricCard label="Validação" value={`${summary.validationRate}%`} icon={TrendingUp} tone="emerald" loading={loading} />
+        <MetricCard label="Custo teto" value={currency(summary.monthlyCost)} icon={CircleDollarSign} tone="amber" loading={loading} />
+        <MetricCard label="Custo/voto" value={summary.costPerMaxVote ? currency(summary.costPerMaxVote) : "-"} icon={CircleDollarSign} tone="emerald" loading={loading} />
         <MetricCard label="Atenção" value={summary.attention} icon={AlertTriangle} tone="red" loading={loading} />
       </section>
 
@@ -151,7 +170,7 @@ export default function Comparativo() {
       <section className="grid gap-5 xl:grid-cols-[minmax(0,1fr)_360px]">
         <div className="space-y-5">
           <div className="grid gap-5 lg:grid-cols-2">
-            <ChartCard title="Apoio estimado x votos" description="Compara base estimada, votos declarados e votos validados" loading={loading} empty={!filteredRows.length}>
+            <ChartCard title="Apoio estimado x votos" description="Compara base estimada, votos mínimos, votos máximos e votos validados" loading={loading} empty={!filteredRows.length}>
               <ResponsiveContainer width="100%" height={290}>
                 <BarChart data={filteredRows.slice(0, 10)} margin={{ top: 10, right: 14, left: -20, bottom: 45 }}>
                   <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e2e8f0" />
@@ -160,7 +179,8 @@ export default function Comparativo() {
                   <Tooltip formatter={(value) => Number(value).toLocaleString("pt-BR")} />
                   <Legend />
                   <Bar dataKey="estimatedSupporters" name="Apoio estimado" fill="#38bdf8" radius={[6, 6, 0, 0]} />
-                  <Bar dataKey="declaredVotes" name="Declarados" fill="#f59e0b" radius={[6, 6, 0, 0]} />
+                  <Bar dataKey="minVotes" name="Mínimos" fill="#f59e0b" radius={[6, 6, 0, 0]} />
+                  <Bar dataKey="maxVotes" name="Máximos" fill="#fb7185" radius={[6, 6, 0, 0]} />
                   <Bar dataKey="validatedVotes" name="Validados" fill="#10b981" radius={[6, 6, 0, 0]} />
                 </BarChart>
               </ResponsiveContainer>
@@ -187,7 +207,8 @@ export default function Comparativo() {
         <aside className="space-y-5">
           <RankingCard title="Prioridade de ação" rows={filteredRows.filter((row) => row.priority !== "Manter").slice(0, 5)} value="priority" />
           <RankingCard title="Maior apoio estimado" rows={[...filteredRows].sort((a, b) => b.estimatedSupporters - a.estimatedSupporters).slice(0, 5)} value="estimatedSupporters" />
-          <RankingCard title="Melhor validação" rows={[...filteredRows].filter((row) => row.declaredVotes > 0).sort((a, b) => b.validationRate - a.validationRate).slice(0, 5)} value="validationRate" />
+          <RankingCard title="Melhor validação" rows={[...filteredRows].filter((row) => row.maxVotes > 0).sort((a, b) => b.validationRate - a.validationRate).slice(0, 5)} value="validationRate" />
+          <RankingCard title="Melhor custo/voto" rows={[...filteredRows].filter((row) => row.costPerMaxVote > 0).sort((a, b) => a.costPerMaxVote - b.costPerMaxVote).slice(0, 5)} value="costPerMaxVote" />
           <FinancePreview summary={summary} />
         </aside>
       </section>
@@ -209,6 +230,7 @@ function FiltersPanel({ filters, setFilters, options }: { filters: Filters; setF
         <FilterSelect label="Recorte" value={filters.scope} onChange={(value) => update("scope", value)} options={[["todos", "Todos"], ["rj", "RJ por cidades"], ["marica", "Maricá por bairros"]]} />
         <FilterSelect label="Cidade" value={filters.city} onChange={(value) => update("city", value)} options={options.cities} />
         <FilterSelect label="Bairro" value={filters.neighborhood} onChange={(value) => update("neighborhood", value)} options={options.neighborhoods} />
+        <FilterSelect label="Mês" value={filters.month} onChange={(value) => update("month", value)} options={options.months} />
         <FilterSelect label="Prioridade" value={filters.priority} onChange={(value) => update("priority", value)} options={["Crítica", "Alta", "Média", "Baixa", "Manter"]} />
         <FilterSelect label="Status" value={filters.status} onChange={(value) => update("status", value)} options={options.statuses} />
         <div>
@@ -238,8 +260,10 @@ function TerritoryTable({ loading, rows }: { loading: boolean; rows: TerritoryRo
               <TableHead className="text-right">Coord.</TableHead>
               <TableHead className="text-right">Lid.</TableHead>
               <TableHead className="text-right">Apoio estim.</TableHead>
-              <TableHead className="text-right">Declarados</TableHead>
+              <TableHead className="text-right">Mín.</TableHead>
+              <TableHead className="text-right">Máx.</TableHead>
               <TableHead className="text-right">Validados</TableHead>
+              <TableHead className="text-right">Custo teto</TableHead>
               <TableHead>Validação</TableHead>
               <TableHead>Prioridade</TableHead>
               <TableHead>Status</TableHead>
@@ -249,12 +273,12 @@ function TerritoryTable({ loading, rows }: { loading: boolean; rows: TerritoryRo
             {loading ? (
               Array.from({ length: 5 }).map((_, index) => (
                 <TableRow key={index}>
-                  <TableCell colSpan={10}><Skeleton className="h-8 w-full" /></TableCell>
+                  <TableCell colSpan={12}><Skeleton className="h-8 w-full" /></TableCell>
                 </TableRow>
               ))
             ) : rows.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={10}>
+                <TableCell colSpan={12}>
                   <EmptyState title="Nenhum território no recorte" description="Ajuste os filtros ou cadastre novas lideranças." icon={MapPin} />
                 </TableCell>
               </TableRow>
@@ -269,8 +293,10 @@ function TerritoryTable({ loading, rows }: { loading: boolean; rows: TerritoryRo
                   <TableCell className="text-right font-bold">{row.coordinators}</TableCell>
                   <TableCell className="text-right font-bold">{row.leaders}</TableCell>
                   <TableCell className="text-right">{formatNumber(row.estimatedSupporters)}</TableCell>
-                  <TableCell className="text-right">{formatNumber(row.declaredVotes)}</TableCell>
+                  <TableCell className="text-right">{formatNumber(row.minVotes)}</TableCell>
+                  <TableCell className="text-right">{formatNumber(row.maxVotes)}</TableCell>
                   <TableCell className="text-right">{formatNumber(row.validatedVotes)}</TableCell>
+                  <TableCell className="text-right">{row.monthlyCost ? currency(row.monthlyCost) : "-"}</TableCell>
                   <TableCell>{row.validationRate}%</TableCell>
                   <TableCell><StatusPill label={row.priority} tone={priorityTone(row.priority)} /></TableCell>
                   <TableCell><StatusPill label={row.status} tone={row.status === "Forte" ? "emerald" : row.status === "Atenção" ? "amber" : "blue"} /></TableCell>
@@ -298,7 +324,7 @@ function ChartCard({ title, description, loading, empty, children }: { title: st
   );
 }
 
-function RankingCard({ title, rows, value }: { title: string; rows: TerritoryRow[]; value: "priority" | "estimatedSupporters" | "validationRate" }) {
+function RankingCard({ title, rows, value }: { title: string; rows: TerritoryRow[]; value: "priority" | "estimatedSupporters" | "validationRate" | "costPerMaxVote" }) {
   return (
     <Card className="premium-card">
       <CardHeader>
@@ -317,7 +343,7 @@ function RankingCard({ title, rows, value }: { title: string; rows: TerritoryRow
               </div>
             </div>
             <div className="text-right text-sm font-extrabold text-slate-950">
-              {value === "priority" ? row.priority : value === "validationRate" ? `${row.validationRate}%` : formatNumber(row.estimatedSupporters)}
+              {value === "priority" ? row.priority : value === "validationRate" ? `${row.validationRate}%` : value === "costPerMaxVote" ? currency(row.costPerMaxVote) : formatNumber(row.estimatedSupporters)}
             </div>
           </div>
         ))}
@@ -336,10 +362,12 @@ function FinancePreview({ summary }: { summary: ReturnType<typeof buildSummary> 
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-3 text-sm font-medium text-slate-600">
-        <p>A próxima evolução deve gravar custo base, teto e custo extra por coordenação/liderança.</p>
+        <p>Compara teto mensal, custo extra e potencial de votos por coordenação/liderança.</p>
         <div className="grid grid-cols-2 gap-2">
           <MiniMetric label="Base atual" value={`${summary.actors} registros`} />
-          <MiniMetric label="Custo por voto" value="Preparado" />
+          <MiniMetric label="Teto mensal" value={currency(summary.monthlyCost)} />
+          <MiniMetric label="Custo/voto máx." value={summary.costPerMaxVote ? currency(summary.costPerMaxVote) : "-"} />
+          <MiniMetric label="Potencial máx." value={`${formatNumber(summary.maxVotes)} votos`} />
         </div>
       </CardContent>
     </Card>
@@ -365,11 +393,11 @@ function StrategicReading({ rows, loading }: { rows: TerritoryRow[]; loading: bo
           <>
             <ReadingBlock
               title={critical ? `${critical.territory} pede prioridade` : "Sem alerta crítico"}
-              text={critical ? `${critical.territory} combina ${critical.actors} registro(s), ${formatNumber(critical.estimatedSupporters)} apoiadores estimados e validação de ${critical.validationRate}%. O próximo passo é revisar promessa, validação e vínculo de coordenação.` : "O recorte atual não apresenta prioridade crítica. Mantenha a rotina mensal de atualização de votos e custos."}
+              text={critical ? `${critical.territory} combina ${critical.actors} registro(s), ${formatNumber(critical.estimatedSupporters)} apoios estimados, ${formatNumber(critical.maxVotes)} votos máximos e validação de ${critical.validationRate}%. O próximo passo é revisar promessa, validação, custo e vínculo de coordenação.` : "O recorte atual não apresenta prioridade crítica. Mantenha a rotina mensal de atualização de votos e custos."}
             />
             <ReadingBlock
               title={strong ? `${strong.territory} é a base mais validada` : "Base ainda vazia"}
-              text={strong ? `${strong.territory} lidera em votos validados no recorte, com ${formatNumber(strong.validatedVotes)} votos validados e ${formatNumber(strong.estimatedSupporters)} apoiadores estimados. Use como referência para comparar custo e conversão.` : "Cadastre lideranças para ativar a análise comparativa."}
+              text={strong ? `${strong.territory} lidera em votos validados no recorte, com ${formatNumber(strong.validatedVotes)} votos validados, ${formatNumber(strong.estimatedSupporters)} apoios estimados e custo/voto máximo de ${strong.costPerMaxVote ? currency(strong.costPerMaxVote) : "não informado"}. Use como referência para comparar custo e conversão.` : "Cadastre lideranças para ativar a análise comparativa."}
             />
           </>
         )}
@@ -434,7 +462,7 @@ function ConnectionWarning({ message, onRetry }: { message: string; onRetry: () 
   );
 }
 
-function buildTerritoryRows(leaders: Leader[]): TerritoryRow[] {
+function buildTerritoryRows(leaders: Leader[], monthlyMetrics: LeaderMonthlyMetric[], selectedMonth: string): TerritoryRow[] {
   const grouped = new Map<string, TerritoryRow>();
 
   leaders.forEach((leader) => {
@@ -443,9 +471,15 @@ function buildTerritoryRows(leaders: Leader[]): TerritoryRow[] {
     const group = scope === "marica" ? getMaricaDistrictForNeighborhood(territory) : getRJRegionForCity(territory);
     const key = `${scope}-${normalize(territory)}`;
     const isCoordinator = isCoordinatorType(leader.leader_type);
-    const estimatedSupporters = Number(leader.estimated_direct_supporters ?? 0) + Number(leader.estimated_indirect_supporters ?? 0) + Number(leader.registered_supporters ?? 0);
-    const declaredVotes = Number(leader.declared_votes ?? 0);
+    const monthly = getMetricForLeader(leader.id, monthlyMetrics, selectedMonth);
+    const estimatedSupporters = monthly?.estimated_supporters ?? Number(leader.estimated_direct_supporters ?? 0) + Number(leader.estimated_indirect_supporters ?? 0) + Number(leader.registered_supporters ?? 0);
+    const minVotes = monthly?.min_votes ?? Number(leader.declared_votes ?? 0);
+    const maxVotes = monthly?.max_votes ?? Math.max(Number(leader.declared_votes ?? 0), Number(leader.validated_votes ?? 0));
+    const declaredVotes = maxVotes;
     const validatedVotes = Number(leader.validated_votes ?? 0);
+    const baseCost = monthly?.base_cost ?? 0;
+    const ceilingCost = monthly?.ceiling_cost ?? 0;
+    const extraCost = monthly?.extra_cost ?? 0;
 
     if (!grouped.has(key)) {
       grouped.set(key, {
@@ -460,11 +494,18 @@ function buildTerritoryRows(leaders: Leader[]): TerritoryRow[] {
         actors: 0,
         estimatedSupporters: 0,
         declaredVotes: 0,
+        minVotes: 0,
+        maxVotes: 0,
         validatedVotes: 0,
         validationRate: 0,
         conversionRate: 0,
         confidenceIndex: 0,
         distanceToDeclared: 0,
+        baseCost: 0,
+        ceilingCost: 0,
+        extraCost: 0,
+        monthlyCost: 0,
+        costPerMaxVote: 0,
         priority: "Baixa",
         status: "Em leitura",
         linkedNames: [],
@@ -477,29 +518,39 @@ function buildTerritoryRows(leaders: Leader[]): TerritoryRow[] {
     current.actors += 1;
     current.estimatedSupporters += estimatedSupporters;
     current.declaredVotes += declaredVotes;
+    current.minVotes += minVotes;
+    current.maxVotes += maxVotes;
     current.validatedVotes += validatedVotes;
+    current.baseCost += baseCost;
+    current.ceilingCost += ceilingCost;
+    current.extraCost += extraCost;
+    current.monthlyCost += ceilingCost + extraCost;
     current.confidenceIndex += confidenceWeight(leader.confidence_level);
     current.linkedNames.push(leader.full_name);
   });
 
   return Array.from(grouped.values())
     .map((row) => {
-      const validationRate = row.declaredVotes ? Math.round((row.validatedVotes / row.declaredVotes) * 100) : 0;
+      const validationRate = row.maxVotes ? Math.round((row.validatedVotes / row.maxVotes) * 100) : 0;
       const conversionRate = row.estimatedSupporters ? Math.round((row.validatedVotes / row.estimatedSupporters) * 100) : 0;
       const confidenceIndex = row.actors ? Math.round(row.confidenceIndex / row.actors) : 0;
-      const distanceToDeclared = Math.max(row.declaredVotes - row.validatedVotes, 0);
-      const priority = inferPriority({ ...row, validationRate, conversionRate, confidenceIndex, distanceToDeclared });
+      const distanceToDeclared = Math.max(row.maxVotes - row.validatedVotes, 0);
+      const costPerMaxVote = row.maxVotes ? Math.round(row.monthlyCost / row.maxVotes) : 0;
+      const priority = inferPriority({ ...row, validationRate, conversionRate, confidenceIndex, distanceToDeclared, costPerMaxVote });
       const status = inferStatus(priority, validationRate, row.validatedVotes);
 
-      return { ...row, validationRate, conversionRate, confidenceIndex, distanceToDeclared, priority, status };
+      return { ...row, validationRate, conversionRate, confidenceIndex, distanceToDeclared, costPerMaxVote, priority, status };
     })
     .sort((a, b) => priorityWeight(b.priority) - priorityWeight(a.priority) || b.validatedVotes - a.validatedVotes);
 }
 
 function buildSummary(rows: TerritoryRow[]) {
   const declaredVotes = sum(rows, "declaredVotes");
+  const minVotes = sum(rows, "minVotes");
+  const maxVotes = sum(rows, "maxVotes");
   const validatedVotes = sum(rows, "validatedVotes");
   const estimatedSupporters = sum(rows, "estimatedSupporters");
+  const monthlyCost = sum(rows, "monthlyCost");
 
   return {
     territories: rows.length,
@@ -508,17 +559,22 @@ function buildSummary(rows: TerritoryRow[]) {
     actors: sum(rows, "actors"),
     estimatedSupporters,
     declaredVotes,
+    minVotes,
+    maxVotes,
     validatedVotes,
-    validationRate: declaredVotes ? Math.round((validatedVotes / declaredVotes) * 100) : 0,
+    monthlyCost,
+    costPerMaxVote: maxVotes ? Math.round(monthlyCost / maxVotes) : 0,
+    validationRate: maxVotes ? Math.round((validatedVotes / maxVotes) * 100) : 0,
     conversionRate: estimatedSupporters ? Math.round((validatedVotes / estimatedSupporters) * 100) : 0,
     attention: rows.filter((row) => row.priority === "Crítica" || row.priority === "Alta").length,
   };
 }
 
-function buildOptions(rows: TerritoryRow[]) {
+function buildOptions(rows: TerritoryRow[], monthlyMetrics: LeaderMonthlyMetric[]) {
   return {
     cities: unique(rows.map((row) => row.city)),
     neighborhoods: unique(rows.filter((row) => row.scope === "marica").map((row) => row.neighborhood)),
+    months: unique([...operationalMonths, ...monthlyMetrics.map((item) => item.month_ref)]),
     statuses: unique(rows.map((row) => row.status)),
   };
 }
@@ -537,8 +593,9 @@ function matchesFilters(row: TerritoryRow, filters: Filters) {
 
 function inferPriority(row: TerritoryRow): Priority {
   if (row.actors === 0) return "Crítica";
-  if (row.declaredVotes >= 200 && row.validationRate < 35) return "Crítica";
+  if (row.maxVotes >= 200 && row.validationRate < 35) return "Crítica";
   if (row.estimatedSupporters >= 300 && row.validatedVotes < 100) return "Alta";
+  if (row.costPerMaxVote >= 120) return "Alta";
   if (row.coordinators === 0 && row.estimatedSupporters >= 150) return "Alta";
   if (row.validationRate >= 75 && row.validatedVotes >= 120) return "Manter";
   if (row.validationRate >= 45) return "Baixa";
@@ -593,8 +650,19 @@ function sum<T extends Record<string, unknown>>(rows: T[], key: keyof T) {
   return rows.reduce((total, row) => total + Number(row[key] ?? 0), 0);
 }
 
+function getMetricForLeader(leaderId: string, metrics: LeaderMonthlyMetric[], selectedMonth: string) {
+  const rows = metrics.filter((item) => item.leader_id === leaderId);
+  if (!rows.length) return null;
+  if (selectedMonth !== "todos") return rows.find((item) => item.month_ref === selectedMonth) ?? null;
+  return rows.slice().sort((a, b) => b.month_ref.localeCompare(a.month_ref, "pt-BR"))[0] ?? null;
+}
+
 function formatNumber(value: number) {
   return Number(value || 0).toLocaleString("pt-BR");
+}
+
+function currency(value: number) {
+  return Number(value || 0).toLocaleString("pt-BR", { style: "currency", currency: "BRL", maximumFractionDigits: 0 });
 }
 
 function normalize(value?: string | null) {

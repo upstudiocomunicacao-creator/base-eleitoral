@@ -9,6 +9,7 @@ import {
   Kanban,
   Landmark,
   LayoutDashboard,
+  ListChecks,
   Map,
   MapPinned,
   MapPin,
@@ -28,6 +29,7 @@ import { useAuth } from "@/hooks/useAuth";
 
 const navItems = [
   { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard, group: "Visão Geral", module: "dashboard" },
+  { href: "/operacional", label: "Modo Operacional", icon: ListChecks, group: "Visão Geral", module: "dashboard" },
   { href: "/mapa-forca", label: "Mapa de Força", icon: Network, group: "Visão Geral", module: "mapa_forca" },
   { href: "/liderancas", label: "Lideranças", icon: Users, group: "Base Territorial", module: "liderancas" },
   { href: "/apoiadores", label: "Apoiadores", icon: UserPlus, group: "Base Territorial", module: "apoiadores" },
@@ -99,7 +101,8 @@ export function AppLayout({ children }: { children: ReactNode }) {
                       onClick={() => setMobileOpen(false)}
                       className={[
                         "group relative flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-semibold transition-all duration-150",
-                        isActive ?                            "bg-white text-slate-950 shadow-lg shadow-blue-950/25"
+                        isActive
+                          ? "bg-white text-slate-950 shadow-lg shadow-blue-950/25"
                           : "text-slate-300 hover:bg-white/10 hover:text-white",
                       ].join(" ")}
                     >

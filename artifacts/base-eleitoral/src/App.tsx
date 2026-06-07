@@ -1,4 +1,4 @@
-import { lazy, Suspense } from "react";
+﻿import { lazy, Suspense } from "react";
 import { Switch, Route, Router as WouterRouter } from "wouter";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { Loader2 } from "lucide-react";
@@ -12,6 +12,7 @@ import { AppLayout } from "@/components/layout/AppLayout";
 import NotFound from "@/pages/not-found";
 
 const Dashboard = lazy(() => import("./pages/Dashboard"));
+const Operacional = lazy(() => import("./pages/Operacional"));
 const MapaForca = lazy(() => import("./pages/MapaForca"));
 const Liderancas = lazy(() => import("./pages/Liderancas"));
 const Apoiadores = lazy(() => import("./pages/Apoiadores"));
@@ -49,6 +50,7 @@ function Router() {
               <Route path="/" component={Dashboard} />
               <Route path="/dashboard" component={Dashboard} />
               <Route path="/painel" component={Dashboard} />
+              <Route path="/operacional" component={Operacional} />
               <Route path="/mapa-forca" component={MapaForca} />
               <Route path="/liderancas" component={Liderancas} />
               <Route path="/apoiadores" component={Apoiadores} />
@@ -78,7 +80,7 @@ function PageLoading() {
     <div className="flex min-h-[420px] items-center justify-center">
       <div className="flex items-center gap-2 rounded-full border border-slate-200 bg-white px-4 py-2 text-sm font-bold text-slate-700 shadow-sm">
         <Loader2 className="h-4 w-4 animate-spin text-blue-600" />
-        Carregando módulo
+        Carregando mÃ³dulo
       </div>
     </div>
   );
@@ -102,3 +104,4 @@ function App() {
 }
 
 export default App;
+

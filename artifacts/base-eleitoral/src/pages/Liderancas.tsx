@@ -632,10 +632,7 @@ function LeadershipFormSheet({
               <NumberField label="Votos declarados" value={record.declared_votes} onChange={(value) => update("declared_votes", value)} />
               <NumberField label="Votos validados" value={record.validated_votes} onChange={(value) => update("validated_votes", value)} />
               <SelectTextField required label="Grau de confiança" value={record.confidence_level} values={["Baixo", "Médio", "Alto"]} onChange={(value) => update("confidence_level", value)} />
-              <TextField label="Fonte da estimativa" value={record.estimate_source} onChange={(value) => update("estimate_source", value)} />
-              <SelectTextField label="Comprovação" value={record.proof_type} values={["Lista", "Reunião", "Evento", "Histórico", "Grupo WhatsApp", "Lista parcial", "Sem comprovação"]} onChange={(value) => update("proof_type", value)} />
               <TextField label="Última atualização" type="date" value={record.last_update} onChange={(value) => update("last_update", value)} />
-              <TextField label="Próxima ação" value={record.next_action} onChange={(value) => update("next_action", value)} />
             </FormSection>
 
             <div className="flex flex-col-reverse gap-2 border-t border-slate-200 pt-4 sm:flex-row sm:justify-end">
@@ -941,8 +938,8 @@ function toInsertPayload(form: LeaderFormState): LeaderInsert {
     declared_votes: Number(form.declared_votes || 0),
     validated_votes: Number(form.validated_votes || 0),
     confidence_level: form.confidence_level,
-    estimate_source: nullable(form.estimate_source),
-    proof_type: nullable(form.proof_type),
+    estimate_source: nullable(form.estimate_source) ?? "Cadastro manual",
+    proof_type: nullable(form.proof_type) ?? "Não informado",
     last_update: nullable(form.last_update),
     next_action: nullable(form.next_action),
     notes: nullable(form.notes),

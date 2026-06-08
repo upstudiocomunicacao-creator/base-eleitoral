@@ -32,6 +32,7 @@ export type UserProfile = RowBase & {
   full_name: string;
   email: string;
   phone: string | null;
+  avatar_url: string | null;
   role: string;
   status: string;
   linked_state: string | null;

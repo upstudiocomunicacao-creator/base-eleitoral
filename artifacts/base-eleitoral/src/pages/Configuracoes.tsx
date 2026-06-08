@@ -27,6 +27,7 @@ import { PageHeader } from "@/components/common/PageHeader";
 import { StatusPill } from "@/components/common/StatusPill";
 import { PermissionGate } from "@/components/auth/PermissionGate";
 import { SensitiveText } from "@/components/auth/SensitiveText";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -38,7 +39,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "@/hooks/use-toast";
 import { inviteCampaignUser } from "@/services/inviteUsers";
-import { listUserProfiles } from "@/services/userProfiles";
+import { listUserProfiles, updateUserProfile } from "@/services/userProfiles";
 import { getRoleLabel } from "@/lib/permissions";
 import type { UserProfile } from "@/types/database";
 
@@ -49,9 +50,11 @@ type AuditStatus = "Sucesso" | "Alerta" | "Bloqueado";
 
 type SystemUser = {
   id: number;
+  profileId?: string;
   name: string;
   email: string;
   phone: string;
+  avatarUrl: string;
   profile: string;
   region: string;
   city: string;
@@ -94,13 +97,13 @@ const initialUsers: SystemUser[] = [
 ];
 
 const auditLogs = [
-  ["05/06/2026 09:12", "Eduardo Silva", "Exportou relatério", "Relatórios", "Semanal Executivo", "Exportação", "Desktop ? 127.0.0.1", "Sucesso"],
-  ["05/06/2026 08:44", "Mariana Costa", "Criou liderança", "Lideranças", "Centro", "Criação", "Notebook ? 10.0.0.22", "Sucesso"],
-  ["04/06/2026 18:21", "Cláudia Menezes", "Editou apoio estimado", "Modo Operacional", "Itaipuaçu", "Edição", "Mobile ? 10.0.0.31", "Sucesso"],
-  ["04/06/2026 15:10", "Rafael Almeida", "Atualizou custo mensal", "Modo Operacional", "Niterói", "Edição", "Mobile ? 10.0.0.41", "Sucesso"],
-  ["04/06/2026 11:05", "Ana Paula", "Visualizou dados sensíveis", "Lideranças", "Telefone", "Leitura", "Desktop ? 10.0.0.18", "Alerta"],
-  ["03/06/2026 17:44", "Equipe Campo", "Tentou excluir cadastro", "Lideranças", "Centro", "Exclusão", "Tablet ? 10.0.0.50", "Bloqueado"],
-  ["03/06/2026 10:25", "Mariana Costa", "Atualizou geocodificação", "Geocodificação", "Maricá", "Edição", "Desktop ? 10.0.0.11", "Sucesso"],
+  ["05/06/2026 09:12", "Eduardo Silva", "Exportou relatório", "Relatórios", "Semanal Executivo", "Exportação", "Desktop - 127.0.0.1", "Sucesso"],
+  ["05/06/2026 08:44", "Mariana Costa", "Criou liderança", "Lideranças", "Centro", "Criação", "Notebook - 10.0.0.22", "Sucesso"],
+  ["04/06/2026 18:21", "Cláudia Menezes", "Editou apoio estimado", "Modo Operacional", "Itaipuaçu", "Edição", "Mobile - 10.0.0.31", "Sucesso"],
+  ["04/06/2026 15:10", "Rafael Almeida", "Atualizou custo mensal", "Modo Operacional", "Niterói", "Edição", "Mobile - 10.0.0.41", "Sucesso"],
+  ["04/06/2026 11:05", "Ana Paula", "Visualizou dados sensíveis", "Lideranças", "Telefone", "Leitura", "Desktop - 10.0.0.18", "Alerta"],
+  ["03/06/2026 17:44", "Equipe Campo", "Tentou excluir cadastro", "Lideranças", "Centro", "Exclusão", "Tablet - 10.0.0.50", "Bloqueado"],
+  ["03/06/2026 10:25", "Mariana Costa", "Atualizou geocodificação", "Geocodificação", "Maricá", "Edição", "Desktop - 10.0.0.11", "Sucesso"],
 ] satisfies Array<[string, string, string, string, string, string, string, AuditStatus]>;
 
 export default function Configuracoes() {
@@ -140,10 +143,35 @@ export default function Configuracoes() {
 
   const saveUser = async (record: SystemUser) => {
     if (record.id) {
-      setUsers((current) => current.map((item) => item.id === record.id ? record : item));
-      setFormOpen(false);
-      setEditing(null);
-      mockSave("Usuário");
+      if (record.profileId) {
+        try {
+          const savedProfile = await updateUserProfile(record.profileId, {
+            full_name: record.name,
+            phone: record.phone && record.phone !== "Não informado" ? record.phone : null,
+            avatar_url: record.avatarUrl || null,
+            role: roleValueFromLabel(record.profile),
+            status: statusValueFromLabel(record.status),
+            linked_state: record.region || null,
+            linked_city: record.city === "Todas" ? null : record.city || null,
+            linked_neighborhood: record.neighborhood === "Todas" ? null : record.neighborhood || null,
+          });
+
+          setUsers((current) => current.map((item) => item.id === record.id ? mapProfileToSystemUser(savedProfile) : item));
+          setFormOpen(false);
+          setEditing(null);
+          toast({ title: "Usuário atualizado", description: "Perfil salvo no Supabase com os dados atuais." });
+        } catch (error) {
+          toast({
+            title: "Usuário não atualizado",
+            description: error instanceof Error ? error.message : "Verifique se a coluna avatar_url foi criada em users_profiles.",
+          });
+        }
+      } else {
+        setUsers((current) => current.map((item) => item.id === record.id ? record : item));
+        setFormOpen(false);
+        setEditing(null);
+        mockSave("Usuário");
+      }
       return;
     }
 
@@ -159,7 +187,11 @@ export default function Configuracoes() {
         redirectTo: `${window.location.origin}/login`,
       });
 
-      setUsers((current) => [mapProfileToSystemUser(result.profile), ...current]);
+      const profile = record.avatarUrl
+        ? await updateUserProfile(result.profile.id, { avatar_url: record.avatarUrl })
+        : result.profile;
+
+      setUsers((current) => [mapProfileToSystemUser(profile), ...current]);
       setFormOpen(false);
       setEditing(null);
       toast({
@@ -220,15 +252,17 @@ export default function Configuracoes() {
 }
 
 function user(id: number, name: string, email: string, phone: string, profile: string, region: string, city: string, neighborhood: string, status: UserStatus, lastAccess: string): SystemUser {
-  return { id, name, email, phone, profile, region, city, neighborhood, linkedLeader: profile === "Liderança" ? name : "", status, lastAccess, createdAt: "01/06/2026", notes: "Usuário de referência para Supabase Auth e permissões reais." };
+  return { id, name, email, phone, avatarUrl: "", profile, region, city, neighborhood, linkedLeader: profile === "Liderança" ? name : "", status, lastAccess, createdAt: "01/06/2026", notes: "Usuário de referência para Supabase Auth e permissões reais." };
 }
 
 function mapProfileToSystemUser(profile: UserProfile): SystemUser {
   return {
     id: stableId(profile.id),
+    profileId: profile.id,
     name: profile.full_name,
     email: profile.email,
     phone: profile.phone ?? "Não informado",
+    avatarUrl: profile.avatar_url ?? "",
     profile: getRoleLabel(profile.role),
     region: profile.linked_state ?? "RJ",
     city: profile.linked_city ?? "Todas",
@@ -243,6 +277,15 @@ function mapProfileToSystemUser(profile: UserProfile): SystemUser {
 
 function stableId(value: string) {
   return value.split("").reduce((total, char) => total + char.charCodeAt(0), 0);
+}
+
+function getInitials(value: string) {
+  return value
+    .split(" ")
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((part) => part[0]?.toUpperCase())
+    .join("") || "U";
 }
 
 function normalizeUserStatus(status: string): UserStatus {
@@ -265,6 +308,13 @@ function roleValueFromLabel(label: string) {
   if (normalized.includes("operador de campo")) return "operador_campo";
   if (normalized.includes("lideranca")) return "lideranca";
   return "visualizador";
+}
+
+function statusValueFromLabel(status: UserStatus) {
+  if (status === "Ativo") return "active";
+  if (status === "Bloqueado") return "blocked";
+  if (status === "Inativo") return "inactive";
+  return "pending";
 }
 
 function GeneralTab({ users, onSave }: { users: SystemUser[]; onSave: (label: string) => void }) {
@@ -558,9 +608,20 @@ function UserFormSheet({ open, record, onOpenChange, onSave }: { open: boolean; 
         <form onSubmit={submit} className="space-y-5 p-5">
           <SheetHeader className="rounded-lg border bg-white p-5 text-left shadow-sm"><SheetTitle>{record ? "Editar usuário" : "Convidar usuário"}</SheetTitle><SheetDescription>Cria o usuário no Supabase Auth e vincula o perfil em users_profiles por uma função segura.</SheetDescription></SheetHeader>
           <SettingsPanel title="Dados do usuário" description="Perfil, território vinculado e status de acesso.">
+            <div className="flex items-center gap-3 rounded-lg border border-slate-100 bg-white p-3 md:col-span-2">
+              <Avatar className="h-14 w-14 rounded-xl border border-slate-200 bg-blue-50">
+                <AvatarImage src={draft.avatarUrl} alt={draft.name || "Usuário"} className="object-cover" />
+                <AvatarFallback className="rounded-xl bg-blue-50 text-sm font-extrabold text-blue-700">{getInitials(draft.name || draft.email || "Usuário")}</AvatarFallback>
+              </Avatar>
+              <div className="min-w-0">
+                <div className="font-extrabold text-slate-950">{draft.name || "Novo usuário"}</div>
+                <div className="text-xs font-semibold text-slate-500">Use uma imagem leve, quadrada e hospedada por URL.</div>
+              </div>
+            </div>
             <Field controlled label="Nome completo" value={draft.name} onChange={(event) => update("name", event.target.value)} />
             <Field controlled label="E-mail" value={draft.email} onChange={(event) => update("email", event.target.value)} />
             <Field controlled label="Telefone/WhatsApp" value={draft.phone} onChange={(event) => update("phone", event.target.value)} />
+            <Field controlled className="md:col-span-2" label="URL da foto de perfil" value={draft.avatarUrl} placeholder="https://..." onChange={(event) => update("avatarUrl", event.target.value)} />
             <SelectField label="Perfil de acesso" value={draft.profile} options={accessProfiles.map((p) => p.name)} onChange={(value) => update("profile", value)} />
             <Field controlled label="Região vinculada" value={draft.region} onChange={(event) => update("region", event.target.value)} />
             <Field controlled label="Cidade vinculada" value={draft.city} onChange={(event) => update("city", event.target.value)} />

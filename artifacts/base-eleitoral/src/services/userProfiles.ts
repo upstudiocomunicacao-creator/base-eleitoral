@@ -30,7 +30,7 @@ export async function listUserProfiles(): Promise<UserProfile[]> {
 
 export async function updateUserProfile(
   id: string,
-  changes: Partial<Pick<UserProfile, "full_name" | "phone" | "role" | "status" | "linked_state" | "linked_city" | "linked_neighborhood">>,
+  changes: Partial<Pick<UserProfile, "full_name" | "phone" | "avatar_url" | "role" | "status" | "linked_state" | "linked_city" | "linked_neighborhood">>,
 ): Promise<UserProfile> {
   const supabase = getSupabaseClient();
   const { data, error } = await supabase

@@ -38,6 +38,7 @@ create table if not exists users_profiles (
   full_name text not null,
   email text not null,
   phone text,
+  avatar_url text,
   role text not null,
   status text not null default 'active',
   linked_state text,

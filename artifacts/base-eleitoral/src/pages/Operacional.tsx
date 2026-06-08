@@ -55,7 +55,7 @@ import {
   type ForceStatus,
   type OperationalScope,
 } from "@/services/operational";
-import { isLeadersSupabaseReady, listLeaders } from "@/services/leaders";
+import { createLeader, isLeadersSupabaseReady, listLeaders } from "@/services/leaders";
 import { listLeaderMonthlyMetrics, upsertLeaderMonthlyMetric } from "@/services/leaderMonthlyMetrics";
 import type { Leader, LeaderMonthlyMetric } from "@/types/database";
 
@@ -81,6 +81,7 @@ export default function Operacional() {
   const [actors, setActors] = useState<ForceActor[]>(operationalActors);
   const [loadingRealData, setLoadingRealData] = useState(false);
   const [savingMonthly, setSavingMonthly] = useState(false);
+  const [addingActor, setAddingActor] = useState(false);
   const [dataMessage, setDataMessage] = useState("Dados mockados de referência");
   const [draft, setDraft] = useState({
     name: "",
@@ -136,7 +137,7 @@ export default function Operacional() {
     void loadRealLeaders();
   }, []);
 
-  function addActor() {
+  async function addActor() {
     if (!draft.name.trim() || !draft.phone.trim() || !draft.territory.trim()) return;
     const isMarica = draft.scope === "marica";
     const minVotes = Number(draft.minVotes) || 0;
@@ -147,24 +148,92 @@ export default function Operacional() {
     const extraCost = Number(draft.extraCost) || 0;
     const monthly = operationalMonths.map((item) => ({ month: item, estimatedSupporters, minVotes, maxVotes, baseCost, ceilingCost, extraCost }));
 
-    setActors((current) => [
-      {
-        id: `local-${Date.now()}`,
-        name: draft.name.trim(),
+    if (!isLeadersSupabaseReady()) {
+      setActors((current) => [
+        {
+          id: `local-${Date.now()}`,
+          name: draft.name.trim(),
+          phone: draft.phone.trim(),
+          role: draft.role,
+          scope: draft.scope,
+          territory: draft.territory,
+          city: isMarica ? "Maricá" : draft.territory,
+          neighborhood: isMarica ? draft.territory : undefined,
+          region: isMarica ? undefined : getRJRegionForCity(draft.territory),
+          district: isMarica ? getMaricaDistrictForNeighborhood(draft.territory) : undefined,
+          status: draft.status as ForceActor["status"],
+          notes: "Cadastro criado no modo operacional.",
+          monthly,
+        },
+        ...current,
+      ]);
+      setDataMessage("Cadastro local criado. Configure o Supabase para gravar dados reais.");
+      resetDraft();
+      return;
+    }
+
+    if (maxVotes < minVotes) {
+      toast({ title: "Revise os votos", description: "O voto máximo não pode ser menor que o voto mínimo.", variant: "destructive" });
+      return;
+    }
+
+    if (ceilingCost < baseCost) {
+      toast({ title: "Revise os custos", description: "O custo teto não pode ser menor que o custo base.", variant: "destructive" });
+      return;
+    }
+
+    setAddingActor(true);
+    try {
+      const savedLeader = await createLeader({
+        full_name: draft.name.trim(),
+        political_nickname: null,
         phone: draft.phone.trim(),
-        role: draft.role,
-        scope: draft.scope,
-        territory: draft.territory,
+        email: null,
+        leader_type: getLeaderTypeForRole(draft.role),
+        status: draft.status,
+        neighborhood: isMarica ? draft.territory : "Todos",
         city: isMarica ? "Maricá" : draft.territory,
-        neighborhood: isMarica ? draft.territory : undefined,
-        region: isMarica ? undefined : getRJRegionForCity(draft.territory),
-        district: isMarica ? getMaricaDistrictForNeighborhood(draft.territory) : undefined,
-        status: draft.status as ForceActor["status"],
-        notes: "Cadastro criado no modo operacional.",
-        monthly,
-      },
-      ...current,
-    ]);
+        state: "RJ",
+        territory_region: isMarica ? getMaricaDistrictForNeighborhood(draft.territory) : getRJRegionForCity(draft.territory),
+        geographic_precision: "Baixa",
+        internal_responsible: "Modo Operacional",
+        registered_supporters: estimatedSupporters,
+        estimated_direct_supporters: 0,
+        estimated_indirect_supporters: 0,
+        declared_votes: maxVotes,
+        validated_votes: minVotes,
+        confidence_level: "Médio",
+        estimate_source: "Cadastro operacional",
+        proof_type: "Atualização manual",
+        last_update: new Date().toISOString().slice(0, 10),
+        next_action: "Acompanhar evolução mensal",
+        notes: "Cadastro mínimo criado pelo modo operacional.",
+      });
+
+      const savedMetric = await upsertLeaderMonthlyMetric({
+        leader_id: savedLeader.id,
+        month_ref: monthToDate(month),
+        estimated_supporters: estimatedSupporters,
+        min_votes: minVotes,
+        max_votes: maxVotes,
+        base_cost: baseCost,
+        ceiling_cost: ceilingCost,
+        extra_cost: extraCost,
+      });
+
+      setActors((current) => [leaderToOperationalActor(savedLeader, [savedMetric]), ...current.filter((item) => item.id !== savedLeader.id)]);
+      setDataMessage("Cadastro e métrica mensal salvos no Supabase.");
+      toast({ title: "Cadastro salvo", description: "O registro já entrou no modo operacional e nas métricas do mês." });
+      resetDraft();
+    } catch (error) {
+      const description = error instanceof Error ? error.message : "Não foi possível salvar o cadastro operacional.";
+      toast({ title: "Não foi possível cadastrar", description, variant: "destructive" });
+    } finally {
+      setAddingActor(false);
+    }
+  }
+
+  function resetDraft() {
     setDraft((current) => ({ ...current, name: "", phone: "", estimatedSupporters: "0", minVotes: "0", maxVotes: "0", baseCost: "0", ceilingCost: "0", extraCost: "0" }));
   }
 
@@ -298,7 +367,7 @@ export default function Operacional() {
 
         <TabsContent value="cadastros">
           <div className="grid gap-5 xl:grid-cols-[360px_minmax(0,1fr)]">
-            <CadastroRapido draft={draft} setDraft={setDraft} onAdd={addActor} />
+            <CadastroRapido draft={draft} setDraft={setDraft} onAdd={addActor} saving={addingActor} />
             <ActorsTable actors={actors} month={month} />
           </div>
         </TabsContent>
@@ -522,7 +591,7 @@ function ActorCard({ actor, month, compact = false }: { actor: ForceActor; month
   );
 }
 
-function CadastroRapido({ draft, setDraft, onAdd }: { draft: Record<string, string>; setDraft: (value: any) => void; onAdd: () => void }) {
+function CadastroRapido({ draft, setDraft, onAdd, saving }: { draft: Record<string, string>; setDraft: (value: any) => void; onAdd: () => void; saving: boolean }) {
   const territories = draft.scope === "marica" ? maricaNeighborhoods : rjCities;
   const setRole = (value: string) => {
     const nextScope = value === "coord_rj" ? "rj" : value === "coord_marica" ? "marica" : draft.scope;
@@ -575,6 +644,17 @@ function CadastroRapido({ draft, setDraft, onAdd }: { draft: Record<string, stri
             ? `Distrito: ${getMaricaDistrictForNeighborhood(draft.territory)}`
             : `Região: ${getRJRegionForCity(draft.territory)}`}
         </div>
+        <Field label="Status">
+          <Select value={draft.status} onValueChange={(value) => setDraft({ ...draft, status: value })}>
+            <SelectTrigger><SelectValue /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="Ativo">Ativo</SelectItem>
+              <SelectItem value="Atenção">Atenção</SelectItem>
+              <SelectItem value="Prioritário">Prioritário</SelectItem>
+              <SelectItem value="Pendente">Pendente</SelectItem>
+            </SelectContent>
+          </Select>
+        </Field>
         <Field label="Apoio estimado">
           <Input type="number" value={draft.estimatedSupporters} onChange={(e) => setDraft({ ...draft, estimatedSupporters: e.target.value })} />
         </Field>
@@ -585,7 +665,10 @@ function CadastroRapido({ draft, setDraft, onAdd }: { draft: Record<string, stri
           <Field label="Custo máx."><Input type="number" value={draft.ceilingCost} onChange={(e) => setDraft({ ...draft, ceilingCost: e.target.value })} /></Field>
         </div>
         <Field label="Custo extra eventual"><Input type="number" value={draft.extraCost} onChange={(e) => setDraft({ ...draft, extraCost: e.target.value })} /></Field>
-        <Button className="w-full" onClick={onAdd}><Plus className="h-4 w-4" /> Adicionar no modo operacional</Button>
+        <Button className="w-full" onClick={onAdd} disabled={saving || !draft.name.trim() || !draft.phone.trim()}>
+          {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Plus className="h-4 w-4" />}
+          Salvar cadastro operacional
+        </Button>
       </CardContent>
     </Card>
   );
@@ -959,6 +1042,12 @@ function leaderToOperationalActor(leader: Leader, monthlyMetrics: LeaderMonthlyM
       };
     }),
   };
+}
+
+function getLeaderTypeForRole(role: ForceRole) {
+  if (role === "coord_rj") return "Coordenação RJ";
+  if (role === "coord_marica") return "Coordenação Maricá";
+  return "Liderança";
 }
 
 function toMonthlyDraft(monthly: ReturnType<typeof getMonthly> | null): MonthlyMetricDraft {

@@ -73,6 +73,7 @@ type LeaderFormState = {
   state: string;
   territory_region: string;
   geographic_precision: string;
+  parent_leader_id: string;
   internal_responsible: string;
   registered_supporters: number;
   estimated_direct_supporters: number;
@@ -115,6 +116,7 @@ const emptyForm: LeaderFormState = {
   state: "RJ",
   territory_region: "Sede / Maricá",
   geographic_precision: "Média",
+  parent_leader_id: "",
   internal_responsible: "Coordenação Territorial",
   registered_supporters: 0,
   estimated_direct_supporters: 0,
@@ -321,6 +323,7 @@ export default function Liderancas() {
       <LeadershipFormSheet
         open={formOpen}
         record={editing}
+        leaders={leaders}
         saving={saving}
         setRecord={setEditing}
         onOpenChange={setFormOpen}
@@ -330,6 +333,7 @@ export default function Liderancas() {
       <LeadershipDetailSheet
         open={detailsOpen}
         record={selected}
+        leaders={leaders}
         onOpenChange={(open) => {
           setDetailsOpen(open);
           if (!open) setSelected(null);
@@ -520,6 +524,7 @@ function LeadersTable({
 function LeadershipFormSheet({
   open,
   record,
+  leaders,
   saving,
   setRecord,
   onOpenChange,
@@ -527,6 +532,7 @@ function LeadershipFormSheet({
 }: {
   open: boolean;
   record: LeaderFormState | null;
+  leaders: Leader[];
   saving: boolean;
   setRecord: (record: LeaderFormState | null) => void;
   onOpenChange: (open: boolean) => void;
@@ -543,7 +549,7 @@ function LeadershipFormSheet({
     const neighborhood = isMarica ? "Centro" : "Todos";
     const territoryRegion = isMarica ? getMaricaDistrictForNeighborhood(neighborhood) : getRJRegionForCity(city);
     const leaderType = normalizeLeadershipTypeForTerritory(record.leader_type, isMarica);
-    setRecord({ ...record, city, state: "RJ", neighborhood, territory_region: territoryRegion, leader_type: leaderType });
+    setRecord({ ...record, city, state: "RJ", neighborhood, territory_region: territoryRegion, leader_type: leaderType, parent_leader_id: "" });
   }
 
   function updateScope(scope: "rj" | "marica") {
@@ -555,8 +561,10 @@ function LeadershipFormSheet({
   function updateNeighborhood(neighborhood: string) {
     if (!record) return;
     const territoryRegion = record.city === "Maricá" ? getMaricaDistrictForNeighborhood(neighborhood) : getRJRegionForCity(record.city);
-    setRecord({ ...record, neighborhood, territory_region: territoryRegion });
+    setRecord({ ...record, neighborhood, territory_region: territoryRegion, parent_leader_id: "" });
   }
+
+  const parentOptions = useMemo(() => record ? buildParentLeaderOptions(leaders, record) : [{ value: "none", label: "Nenhum" }], [leaders, record]);
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
@@ -575,8 +583,14 @@ function LeadershipFormSheet({
               <TextField label="Apelido político" value={record.political_nickname} onChange={(value) => update("political_nickname", value)} />
               <TextField required label="Telefone/WhatsApp" value={record.phone} onChange={(value) => update("phone", value)} />
               <TextField label="E-mail" value={record.email} onChange={(value) => update("email", value)} />
-              <SelectTextField required label="Papel no organograma" value={record.leader_type} values={leaderTypeOptions} onChange={(value) => update("leader_type", value)} />
+              <SelectTextField required label="Papel no organograma" value={record.leader_type} values={leaderTypeOptions} onChange={(value) => setRecord({ ...record, leader_type: value, parent_leader_id: "" })} />
               <SelectTextField required label="Status" value={record.status} values={["Ativa", "Atenção", "Em validação", "Inativa"]} onChange={(value) => update("status", value)} />
+              <SelectOptionField
+                label="Vinculado a / indicado por"
+                value={record.parent_leader_id || "none"}
+                options={parentOptions}
+                onChange={(value) => update("parent_leader_id", value === "none" ? "" : value)}
+              />
               <TextField label="Responsável interno" value={record.internal_responsible} onChange={(value) => update("internal_responsible", value)} />
               <AreaField label="Observações" value={record.notes} onChange={(value) => update("notes", value)} />
             </FormSection>
@@ -638,7 +652,7 @@ function LeadershipFormSheet({
   );
 }
 
-function LeadershipDetailSheet({ open, record, onOpenChange }: { open: boolean; record: Leader | null; onOpenChange: (open: boolean) => void }) {
+function LeadershipDetailSheet({ open, record, leaders, onOpenChange }: { open: boolean; record: Leader | null; leaders: Leader[]; onOpenChange: (open: boolean) => void }) {
   if (!record) {
     return <Sheet open={open} onOpenChange={onOpenChange}><SheetContent /></Sheet>;
   }
@@ -646,6 +660,7 @@ function LeadershipDetailSheet({ open, record, onOpenChange }: { open: boolean; 
   const potential = getPotentialTotal(record);
   const validation = getValidationRate(record);
   const attention = getAttentionLevel(record);
+  const parentLeader = record.parent_leader_id ? leaders.find((leader) => leader.id === record.parent_leader_id) : null;
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
@@ -675,6 +690,7 @@ function LeadershipDetailSheet({ open, record, onOpenChange }: { open: boolean; 
                 ["Status", record.status],
                 ["Confiança", record.confidence_level],
                 ["Nível de atenção", attention],
+                ["Vinculado a", parentLeader ? `${parentLeader.full_name} (${parentLeader.leader_type})` : "Nenhum"],
                 ["Responsável interno", record.internal_responsible ?? "-"],
                 ["Telefone", <SensitiveText value={record.phone} kind="phone" />],
                 ["E-mail", <SensitiveText value={record.email} kind="email" />],
@@ -776,6 +792,16 @@ function SelectTextField({ label, value, values, onChange, required = false }: {
   );
 }
 
+function SelectOptionField({ label, value, options, onChange }: { label: string; value: string; options: Array<{ value: string; label: string }>; onChange: (value: string) => void }) {
+  return (
+    <Field label={label}>
+      <select className="h-9 w-full rounded-md border border-slate-200 bg-white px-3 text-sm font-medium text-slate-700 shadow-sm" value={value} onChange={(event) => onChange(event.target.value)}>
+        {options.map((item) => <option key={item.value} value={item.value}>{item.label}</option>)}
+      </select>
+    </Field>
+  );
+}
+
 function AreaField({ label, value, onChange }: { label: string; value: string; onChange: (value: string) => void }) {
   return <Field label={label} className="md:col-span-2"><Textarea value={value} onChange={(event) => onChange(event.target.value)} /></Field>;
 }
@@ -870,6 +896,7 @@ function toFormState(leader: Leader): LeaderFormState {
     state: leader.state,
     territory_region: isMarica ? getMaricaDistrictForNeighborhood(neighborhood) : getRJRegionForCity(city),
     geographic_precision: leader.geographic_precision,
+    parent_leader_id: leader.parent_leader_id ?? "",
     internal_responsible: leader.internal_responsible ?? "",
     registered_supporters: leader.registered_supporters,
     estimated_direct_supporters: leader.estimated_direct_supporters,
@@ -906,6 +933,7 @@ function toInsertPayload(form: LeaderFormState): LeaderInsert {
     state: form.state.trim(),
     territory_region: territory.territory_region,
     geographic_precision: form.geographic_precision,
+    parent_leader_id: nullable(form.parent_leader_id),
     internal_responsible: nullable(form.internal_responsible),
     registered_supporters: Number(form.registered_supporters || 0),
     estimated_direct_supporters: Number(form.estimated_direct_supporters || 0),
@@ -944,6 +972,41 @@ function normalizeLeadershipTypeForTerritory(type: string, isMarica: boolean) {
   if (normalizedType.includes("lider")) return isMarica ? "Liderança Maricá" : "Liderança RJ";
 
   return isMarica ? "Liderança Maricá" : "Liderança RJ";
+}
+
+function buildParentLeaderOptions(leaders: Leader[], record: LeaderFormState) {
+  const normalizedType = normalize(record.leader_type);
+  const isMarica = normalize(record.city) === "marica";
+  const isGeneral = normalizedType.includes("geral");
+  const isLeader = normalizedType.includes("lider");
+  const options = [{ value: "none", label: "Nenhum" }];
+
+  if (isGeneral) return options;
+
+  const generalCoordinators = leaders.filter((leader) =>
+    leader.id !== record.id &&
+    normalize(leader.leader_type).includes("coord") &&
+    normalize(leader.leader_type).includes("geral")
+  );
+
+  const territoryCoordinators = leaders.filter((leader) => {
+    if (leader.id === record.id) return false;
+    const type = normalize(leader.leader_type);
+    if (!type.includes("coord") || type.includes("geral")) return false;
+    if (!isLeader) return false;
+
+    if (isMarica) {
+      return normalize(leader.city) === "marica" && normalize(leader.neighborhood) === normalize(record.neighborhood);
+    }
+
+    return normalize(leader.city) === normalize(record.city);
+  });
+
+  return [
+    ...options,
+    ...generalCoordinators.map((leader) => ({ value: leader.id, label: `${leader.full_name} - Coordenação Geral` })),
+    ...territoryCoordinators.map((leader) => ({ value: leader.id, label: `${leader.full_name} - ${leader.city === "Maricá" ? leader.neighborhood : leader.city}` })),
+  ];
 }
 
 function validateForm(form: LeaderFormState) {

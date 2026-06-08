@@ -1,5 +1,5 @@
 export type OperationalScope = "rj" | "marica";
-export type ForceRole = "coord_rj" | "coord_marica" | "leader";
+export type ForceRole = "coord_general" | "coord_rj" | "coord_marica" | "leader";
 export type ForceStatus = "Ativo" | "Atenção" | "Prioritário" | "Pendente";
 
 export type MonthlyProjection = {
@@ -199,7 +199,7 @@ export const operationalActors: ForceActor[] = [
 function actor(
   id: string,
   name: string,
-  role: Extract<ForceRole, "coord_rj" | "coord_marica">,
+  role: Extract<ForceRole, "coord_general" | "coord_rj" | "coord_marica">,
   scope: OperationalScope,
   territory: string,
   minVotes: number,
@@ -314,6 +314,7 @@ export function getMonthly(actor: ForceActor, month: string) {
 }
 
 export function getRoleLabel(role: ForceRole) {
+  if (role === "coord_general") return "Coord. Geral";
   if (role === "coord_rj") return "Coord. RJ";
   if (role === "coord_marica") return "Coord. Maricá";
   return "Liderança";

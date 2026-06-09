@@ -21,6 +21,7 @@ import {
 import { UserMenu } from "@/components/auth/UserMenu";
 import { canAccessModule, type PermissionModule } from "@/lib/permissions";
 import { useAuth } from "@/hooks/useAuth";
+import { useCampaignSettings } from "@/hooks/useCampaignSettings";
 
 const navItems = [
   { href: "/dashboard", label: "Painel", icon: LayoutDashboard, group: "Operação", module: "dashboard" },
@@ -43,8 +44,11 @@ export function AppLayout({ children }: { children: ReactNode }) {
   const [location] = useLocation();
   const [mobileOpen, setMobileOpen] = useState(false);
   const { profile } = useAuth();
+  const { settings } = useCampaignSettings();
   const visibleNavItems = navItems.filter((item) => canAccessModule(profile, item.module as PermissionModule));
   const activeLabel = visibleNavItems.find((item) => item.href === location || (item.href === "/dashboard" && location === "/"))?.label ?? "Painel";
+  const campaignSubtitle = `${settings.candidateName} - ${settings.office}`;
+  const headerSubtitle = `${settings.name} - ${settings.mainCity}/${settings.mainState}`;
 
   const sidebar = (
     <div className="flex h-full flex-col">
@@ -54,9 +58,9 @@ export function AppLayout({ children }: { children: ReactNode }) {
             <Zap className="h-4 w-4 text-white" />
           </div>
           <div>
-            <div className="text-base font-extrabold leading-none tracking-tight text-white">Base Eleitoral 360</div>
+            <div className="text-base font-extrabold leading-none tracking-tight text-white">{settings.systemName}</div>
             <div className="mt-1 text-[10px] font-bold uppercase tracking-[0.18em] text-cyan-200/80">
-              Inteligência territorial
+              {campaignSubtitle}
             </div>
           </div>
         </div>
@@ -149,7 +153,7 @@ export function AppLayout({ children }: { children: ReactNode }) {
           </button>
           <div className="min-w-0 flex-1">
             <span className="block truncate text-sm font-bold text-slate-950">{activeLabel}</span>
-            <span className="hidden text-xs font-medium text-slate-500 sm:block">Monitoramento territorial de campanha</span>
+            <span className="hidden text-xs font-medium text-slate-500 sm:block">{headerSubtitle}</span>
           </div>
           <div className="hidden items-center gap-2 rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1.5 md:flex">
             <div className="h-2 w-2 rounded-full bg-emerald-500 shadow-[0_0_0_4px_rgba(16,185,129,0.16)]" />

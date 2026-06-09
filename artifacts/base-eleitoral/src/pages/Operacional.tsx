@@ -34,6 +34,7 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "@/hooks/use-toast";
+import { useCampaignSettings } from "@/hooks/useCampaignSettings";
 import {
   computeOperationalSummary,
   getMaricaDistrictForNeighborhood,
@@ -57,6 +58,7 @@ import {
 } from "@/services/operational";
 import { createLeader, isLeadersSupabaseReady, listLeaders } from "@/services/leaders";
 import { listLeaderMonthlyMetrics, upsertLeaderMonthlyMetric } from "@/services/leaderMonthlyMetrics";
+import type { CampaignSettings } from "@/services/campaigns";
 import type { Leader, LeaderMonthlyMetric } from "@/types/database";
 
 const statusTone: Record<string, string> = {
@@ -76,6 +78,7 @@ type MonthlyMetricDraft = {
 };
 
 export default function Operacional() {
+  const { settings: campaignSettings } = useCampaignSettings();
   const [month, setMonth] = useState(operationalMonths[0]);
   const [scope, setScope] = useState<OperationalScope>("marica");
   const [actors, setActors] = useState<ForceActor[]>(operationalActors);
@@ -370,7 +373,7 @@ export default function Operacional() {
         </TabsContent>
 
         <TabsContent value="forca">
-          <ForceMap actors={actors} month={month} />
+          <ForceMap actors={actors} month={month} campaign={campaignSettings} />
         </TabsContent>
 
         <TabsContent value="cadastros">
@@ -528,7 +531,7 @@ function TerritoryStructureCard() {
   );
 }
 
-function ForceMap({ actors, month }: { actors: ForceActor[]; month: string }) {
+function ForceMap({ actors, month, campaign }: { actors: ForceActor[]; month: string; campaign: CampaignSettings }) {
   const general = actors.filter((item) => item.role !== "leader");
   const generalCoordinators = actors.filter((item) => item.role === "coord_general");
   const leaders = actors.filter((item) => item.role === "leader");
@@ -542,12 +545,13 @@ function ForceMap({ actors, month }: { actors: ForceActor[]; month: string }) {
       <CardContent className="space-y-5">
         <div className="mx-auto max-w-sm rounded-xl border border-blue-100 bg-blue-50 p-4 text-center shadow-sm">
           <div className="text-xs font-black uppercase tracking-[0.12em] text-blue-600">Candidato</div>
-          <div className="mt-1 text-xl font-black text-slate-950">Base Eleitoral 360</div>
+          <div className="mt-1 text-xl font-black text-slate-950">{campaign.candidateName}</div>
+          <div className="mt-1 text-sm font-bold text-blue-700">{campaign.office} - {campaign.name}</div>
         </div>
         <Connector />
         <div className="mx-auto max-w-sm rounded-xl border border-emerald-100 bg-emerald-50 p-4 text-center shadow-sm">
           <div className="text-xs font-black uppercase tracking-[0.12em] text-emerald-600">Coordenação Geral</div>
-          <div className="mt-1 text-lg font-black text-slate-950">Comando da campanha</div>
+          <div className="mt-1 text-lg font-black text-slate-950">{campaign.generalResponsible || "Comando da campanha"}</div>
           {generalCoordinators.length ? (
             <div className="mt-3 grid gap-2 text-left">
               {generalCoordinators.map((item) => <ActorCard key={item.id} actor={item} month={month} compact />)}

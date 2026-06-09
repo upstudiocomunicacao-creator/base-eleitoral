@@ -38,6 +38,8 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "@/hooks/use-toast";
+import { notifyCampaignSettingsUpdated, useCampaignSettings } from "@/hooks/useCampaignSettings";
+import { updateCurrentCampaignSettings, type CampaignSettings } from "@/services/campaigns";
 import { inviteCampaignUser } from "@/services/inviteUsers";
 import { listUserProfiles, updateUserProfile } from "@/services/userProfiles";
 import { getRoleLabel } from "@/lib/permissions";
@@ -234,7 +236,7 @@ export default function Configuracoes() {
           ].map(([value, label]) => <TabsTrigger key={value} value={value}>{label}</TabsTrigger>)}
         </TabsList>
 
-        <TabsContent value="geral"><GeneralTab users={users} onSave={mockSave} /></TabsContent>
+        <TabsContent value="geral"><GeneralTab users={users} /></TabsContent>
         <TabsContent value="usuarios"><UsersTab users={users} summary={userSummary} onCreate={() => { setEditing(null); setFormOpen(true); }} onEdit={(userItem) => { setEditing(userItem); setFormOpen(true); }} onDelete={(id) => setUsers((current) => current.filter((item) => item.id !== id))} /></TabsContent>
         <TabsContent value="perfis"><ProfilesTab /></TabsContent>
         <TabsContent value="permissoes"><PermissionsTab /></TabsContent>
@@ -317,29 +319,80 @@ function statusValueFromLabel(status: UserStatus) {
   return "pending";
 }
 
-function GeneralTab({ users, onSave }: { users: SystemUser[]; onSave: (label: string) => void }) {
+function GeneralTab({ users }: { users: SystemUser[] }) {
+  const { settings, loading, error } = useCampaignSettings();
+  const [draft, setDraft] = useState<CampaignSettings>(settings);
+  const [saving, setSaving] = useState(false);
+
+  useEffect(() => {
+    setDraft(settings);
+  }, [settings]);
+
+  const update = <Key extends keyof CampaignSettings>(key: Key, value: CampaignSettings[Key]) => {
+    setDraft((current) => ({ ...current, [key]: value }));
+  };
+
+  const saveGeneral = async () => {
+    if (!draft.name.trim() || !draft.candidateName.trim() || !draft.office.trim()) {
+      toast({
+        title: "Revise os dados da campanha",
+        description: "Nome da campanha, candidato e cargo disputado precisam estar preenchidos.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setSaving(true);
+    try {
+      const saved = await updateCurrentCampaignSettings(draft);
+      setDraft(saved);
+      notifyCampaignSettingsUpdated(saved);
+      toast({
+        title: "Configurações gerais salvas",
+        description: "Nome, candidato, cargo e dados da campanha já foram atualizados no app.",
+      });
+    } catch (saveError) {
+      const description = saveError instanceof Error
+        ? saveError.message
+        : "Rode supabase/add-campaign-settings.sql no Supabase e tente novamente.";
+      toast({ title: "Não foi possível salvar", description, variant: "destructive" });
+    } finally {
+      setSaving(false);
+    }
+  };
+
   return (
     <div className="space-y-5">
       <section className="grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
         <MetricCard label="Sistema ativo" value="Online" icon={Activity} tone="green" />
-        <MetricCard label="Última atualização" value="05/06" icon={CheckCircle2} tone="blue" />
+        <MetricCard label="Campanha" value={draft.electionYear} icon={CheckCircle2} tone="blue" />
         <MetricCard label="Usuários" value={users.length} icon={Users} tone="indigo" />
         <MetricCard label="Perfis ativos" value={accessProfiles.filter((p) => p.status === "Ativo").length} icon={UserCog} tone="violet" />
         <MetricCard label="Módulos" value={modules.length} icon={Database} tone="emerald" />
       </section>
       <SettingsPanel title="Configurações gerais" description="Dados base exibidos nos painéis, relatórios e futuras exportações.">
-        <Field label="Nome do sistema" defaultValue="Base Eleitoral 360" />
-        <Field label="Nome da campanha" defaultValue="Campanha Maricá 2026" />
-        <Field label="Nome do candidato" defaultValue="Candidato Exemplo" />
-        <Field label="Cargo disputado" defaultValue="Vereador" />
-        <Field label="Estado principal" defaultValue="RJ" />
-        <Field label="Município principal" defaultValue="Maricá" />
-        <Field label="Ano da eleição" defaultValue="2026" type="number" />
-        <Field label="Responsável geral" defaultValue="Coordenação Geral" />
-        <Field label="Telefone de contato" defaultValue="(21) 99999-0000" />
-        <Field label="E-mail de contato" defaultValue="contato@campanha.local" />
-        <label className="block md:col-span-2"><FieldLabel>Observações gerais</FieldLabel><Textarea defaultValue="Ambiente operacional para campanha, preparado para autenticação, banco real e auditoria." rows={4} /></label>
-        <div className="md:col-span-2"><Button onClick={() => onSave("Configurações gerais")}><Save className="h-4 w-4" /> Salvar geral</Button></div>
+        {error ? (
+          <div className="md:col-span-2 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm font-semibold text-amber-800">
+            Não foi possível carregar a campanha agora. Verifique o Supabase ou rode supabase/add-campaign-settings.sql.
+          </div>
+        ) : null}
+        <Field controlled label="Nome do sistema" value={draft.systemName} onChange={(event) => update("systemName", event.target.value)} />
+        <Field controlled label="Nome da campanha" value={draft.name} onChange={(event) => update("name", event.target.value)} />
+        <Field controlled label="Nome do candidato" value={draft.candidateName} onChange={(event) => update("candidateName", event.target.value)} />
+        <Field controlled label="Cargo disputado" value={draft.office} onChange={(event) => update("office", event.target.value)} />
+        <Field controlled label="Estado principal" value={draft.mainState} onChange={(event) => update("mainState", event.target.value.toUpperCase())} />
+        <Field controlled label="Município principal" value={draft.mainCity} onChange={(event) => update("mainCity", event.target.value)} />
+        <Field controlled label="Ano da eleição" value={String(draft.electionYear)} type="number" onChange={(event) => update("electionYear", Number(event.target.value) || 2026)} />
+        <Field controlled label="Responsável geral" value={draft.generalResponsible} onChange={(event) => update("generalResponsible", event.target.value)} />
+        <Field controlled label="Telefone de contato" value={draft.contactPhone} onChange={(event) => update("contactPhone", event.target.value)} />
+        <Field controlled label="E-mail de contato" value={draft.contactEmail} onChange={(event) => update("contactEmail", event.target.value)} />
+        <label className="block md:col-span-2"><FieldLabel>Observações gerais</FieldLabel><Textarea value={draft.notes} onChange={(event) => update("notes", event.target.value)} rows={4} /></label>
+        <div className="md:col-span-2">
+          <Button onClick={saveGeneral} disabled={saving || loading}>
+            <Save className="h-4 w-4" />
+            {saving ? "Salvando..." : "Salvar geral"}
+          </Button>
+        </div>
       </SettingsPanel>
     </div>
   );

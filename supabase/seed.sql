@@ -1,10 +1,11 @@
 insert into campaigns (
-  id, name, candidate_name, candidate_number, office, party, coalition, main_state, main_city,
-  election_year, general_vote_goal, validated_vote_goal, supporter_goal, leader_goal,
+  id, name, system_name, candidate_name, candidate_number, office, party, coalition, main_state, main_city,
+  election_year, general_responsible, contact_phone, contact_email, general_vote_goal, validated_vote_goal, supporter_goal, leader_goal,
   start_date, election_date, status, notes
 ) values (
   '00000000-0000-4000-8000-000000000001',
   'Campanha Maricá 2026',
+  'Base Eleitoral 360',
   'Candidato Exemplo',
   '00000',
   'Vereador',
@@ -13,6 +14,9 @@ insert into campaigns (
   'RJ',
   'Maricá',
   2026,
+  'Coordenacao Geral',
+  '(21) 99999-0000',
+  'contato@campanha.local',
   7410,
   7410,
   5000,

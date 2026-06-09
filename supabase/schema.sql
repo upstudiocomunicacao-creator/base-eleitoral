@@ -11,6 +11,7 @@ $$ language plpgsql;
 create table if not exists campaigns (
   id uuid primary key default gen_random_uuid(),
   name text not null,
+  system_name text,
   candidate_name text not null,
   candidate_number text,
   office text not null,
@@ -19,6 +20,9 @@ create table if not exists campaigns (
   main_state text not null,
   main_city text not null,
   election_year integer not null,
+  general_responsible text,
+  contact_phone text,
+  contact_email text,
   general_vote_goal integer not null default 0,
   validated_vote_goal integer not null default 0,
   supporter_goal integer not null default 0,

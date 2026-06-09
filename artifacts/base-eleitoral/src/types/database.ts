@@ -8,6 +8,7 @@ type RowBase = {
 
 export type Campaign = RowBase & {
   name: string;
+  system_name: string | null;
   candidate_name: string;
   candidate_number: string | null;
   office: string;
@@ -16,6 +17,9 @@ export type Campaign = RowBase & {
   main_state: string;
   main_city: string;
   election_year: number;
+  general_responsible: string | null;
+  contact_phone: string | null;
+  contact_email: string | null;
   general_vote_goal: number;
   validated_vote_goal: number;
   supporter_goal: number;

@@ -2,8 +2,10 @@ import { AlertTriangle, RefreshCw } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { PageHeader } from "@/components/common/PageHeader";
 import { Button } from "@/components/ui/button";
+import { useCampaignSettings } from "@/hooks/useCampaignSettings";
 import { listLeaderMonthlyMetrics } from "@/services/leaderMonthlyMetrics";
 import { isLeadersSupabaseReady, listLeaders } from "@/services/leaders";
+import type { CampaignSettings } from "@/services/campaigns";
 import { BranchConnector, FlowConnector } from "./FlowConnector";
 import { FlowNodeCard } from "./FlowNodeCard";
 import { buildForceMapLevels, forceMapLevels } from "./forceMapData";
@@ -12,11 +14,13 @@ import { ForceMapStats } from "./ForceMapStats";
 import type { ForceNode } from "./types";
 
 export function ForceMapPage() {
+  const { settings: campaignSettings } = useCampaignSettings();
   const [levels, setLevels] = useState(forceMapLevels);
   const [loading, setLoading] = useState(false);
   const [sourceLabel, setSourceLabel] = useState("Modelo operacional");
   const [error, setError] = useState<string | null>(null);
-  const nodes = useMemo(() => levels.flat(), [levels]);
+  const campaignLevels = useMemo(() => applyCampaignSettingsToForceMap(levels, campaignSettings), [levels, campaignSettings]);
+  const nodes = useMemo(() => campaignLevels.flat(), [campaignLevels]);
   const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null);
   const selectedNode = nodes.find((node) => node.id === selectedNodeId);
 
@@ -66,17 +70,17 @@ export function ForceMapPage() {
 
       {error ? <ForceMapWarning message={error} /> : null}
 
-      <ForceMapStats nodes={nodes} levels={levels} />
+      <ForceMapStats nodes={nodes} levels={campaignLevels} />
 
       <OperationalRules />
 
       <section className="rounded-lg border border-white/70 bg-white/80 p-4 shadow-[0_18px_50px_rgba(15,23,42,0.08)] backdrop-blur-sm sm:p-6">
         <div className="hidden overflow-x-auto md:block">
-          <DesktopFlow levels={levels} selectedNodeId={selectedNodeId} onSelect={setSelectedNodeId} />
+          <DesktopFlow levels={campaignLevels} selectedNodeId={selectedNodeId} onSelect={setSelectedNodeId} />
         </div>
 
         <div className="md:hidden">
-          <MobileFlow levels={levels} selectedNodeId={selectedNodeId} onSelect={setSelectedNodeId} />
+          <MobileFlow levels={campaignLevels} selectedNodeId={selectedNodeId} onSelect={setSelectedNodeId} />
         </div>
       </section>
 
@@ -89,6 +93,29 @@ export function ForceMapPage() {
       />
     </div>
   );
+}
+
+function applyCampaignSettingsToForceMap(levels: ForceNode[][], campaign: CampaignSettings): ForceNode[][] {
+  return levels.map((level) => level.map((node) => {
+    if (node.id === "candidato") {
+      return {
+        ...node,
+        title: campaign.candidateName || node.title,
+        subtitle: `${campaign.office} - ${campaign.name}`,
+        summary: `Visão consolidada da campanha de ${campaign.candidateName} para ${campaign.office}, separando ${campaign.mainState} por cidades e ${campaign.mainCity} por bairros.`,
+      };
+    }
+
+    if (node.id === "coordenacao-geral") {
+      return {
+        ...node,
+        title: campaign.generalResponsible || node.title,
+        subtitle: "Comando único das coordenações RJ e Maricá.",
+      };
+    }
+
+    return node;
+  }));
 }
 
 function ForceMapWarning({ message }: { message: string }) {

@@ -98,9 +98,26 @@ type TerritoryReportRow = {
   responsible: string;
 };
 
+type LeaderReportNumbers = {
+  supportEstimate: number;
+  minVotes: number;
+  maxVotes: number;
+  baseCost: number;
+  ceilingCost: number;
+  extraCost: number;
+  totalCost: number;
+};
+
+type CoordinatorRollup = {
+  coordinator: Leader;
+  descendants: Leader[];
+  linkedLeaders: Leader[];
+  numbers: LeaderReportNumbers;
+};
+
 export const reportDefinitions: ReportDefinition[] = [
   report("geral", "Relatório Geral Operacional", "Geral", "Visão consolidada de coordenações, lideranças, apoio estimado, votos e territórios prioritários.", "Operação completa"),
-  report("lideranca", "Relatório por Cadastro Territorial", "Liderança", "Performance de coordenadores e lideranças por cidade, bairro, estimativa de apoio, votos e próxima ação.", "Cadastros"),
+  report("lideranca", "Relatório por Cadastro Territorial", "Liderança", "Performance hierárquica de coordenadores e lideranças, com números individuais, somatórios dos subordinados, votos e custos mensais.", "Cadastros"),
   report("bairro", "Relatório Maricá por Bairro", "Território", "Leitura territorial por bairro e distrito de Maricá, com força local, meta e distância.", "Bairros de Maricá"),
   report("municipio", "Relatório RJ por Cidade", "Território", "Comparativo das cidades do RJ com atuação, apoio estimado e oportunidade territorial.", "Cidades do RJ"),
   report("votos", "Relatório de Votos e Conversão", "Estratégico", "Compara votos declarados, validados, taxa de conversão e lacunas por território.", "Votos"),
@@ -182,7 +199,7 @@ export function generateReportPreview(dataset: DashboardDataset, reportId: strin
   const territoryRows = buildTerritoryRows(filtered);
   const rows = buildRowsForReport(definition.id, filtered, territoryRows);
   const metrics = buildMetricsForReport(definition.id, filtered, territoryRows, rows);
-  const chart = buildChartForReport(definition.id, territoryRows);
+  const chart = buildChartForReport(definition.id, territoryRows, filtered);
   const recommendations = buildRecommendations(territoryRows);
   const executiveSummary = buildExecutiveSummary(definition.id, filtered, territoryRows);
 
@@ -231,21 +248,7 @@ function buildRowsForReport(reportId: string, dataset: DashboardDataset, territo
   if (reportId === "municipio") return groupByCity(territoryRows);
 
   if (reportId === "lideranca") {
-    const metricMap = getCurrentMetricMap(dataset.leaderMonthlyMetrics);
-    return dataset.leaders.map((item) => ({
-      Cadastro: item.full_name,
-      Papel: item.leader_type,
-      Bairro: item.neighborhood,
-      Cidade: item.city,
-      "Região/Distrito": item.territory_region ?? "-",
-      "Apoio estimado": getLeaderMetricValue(item, metricMap, "estimated_supporters", leaderSupport(item)),
-      "Votos mínimos": getLeaderMetricValue(item, metricMap, "min_votes", item.validated_votes),
-      "Votos máximos": getLeaderMetricValue(item, metricMap, "max_votes", item.declared_votes),
-      "Confirmação": `${percent(getLeaderMetricValue(item, metricMap, "min_votes", item.validated_votes), getLeaderMetricValue(item, metricMap, "max_votes", item.declared_votes))}%`,
-      Confiança: item.confidence_level,
-      Responsável: item.internal_responsible ?? "Não definido",
-      "Próxima ação": item.next_action ?? "Validar estimativa",
-    }));
+    return buildLeaderHierarchyRows(dataset);
   }
 
   if (reportId === "custos") {
@@ -290,6 +293,28 @@ function buildMetricsForReport(reportId: string, dataset: DashboardDataset, terr
   const monthlyCost = sumMetric(currentMetrics, "ceiling_cost") + sumMetric(currentMetrics, "extra_cost");
   const distance = Math.max(maxVotes - minVotes, 0);
 
+  if (reportId === "lideranca") {
+    const rollups = buildCoordinatorRollups(dataset);
+    const leadersById = new Map(dataset.leaders.map((item) => [item.id, item]));
+    const subordinateLeaderIds = new Set(rollups.flatMap((item) => item.descendants.map((leader) => leader.id)));
+    const linkedLeaders = Array.from(subordinateLeaderIds).filter((id) => {
+      const leader = leadersById.get(id);
+      return leader && !isCoordinatorLeader(leader);
+    }).length;
+    const withoutLink = dataset.leaders.filter((item) => !isCoordinatorLeader(item) && !item.parent_leader_id).length;
+
+    return [
+      metric("Coordenações", rollups.length),
+      metric("Lideranças vinculadas", linkedLeaders),
+      metric("Sem vínculo", withoutLink),
+      metric("Apoio total", supportEstimate),
+      metric("Votos mínimos", minVotes),
+      metric("Votos máximos", maxVotes),
+      metric("Custo total (R$)", monthlyCost),
+      metric("Custo/voto mín.", costPerVote(monthlyCost, minVotes)),
+    ];
+  }
+
   if (reportId === "custos") {
     return [
       metric("Cadastros com custo", dataset.leaders.length),
@@ -311,7 +336,9 @@ function buildMetricsForReport(reportId: string, dataset: DashboardDataset, terr
   ];
 }
 
-function buildChartForReport(reportId: string, territoryRows: TerritoryReportRow[]) {
+function buildChartForReport(reportId: string, territoryRows: TerritoryReportRow[], dataset: DashboardDataset) {
+  if (reportId === "lideranca") return buildCoordinatorChartRows(dataset);
+
   const rows = reportId === "municipio" ? cityChartRows(territoryRows) : territoryRows;
   return rows.slice(0, 8).map((item) => ({
     name: item.area,
@@ -319,6 +346,177 @@ function buildChartForReport(reportId: string, territoryRows: TerritoryReportRow
     minimos: item.validatedVotes,
     apoio: item.supportEstimate,
   }));
+}
+
+function buildLeaderHierarchyRows(dataset: DashboardDataset) {
+  const metricMap = getCurrentMetricMap(dataset.leaderMonthlyMetrics);
+  const rollups = buildCoordinatorRollups(dataset);
+  const descendantIds = new Set(rollups.flatMap((item) => item.descendants.map((leader) => leader.id)));
+  const rows: Array<Record<string, string | number>> = [];
+
+  rollups.forEach(({ coordinator, descendants, linkedLeaders, numbers }) => {
+    rows.push({
+      Nível: "Coordenação",
+      Cadastro: coordinator.full_name,
+      Coordenação: "-",
+      Cidade: coordinator.city,
+      Bairro: coordinator.neighborhood,
+      "Lideranças vinculadas": linkedLeaders.length,
+      "Apoio total": numbers.supportEstimate,
+      "Custo total (R$)": numbers.totalCost,
+      Papel: coordinator.leader_type,
+      "Votos mínimos": numbers.minVotes,
+      "Votos máximos": numbers.maxVotes,
+      "Custo base (R$)": numbers.baseCost,
+      "Custo teto (R$)": numbers.ceilingCost,
+      "Extras (R$)": numbers.extraCost,
+      "Custo/voto mín.": costPerVote(numbers.totalCost, numbers.minVotes),
+      "Lista de lideranças": linkedLeaders.map((leader) => leader.full_name).join(", ") || "Sem lideranças vinculadas",
+    });
+
+    descendants.forEach((leader) => {
+      const itemNumbers = leaderReportNumbers(leader, metricMap);
+      rows.push({
+        Nível: isCoordinatorLeader(leader) ? "Subcoordenação" : "Liderança vinculada",
+        Cadastro: leader.full_name,
+        Coordenação: coordinator.full_name,
+        Cidade: leader.city,
+        Bairro: leader.neighborhood,
+        "Lideranças vinculadas": "-",
+        "Apoio total": itemNumbers.supportEstimate,
+        "Custo total (R$)": itemNumbers.totalCost,
+        Papel: leader.leader_type,
+        "Votos mínimos": itemNumbers.minVotes,
+        "Votos máximos": itemNumbers.maxVotes,
+        "Custo base (R$)": itemNumbers.baseCost,
+        "Custo teto (R$)": itemNumbers.ceilingCost,
+        "Extras (R$)": itemNumbers.extraCost,
+        "Custo/voto mín.": costPerVote(itemNumbers.totalCost, itemNumbers.minVotes),
+        Confiança: leader.confidence_level,
+        Status: leader.status,
+        "Próxima ação": leader.next_action ?? "Validar estimativa",
+      });
+    });
+  });
+
+  dataset.leaders
+    .filter((leader) => !isCoordinatorLeader(leader) && !leader.parent_leader_id && !descendantIds.has(leader.id))
+    .forEach((leader) => {
+      const itemNumbers = leaderReportNumbers(leader, metricMap);
+      rows.push({
+        Nível: "Liderança sem vínculo",
+        Cadastro: leader.full_name,
+        Coordenação: "Nenhuma",
+        Cidade: leader.city,
+        Bairro: leader.neighborhood,
+        "Lideranças vinculadas": "-",
+        "Apoio total": itemNumbers.supportEstimate,
+        "Custo total (R$)": itemNumbers.totalCost,
+        Papel: leader.leader_type,
+        "Votos mínimos": itemNumbers.minVotes,
+        "Votos máximos": itemNumbers.maxVotes,
+        "Custo base (R$)": itemNumbers.baseCost,
+        "Custo teto (R$)": itemNumbers.ceilingCost,
+        "Extras (R$)": itemNumbers.extraCost,
+        "Custo/voto mín.": costPerVote(itemNumbers.totalCost, itemNumbers.minVotes),
+        Confiança: leader.confidence_level,
+        Status: leader.status,
+        "Próxima ação": leader.next_action ?? "Vincular a uma coordenação",
+      });
+    });
+
+  return rows;
+}
+
+function buildCoordinatorChartRows(dataset: DashboardDataset) {
+  return buildCoordinatorRollups(dataset).slice(0, 8).map(({ coordinator, numbers }) => ({
+    name: coordinator.full_name,
+    maximos: numbers.maxVotes,
+    minimos: numbers.minVotes,
+    apoio: numbers.supportEstimate,
+    custo: numbers.totalCost,
+  }));
+}
+
+function buildCoordinatorRollups(dataset: DashboardDataset): CoordinatorRollup[] {
+  const metricMap = getCurrentMetricMap(dataset.leaderMonthlyMetrics);
+  const childrenByParent = buildChildrenByParent(dataset.leaders);
+  const coordinatorIds = new Set<string>();
+
+  dataset.leaders.forEach((leader) => {
+    if (isCoordinatorLeader(leader) || childrenByParent.has(leader.id)) coordinatorIds.add(leader.id);
+  });
+
+  return dataset.leaders
+    .filter((leader) => coordinatorIds.has(leader.id))
+    .map((coordinator) => {
+      const descendants = collectDescendants(coordinator.id, childrenByParent);
+      const linkedLeaders = descendants.filter((leader) => !isCoordinatorLeader(leader));
+      return {
+        coordinator,
+        descendants,
+        linkedLeaders,
+        numbers: sumLeaderReportNumbers([coordinator, ...descendants], metricMap),
+      };
+    })
+    .sort((a, b) => b.numbers.totalCost - a.numbers.totalCost || b.numbers.maxVotes - a.numbers.maxVotes);
+}
+
+function buildChildrenByParent(leaders: Leader[]) {
+  const childrenByParent = new Map<string, Leader[]>();
+  const leadersById = new Map(leaders.map((leader) => [leader.id, leader]));
+
+  leaders.forEach((leader) => {
+    if (!leader.parent_leader_id || !leadersById.has(leader.parent_leader_id)) return;
+    const current = childrenByParent.get(leader.parent_leader_id) ?? [];
+    current.push(leader);
+    childrenByParent.set(leader.parent_leader_id, current);
+  });
+
+  return childrenByParent;
+}
+
+function collectDescendants(parentId: string, childrenByParent: Map<string, Leader[]>, visited = new Set<string>()): Leader[] {
+  if (visited.has(parentId)) return [];
+  visited.add(parentId);
+
+  const children = childrenByParent.get(parentId) ?? [];
+  return children.flatMap((child) => [child, ...collectDescendants(child.id, childrenByParent, visited)]);
+}
+
+function leaderReportNumbers(leader: Leader, metricMap: Map<string, LeaderMonthlyMetric>): LeaderReportNumbers {
+  const baseCost = getLeaderMetricValue(leader, metricMap, "base_cost", 0);
+  const ceilingCost = getLeaderMetricValue(leader, metricMap, "ceiling_cost", 0);
+  const extraCost = getLeaderMetricValue(leader, metricMap, "extra_cost", 0);
+
+  return {
+    supportEstimate: getLeaderMetricValue(leader, metricMap, "estimated_supporters", leaderSupport(leader)),
+    minVotes: getLeaderMetricValue(leader, metricMap, "min_votes", leader.validated_votes),
+    maxVotes: getLeaderMetricValue(leader, metricMap, "max_votes", leader.declared_votes),
+    baseCost,
+    ceilingCost,
+    extraCost,
+    totalCost: ceilingCost + extraCost,
+  };
+}
+
+function sumLeaderReportNumbers(leaders: Leader[], metricMap: Map<string, LeaderMonthlyMetric>): LeaderReportNumbers {
+  return leaders.reduce<LeaderReportNumbers>((total, leader) => {
+    const numbers = leaderReportNumbers(leader, metricMap);
+    return {
+      supportEstimate: total.supportEstimate + numbers.supportEstimate,
+      minVotes: total.minVotes + numbers.minVotes,
+      maxVotes: total.maxVotes + numbers.maxVotes,
+      baseCost: total.baseCost + numbers.baseCost,
+      ceilingCost: total.ceilingCost + numbers.ceilingCost,
+      extraCost: total.extraCost + numbers.extraCost,
+      totalCost: total.totalCost + numbers.totalCost,
+    };
+  }, { supportEstimate: 0, minVotes: 0, maxVotes: 0, baseCost: 0, ceilingCost: 0, extraCost: 0, totalCost: 0 });
+}
+
+function isCoordinatorLeader(leader: Leader) {
+  return normalize(leader.leader_type).includes("coord");
 }
 
 function buildRecommendations(rows: TerritoryReportRow[]) {
@@ -341,6 +539,18 @@ function buildExecutiveSummary(reportId: string, dataset: DashboardDataset, terr
   const supportEstimate = sumLeadersSupport(dataset.leaders);
   const top = [...territoryRows].sort((a, b) => b.distanceToGoal - a.distanceToGoal || b.supportEstimate - a.supportEstimate)[0];
   const base = `O recorte possui ${dataset.leaders.length} cadastros territoriais, ${supportEstimate.toLocaleString("pt-BR")} apoios estimados e ${validatedVotes.toLocaleString("pt-BR")} votos validados. A distância até a meta atual é de ${distance.toLocaleString("pt-BR")} votos.`;
+  if (reportId === "lideranca") {
+    const rollups = buildCoordinatorRollups(dataset);
+    const leadersById = new Map(dataset.leaders.map((item) => [item.id, item]));
+    const linkedLeaders = new Set(rollups.flatMap((item) => item.descendants.map((leader) => leader.id)));
+    const linkedLeadershipCount = Array.from(linkedLeaders).filter((id) => {
+      const leader = leadersById.get(id);
+      return leader && !isCoordinatorLeader(leader);
+    }).length;
+    const monthlyCost = sumMetric(getCurrentMetrics(dataset.leaderMonthlyMetrics), "ceiling_cost") + sumMetric(getCurrentMetrics(dataset.leaderMonthlyMetrics), "extra_cost");
+
+    return `${base} A leitura hierárquica consolida ${rollups.length} coordenação(ões), ${linkedLeadershipCount} liderança(s) vinculada(s) e custo mensal de R$ ${monthlyCost.toLocaleString("pt-BR")}. Cada coordenação soma seus próprios números com os subordinados vinculados.`;
+  }
   if (reportId === "custos") return `${base} O centro de custos mensal deve consolidar custo base, teto e extras por coordenação ou liderança.`;
   if (top) return `${base} O território mais sensível é ${top.area}, em ${top.city}, com prioridade ${top.priority.toLowerCase()} e ${top.distanceToGoal.toLocaleString("pt-BR")} votos de distância.`;
   return campaign ? `${base} Relatório vinculado à campanha ${campaign.name}.` : base;

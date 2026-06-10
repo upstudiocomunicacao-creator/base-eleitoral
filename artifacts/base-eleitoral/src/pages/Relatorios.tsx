@@ -274,6 +274,7 @@ function QuickReports({ reports, onSelect, loading }: { reports: ReportDefinitio
 
 function ReportPreview({ report, loading, exporting, onExport }: { report: ReportPreviewData | null; loading: boolean; exporting: string | null; onExport: (kind: "csv" | "xlsx" | "pdf") => Promise<void> }) {
   if (loading) return <Card className="premium-card"><CardContent className="space-y-4 p-5"><Skeleton className="h-8 w-2/3" /><Skeleton className="h-24 w-full" /><Skeleton className="h-64 w-full" /></CardContent></Card>;
+  const previewRows = report?.definition.id === "lideranca" ? report.rows : report?.rows.slice(0, 8) ?? [];
   if (!report) return <EmptyState title="Selecione um relatório" description="A prévia aparece aqui assim que houver dados disponíveis." icon={FileText} />;
 
   return (
@@ -329,7 +330,7 @@ function ReportPreview({ report, loading, exporting, onExport }: { report: Repor
           <Table>
             <TableHeader><TableRow>{getTableHeaders(report.rows).map((head) => <TableHead key={head}>{head}</TableHead>)}</TableRow></TableHeader>
             <TableBody>
-              {report.rows.slice(0, 8).map((row, index) => (
+              {previewRows.map((row, index) => (
                 <TableRow key={index}>
                   {getTableHeaders(report.rows).map((head) => <TableCell key={head} className={index === 0 && head === getTableHeaders(report.rows)[0] ? "font-bold" : ""}>{String(row[head] ?? "-")}</TableCell>)}
                 </TableRow>

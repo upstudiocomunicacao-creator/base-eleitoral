@@ -218,15 +218,20 @@ export function generateReportPreview(dataset: DashboardDataset, reportId: strin
 }
 
 export function filterReportDataset(dataset: DashboardDataset, filters: ReportFilters): DashboardDataset {
+  const selectedLeader = filters.lideranca !== "todos"
+    ? dataset.leaders.find((item) => normalize(item.full_name) === normalize(filters.lideranca))
+    : null;
+  const selectedHierarchyIds = selectedLeader ? getHierarchyIds(dataset.leaders, selectedLeader.id) : new Set<string>();
+
   const leaders = dataset.leaders.filter((item) =>
     selectMatches(filters.estado, item.state) &&
     selectMatches(filters.cidade, item.city) &&
     selectMatches(filters.bairro, item.neighborhood) &&
-    selectMatches(filters.lideranca, item.full_name) &&
+    (filters.lideranca === "todos" || selectedHierarchyIds.has(item.id) || selectMatches(filters.lideranca, item.full_name)) &&
     selectMatches(filters.responsavel, item.internal_responsible ?? "Não definido") &&
     selectMatches(filters.prioridade, getLeaderPriority(item.validated_votes, item.declared_votes, item.confidence_level)) &&
     selectMatches(filters.status, item.status) &&
-    matchesPeriod(filters.periodo, item.created_at),
+    (selectedLeader ? true : matchesPeriod(filters.periodo, item.created_at)),
   );
   const leaderIds = new Set(leaders.map((item) => item.id));
 
@@ -482,6 +487,11 @@ function collectDescendants(parentId: string, childrenByParent: Map<string, Lead
 
   const children = childrenByParent.get(parentId) ?? [];
   return children.flatMap((child) => [child, ...collectDescendants(child.id, childrenByParent, visited)]);
+}
+
+function getHierarchyIds(leaders: Leader[], rootId: string) {
+  const childrenByParent = buildChildrenByParent(leaders);
+  return new Set([rootId, ...collectDescendants(rootId, childrenByParent).map((leader) => leader.id)]);
 }
 
 function leaderReportNumbers(leader: Leader, metricMap: Map<string, LeaderMonthlyMetric>): LeaderReportNumbers {

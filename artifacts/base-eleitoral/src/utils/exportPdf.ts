@@ -3,7 +3,7 @@ import { getReportFileName } from "./exportCsv";
 
 export async function exportReportPdf(report: ReportPreviewData) {
   const { jsPDF } = await import("jspdf");
-  const pdf = new jsPDF({ orientation: "portrait", unit: "pt", format: "a4" });
+  const pdf = new jsPDF({ orientation: report.definition.id === "lideranca" ? "landscape" : "portrait", unit: "pt", format: "a4" });
   const pageWidth = pdf.internal.pageSize.getWidth();
   const margin = 42;
   let y = 42;
@@ -44,9 +44,9 @@ export async function exportReportPdf(report: ReportPreviewData) {
 
   pdf.setFont("helvetica", "bold");
   pdf.setFontSize(11);
-  pdf.text("Tabela resumida", margin, y);
+  pdf.text(report.definition.id === "lideranca" ? "Cadastros e subordinados" : "Tabela resumida", margin, y);
   y += 16;
-  y = addTable(pdf, report.rows.slice(0, 10), margin, y, pageWidth);
+  y = addTable(pdf, report.rows, margin, y, pageWidth, report.definition.id);
   y += 12;
 
   y = addSection(pdf, "Recomendações estratégicas", report.recommendations.map((item) => `- ${item}`).join("\n"), margin, y, pageWidth);
@@ -70,7 +70,7 @@ function addSection(pdf: InstanceType<(typeof import("jspdf"))["jsPDF"]>, title:
   return y + lines.length * 12 + 10;
 }
 
-function addTable(pdf: InstanceType<(typeof import("jspdf"))["jsPDF"]>, rows: Array<Record<string, string | number>>, margin: number, y: number, pageWidth: number) {
+function addTable(pdf: InstanceType<(typeof import("jspdf"))["jsPDF"]>, rows: Array<Record<string, string | number>>, margin: number, y: number, pageWidth: number, reportId: string) {
   if (!rows.length) {
     pdf.setFont("helvetica", "normal");
     pdf.setFontSize(9);
@@ -78,16 +78,35 @@ function addTable(pdf: InstanceType<(typeof import("jspdf"))["jsPDF"]>, rows: Ar
     return y + 18;
   }
 
-  const headers = Object.keys(rows[0]).slice(0, 5);
+  const preferredHeaders = ["Nível", "Cadastro", "Coordenação", "Cidade", "Bairro", "Apoio total", "Votos mínimos", "Custo total (R$)"];
+  const rowHeaders = Object.keys(rows[0]);
+  const headers = reportId === "lideranca"
+    ? preferredHeaders.filter((header) => rowHeaders.includes(header))
+    : rowHeaders.slice(0, 5);
   const columnWidth = (pageWidth - margin * 2) / headers.length;
+  const pageHeight = pdf.internal.pageSize.getHeight();
+
+  const printHeader = () => {
+    pdf.setFont("helvetica", "bold");
+    pdf.setFontSize(reportId === "lideranca" ? 7 : 8);
+    headers.forEach((header, index) => pdf.text(header, margin + index * columnWidth, y, { maxWidth: columnWidth - 6 }));
+    y += 14;
+    pdf.setFont("helvetica", "normal");
+    pdf.setFontSize(reportId === "lideranca" ? 7 : 8);
+  };
+
   pdf.setFont("helvetica", "bold");
-  pdf.setFontSize(8);
-  headers.forEach((header, index) => pdf.text(header, margin + index * columnWidth, y, { maxWidth: columnWidth - 6 }));
-  y += 14;
-  pdf.setFont("helvetica", "normal");
-  rows.forEach((row) => {
+  printHeader();
+  rows.forEach((row, rowIndex) => {
+    if (y > pageHeight - 54) {
+      pdf.addPage();
+      y = 42;
+      printHeader();
+    }
     headers.forEach((header, index) => {
-      pdf.text(String(row[header] ?? "-").slice(0, 28), margin + index * columnWidth, y, { maxWidth: columnWidth - 6 });
+      const value = String(row[header] ?? "-");
+      pdf.setFont("helvetica", rowIndex === 0 && reportId === "lideranca" ? "bold" : "normal");
+      pdf.text(value.slice(0, reportId === "lideranca" ? 34 : 28), margin + index * columnWidth, y, { maxWidth: columnWidth - 6 });
     });
     y += 13;
   });

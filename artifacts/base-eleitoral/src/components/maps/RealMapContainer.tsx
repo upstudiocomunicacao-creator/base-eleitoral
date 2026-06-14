@@ -228,15 +228,15 @@ function RealMapSummary({ summary, mode, heatmapLayer }: { summary: MapData["sum
   ];
 
   return (
-    <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+    <div className="grid gap-3 [grid-template-columns:repeat(auto-fit,minmax(150px,1fr))]">
       {cards.map(({ label, value, icon: Icon }) => (
         <div key={label} className="rounded-xl border border-slate-100 bg-white p-4 shadow-sm">
           <div className="flex items-center justify-between gap-3">
-            <div>
-              <div className="text-xs font-bold uppercase tracking-[0.08em] text-slate-400">{label}</div>
-              <div className="mt-1 text-xl font-extrabold text-slate-950">{String(value)}</div>
+            <div className="min-w-0">
+              <div className="break-words text-xs font-bold uppercase leading-snug tracking-[0.08em] text-slate-400 [overflow-wrap:anywhere]">{label}</div>
+              <div className="mt-1 break-words text-xl font-extrabold leading-tight text-slate-950 [overflow-wrap:anywhere]">{String(value)}</div>
             </div>
-            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-blue-50 text-blue-600">
+            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-blue-50 text-blue-600">
               <Icon className="h-4 w-4" />
             </div>
           </div>
@@ -244,7 +244,7 @@ function RealMapSummary({ summary, mode, heatmapLayer }: { summary: MapData["sum
       ))}
       <div className="rounded-xl border border-blue-100 bg-blue-50 p-4 shadow-sm">
         <div className="text-xs font-bold uppercase tracking-[0.08em] text-blue-500">Camada ativa</div>
-        <div className="mt-1 text-xl font-extrabold text-blue-950">{mode === "heatmap" ? getHeatmapLayerLabel(heatmapLayer) : mode}</div>
+        <div className="mt-1 break-words text-xl font-extrabold leading-tight text-blue-950 [overflow-wrap:anywhere]">{mode === "heatmap" ? getHeatmapLayerLabel(heatmapLayer) : mode}</div>
       </div>
     </div>
   );

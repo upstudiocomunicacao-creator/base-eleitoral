@@ -316,7 +316,7 @@ export default function Prospeccao() {
 
       {error ? <ConnectionWarning message={error} /> : null}
 
-      <div className="grid grid-cols-2 gap-4 md:grid-cols-5 xl:grid-cols-10">
+      <div className="grid gap-4 [grid-template-columns:repeat(auto-fit,minmax(148px,1fr))]">
         <MetricCard label="Novos" value={summary.novoContato} icon={Users} tone="blue" loading={loading} />
         <MetricCard label="1º atendimento" value={summary.primeiroAtendimento} icon={UserCheck} tone="cyan" loading={loading} />
         <MetricCard label="Simpatizantes" value={summary.simpatizante} icon={TrendingUp} tone="amber" loading={loading} />

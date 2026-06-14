@@ -256,7 +256,7 @@ function buildRealMapFilters(filters: Filters, scope: TerritoryScope): MapDataFi
 function TerritoryStatsCards({ scope, summary }: { scope: TerritoryScope; summary: ReturnType<typeof buildSummary> }) {
   const isState = scope === "state";
   return (
-    <section className="grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
+    <section className="grid gap-3 [grid-template-columns:repeat(auto-fit,minmax(148px,1fr))]">
       <MetricCard label={isState ? "Munic\u00edpios com atua\u00e7\u00e3o" : "Bairros mapeados"} value={summary.activeAreas} icon={MapPin} tone="blue" />
       <MetricCard label={isState ? "Munic\u00edpios sem atua\u00e7\u00e3o" : "Bairros sem cobertura"} value={summary.inactiveAreas} icon={AlertTriangle} tone="amber" />
       <MetricCard label={isState ? "Cadastros no RJ" : "Cadastros em Maric\u00e1"} value={summary.leaders} icon={RadioTower} tone="indigo" />
@@ -494,7 +494,7 @@ function MapLegend({ activeLayer }: { activeLayer: HeatMode }) {
     <Card className="premium-card">
       <CardHeader className="pb-3"><CardTitle className="flex items-center gap-2 text-sm"><Layers className="h-4 w-4 text-blue-600" /> Legenda do mapa</CardTitle></CardHeader>
       <CardContent className="space-y-3">
-        <div className="rounded-lg border border-slate-100 bg-slate-50 p-3"><div className="text-xs font-bold uppercase tracking-[0.1em] text-slate-400">Camada ativa</div><div className="mt-1 text-sm font-extrabold text-slate-900">{layerName(activeLayer)}</div></div>
+        <div className="rounded-lg border border-slate-100 bg-slate-50 p-3"><div className="break-words text-xs font-bold uppercase leading-snug tracking-[0.08em] text-slate-400 [overflow-wrap:anywhere]">Camada ativa</div><div className="mt-1 break-words text-sm font-extrabold leading-tight text-slate-900 [overflow-wrap:anywhere]">{layerName(activeLayer)}</div></div>
         {items.map(([label, value, color]) => (
           <div key={label} className="flex items-center justify-between gap-3 rounded-lg bg-white p-2 shadow-sm">
             <div className="flex items-center gap-2"><span className="h-3 w-3 rounded-full" style={{ background: color }} /><span className="text-sm font-bold text-slate-700">{label}</span></div>

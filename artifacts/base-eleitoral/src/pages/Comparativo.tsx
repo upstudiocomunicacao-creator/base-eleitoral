@@ -148,7 +148,7 @@ export default function Comparativo() {
 
       {error ? <ConnectionWarning message={error} onRetry={() => void loadData()} /> : null}
 
-      <section className="grid gap-3 sm:grid-cols-2 lg:grid-cols-5 xl:grid-cols-10">
+      <section className="grid gap-3 [grid-template-columns:repeat(auto-fit,minmax(148px,1fr))]">
         <MetricCard label="Territórios" value={summary.territories} icon={MapPin} tone="blue" loading={loading} />
         <MetricCard label="Coordenações" value={summary.coordinators} icon={Building2} tone="indigo" loading={loading} />
         <MetricCard label="Lideranças" value={summary.leaders} icon={Users} tone="violet" loading={loading} />

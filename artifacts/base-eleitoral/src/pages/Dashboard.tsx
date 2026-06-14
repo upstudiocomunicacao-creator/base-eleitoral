@@ -146,7 +146,7 @@ export default function Dashboard() {
 
       <ExecutivePulse computed={computed} loading={loading} />
 
-      <div className="grid grid-cols-2 gap-4 md:grid-cols-3 lg:grid-cols-5 xl:grid-cols-10">
+      <div className="grid gap-4 [grid-template-columns:repeat(auto-fit,minmax(148px,1fr))]">
         {statCards.map(({ key, label, icon, tone }) => (
           <MetricCard
             key={key}

@@ -1,15 +1,83 @@
-alter table campaigns
+alter table public.campaigns
   add column if not exists system_name text,
+  add column if not exists candidate_number text,
+  add column if not exists party text,
+  add column if not exists coalition text,
   add column if not exists general_responsible text,
   add column if not exists contact_phone text,
-  add column if not exists contact_email text;
+  add column if not exists contact_email text,
+  add column if not exists general_vote_goal integer default 0,
+  add column if not exists validated_vote_goal integer default 0,
+  add column if not exists supporter_goal integer default 0,
+  add column if not exists leader_goal integer default 0,
+  add column if not exists start_date date,
+  add column if not exists election_date date,
+  add column if not exists notes text;
 
-update campaigns
+insert into public.campaigns (
+  id,
+  name,
+  system_name,
+  candidate_name,
+  candidate_number,
+  office,
+  party,
+  coalition,
+  main_state,
+  main_city,
+  election_year,
+  general_responsible,
+  contact_phone,
+  contact_email,
+  general_vote_goal,
+  validated_vote_goal,
+  supporter_goal,
+  leader_goal,
+  start_date,
+  election_date,
+  status,
+  notes
+)
+values (
+  '00000000-0000-4000-8000-000000000001',
+  'Campanha Maricá 2026',
+  'Base Eleitoral 360',
+  'Candidato Exemplo',
+  '00000',
+  'Vereador',
+  'Partido Modelo',
+  '',
+  'RJ',
+  'Maricá',
+  2026,
+  'Coordenação Geral',
+  '(21) 99999-0000',
+  'contato@campanha.local',
+  7410,
+  7410,
+  5000,
+  180,
+  '2026-05-01',
+  '2026-10-04',
+  'active',
+  'Ambiente operacional para campanha, preparado para autenticação, banco real e auditoria.'
+)
+on conflict (id) do update
 set
-  system_name = coalesce(system_name, 'Base Eleitoral 360'),
-  general_responsible = coalesce(general_responsible, 'Coordenacao Geral'),
-  contact_phone = coalesce(contact_phone, '(21) 99999-0000'),
-  contact_email = coalesce(contact_email, 'contato@campanha.local')
-where id = '00000000-0000-4000-8000-000000000001';
+  system_name = coalesce(public.campaigns.system_name, excluded.system_name),
+  candidate_number = coalesce(public.campaigns.candidate_number, excluded.candidate_number),
+  party = coalesce(public.campaigns.party, excluded.party),
+  coalition = coalesce(public.campaigns.coalition, excluded.coalition),
+  general_responsible = coalesce(public.campaigns.general_responsible, excluded.general_responsible),
+  contact_phone = coalesce(public.campaigns.contact_phone, excluded.contact_phone),
+  contact_email = coalesce(public.campaigns.contact_email, excluded.contact_email),
+  general_vote_goal = coalesce(public.campaigns.general_vote_goal, excluded.general_vote_goal),
+  validated_vote_goal = coalesce(public.campaigns.validated_vote_goal, excluded.validated_vote_goal),
+  supporter_goal = coalesce(public.campaigns.supporter_goal, excluded.supporter_goal),
+  leader_goal = coalesce(public.campaigns.leader_goal, excluded.leader_goal),
+  start_date = coalesce(public.campaigns.start_date, excluded.start_date),
+  election_date = coalesce(public.campaigns.election_date, excluded.election_date),
+  notes = coalesce(public.campaigns.notes, excluded.notes);
 
 notify pgrst, 'reload schema';
+select pg_notify('pgrst', 'reload schema');

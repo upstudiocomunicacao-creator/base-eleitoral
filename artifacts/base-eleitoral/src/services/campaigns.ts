@@ -71,7 +71,7 @@ export async function getCurrentCampaignSettings(campaignId = DEFAULT_CAMPAIGN_I
     .eq("id", campaignId)
     .maybeSingle();
 
-  if (error) throw error;
+  if (error) throw createCampaignSettingsError(error);
   if (!data) return DEFAULT_CAMPAIGN_SETTINGS;
 
   return mapCampaignToSettings(data as Campaign);
@@ -88,8 +88,42 @@ export async function updateCurrentCampaignSettings(settings: CampaignSettings):
     .select("*")
     .single();
 
-  if (error) throw error;
+  if (error) throw createCampaignSettingsError(error);
   return mapCampaignToSettings(data as Campaign);
+}
+
+function createCampaignSettingsError(error: unknown): Error {
+  const message = getSupabaseErrorMessage(error);
+
+  if (isCampaignSettingsSchemaError(message)) {
+    return new Error(
+      `A tabela campaigns ainda precisa receber os campos de configurações. Rode supabase/add-campaign-settings.sql no SQL Editor do Supabase e tente novamente. Detalhe: ${message}`,
+    );
+  }
+
+  if (message) return new Error(message);
+  return new Error("Não foi possível acessar as configurações da campanha no Supabase.");
+}
+
+function getSupabaseErrorMessage(error: unknown): string {
+  if (error instanceof Error) return error.message;
+  if (typeof error === "string") return error;
+  if (!error || typeof error !== "object") return "";
+
+  const details = error as { message?: unknown; details?: unknown; hint?: unknown; code?: unknown };
+  return [details.message, details.details, details.hint, details.code]
+    .filter(Boolean)
+    .map(String)
+    .join(" ");
+}
+
+function isCampaignSettingsSchemaError(message: string): boolean {
+  const normalized = message.toLowerCase();
+  return (
+    normalized.includes("schema cache")
+    || (normalized.includes("could not find") && normalized.includes("campaigns"))
+    || (normalized.includes("column") && normalized.includes("campaigns"))
+  );
 }
 
 function mapCampaignToSettings(campaign: Campaign): CampaignSettings {

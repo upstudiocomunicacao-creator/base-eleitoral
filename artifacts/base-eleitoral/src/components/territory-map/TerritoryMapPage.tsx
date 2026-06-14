@@ -320,27 +320,35 @@ function MapLayerToggle({
 
   return (
     <Card className="premium-card overflow-hidden">
-      <CardContent className="flex flex-col gap-4 p-4 lg:flex-row lg:items-center lg:justify-between">
+      <CardContent className="flex flex-col gap-4 p-4 xl:flex-row xl:items-start xl:justify-between">
         <div className="min-w-0 flex-1">
           <div className="mb-2 text-xs font-bold uppercase tracking-[0.1em] text-slate-400">Camadas de leitura</div>
           <Tabs value={activeLayer} onValueChange={(mode) => setActiveLayer(mode as HeatMode)}>
-            <TabsList className="grid h-auto grid-cols-2 gap-1 bg-slate-100 p-1 sm:grid-cols-3 xl:grid-cols-6">
-              {layerOptions.map((mode) => <TabsTrigger key={mode.key} value={mode.key} className="text-xs">{mode.label}</TabsTrigger>)}
+            <TabsList className="flex h-auto flex-wrap items-stretch gap-1 rounded-xl bg-slate-100 p-1">
+              {layerOptions.map((mode) => (
+                <TabsTrigger
+                  key={mode.key}
+                  value={mode.key}
+                  className="min-h-9 min-w-[138px] flex-1 whitespace-normal rounded-lg px-3 py-2 text-center text-xs font-extrabold leading-tight text-slate-600 data-[state=active]:bg-white data-[state=active]:text-blue-700 data-[state=active]:shadow-sm sm:flex-none"
+                >
+                  {mode.label}
+                </TabsTrigger>
+              ))}
             </TabsList>
           </Tabs>
         </div>
-        <div className="flex flex-wrap items-end gap-3">
-          <div>
+        <div className="grid gap-3 sm:grid-cols-[minmax(260px,1fr)_auto] xl:min-w-[560px]">
+          <div className="min-w-0">
             <div className="mb-2 text-xs font-bold uppercase tracking-[0.1em] text-slate-400">Visual</div>
-            <div className="flex rounded-lg border border-slate-200 bg-white p-1 shadow-sm">
+            <div className="flex flex-wrap rounded-lg border border-slate-200 bg-white p-1 shadow-sm">
               {viewModes.map(({ key, label, icon: Icon }) => (
-                <button key={key} type="button" onClick={() => setViewMode(key)} className={`inline-flex min-h-9 items-center gap-2 rounded-md px-3 text-xs font-bold transition ${viewMode === key ? "bg-blue-600 text-white shadow-sm" : "text-slate-600 hover:bg-slate-100"}`}>
+                <button key={key} type="button" onClick={() => setViewMode(key)} className={`inline-flex min-h-9 flex-1 items-center justify-center gap-2 rounded-md px-3 text-xs font-bold transition sm:flex-none ${viewMode === key ? "bg-blue-600 text-white shadow-sm" : "text-slate-600 hover:bg-slate-100"}`}>
                   <Icon className="h-4 w-4" /> {label}
                 </button>
               ))}
             </div>
           </div>
-          <div>
+          <div className="min-w-[150px]">
             <div className="mb-2 text-xs font-bold uppercase tracking-[0.1em] text-slate-400">Zoom visual</div>
             <div className="flex items-center gap-1 rounded-lg border border-slate-200 bg-white p-1 shadow-sm">
               <Button size="icon" variant="ghost" onClick={() => setZoom(Math.max(0.85, Number((zoom - 0.08).toFixed(2))))}><Minus className="h-4 w-4" /></Button>

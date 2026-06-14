@@ -81,11 +81,11 @@ export async function getCurrentCampaignSettings(campaignId = DEFAULT_CAMPAIGN_I
 export async function updateCurrentCampaignSettings(settings: CampaignSettings): Promise<CampaignSettings> {
   const supabase = getSupabaseClient();
   const payload = mapSettingsToCampaignUpdate(settings);
+  const id = settings.id || DEFAULT_CAMPAIGN_ID;
 
   const { data, error } = await supabase
     .from("campaigns")
-    .update(payload)
-    .eq("id", settings.id || DEFAULT_CAMPAIGN_ID)
+    .upsert({ ...payload, id }, { onConflict: "id" })
     .select("*")
     .single();
 

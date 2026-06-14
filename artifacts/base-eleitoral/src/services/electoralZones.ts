@@ -1,6 +1,7 @@
 import { getSupabaseClient, isSupabaseConfigured } from "@/lib/supabaseClient";
 import type { Database, ElectoralZone } from "@/types/database";
 import { DEFAULT_CAMPAIGN_ID } from "./leaders";
+import { createSupabaseServiceError } from "./supabaseErrors";
 
 type ElectoralZoneInsert = Database["public"]["Tables"]["electoral_zones"]["Insert"];
 type ElectoralZoneUpdate = Database["public"]["Tables"]["electoral_zones"]["Update"];
@@ -30,7 +31,7 @@ export async function listElectoralZones(): Promise<ElectoralZone[]> {
     .order("zone_number", { ascending: true })
     .order("section_number", { ascending: true, nullsFirst: false });
 
-  if (error) throw error;
+  if (error) throw createElectoralZoneError(error);
   return data ?? [];
 }
 
@@ -42,7 +43,7 @@ export async function getElectoralZoneById(id: string): Promise<ElectoralZone | 
     .eq("id", id)
     .maybeSingle();
 
-  if (error) throw error;
+  if (error) throw createElectoralZoneError(error);
   return data;
 }
 
@@ -54,7 +55,7 @@ export async function createElectoralZone(payload: ElectoralZoneInsert): Promise
     .select("*")
     .single();
 
-  if (error) throw error;
+  if (error) throw createElectoralZoneError(error);
   return data;
 }
 
@@ -67,14 +68,22 @@ export async function updateElectoralZone(id: string, payload: ElectoralZoneUpda
     .select("*")
     .single();
 
-  if (error) throw error;
+  if (error) throw createElectoralZoneError(error);
   return data;
 }
 
 export async function deleteElectoralZone(id: string): Promise<void> {
   const supabase = getSupabaseClient();
   const { error } = await supabase.from("electoral_zones").delete().eq("id", id);
-  if (error) throw error;
+  if (error) throw createElectoralZoneError(error);
+}
+
+function createElectoralZoneError(error: unknown) {
+  return createSupabaseServiceError(error, {
+    tableName: "electoral_zones",
+    setupSql: "supabase/schema.sql",
+    fallbackMessage: "Não foi possível salvar a zona eleitoral no Supabase.",
+  });
 }
 
 export async function getElectoralZoneSummary(): Promise<ElectoralZoneSummary> {

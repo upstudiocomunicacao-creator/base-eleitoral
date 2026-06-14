@@ -1,5 +1,6 @@
 import { getSupabaseClient } from "@/lib/supabaseClient";
 import type { Database } from "@/types/database";
+import { createSupabaseServiceError } from "./supabaseErrors";
 
 type TableName = keyof Database["public"]["Tables"];
 type Row<T extends TableName> = Database["public"]["Tables"][T]["Row"];
@@ -12,31 +13,39 @@ export function createCrudService<T extends TableName>(tableName: T) {
   return {
     async list(): Promise<Row<T>[]> {
       const { data, error } = await table().select("*").order("created_at", { ascending: false });
-      if (error) throw error;
+      if (error) throw createCrudError(error, tableName as string);
       return data as unknown as Row<T>[];
     },
 
     async getById(id: string): Promise<Row<T> | null> {
       const { data, error } = await table().select("*").eq("id", id).maybeSingle();
-      if (error) throw error;
+      if (error) throw createCrudError(error, tableName as string);
       return data as unknown as Row<T> | null;
     },
 
     async create(payload: Insert<T>): Promise<Row<T>> {
       const { data, error } = await table().insert(payload as never).select("*").single();
-      if (error) throw error;
+      if (error) throw createCrudError(error, tableName as string);
       return data as unknown as Row<T>;
     },
 
     async update(id: string, payload: Update<T>): Promise<Row<T>> {
       const { data, error } = await table().update(payload as never).eq("id", id).select("*").single();
-      if (error) throw error;
+      if (error) throw createCrudError(error, tableName as string);
       return data as unknown as Row<T>;
     },
 
     async remove(id: string): Promise<void> {
       const { error } = await table().delete().eq("id", id);
-      if (error) throw error;
+      if (error) throw createCrudError(error, tableName as string);
     },
   };
+}
+
+function createCrudError(error: unknown, tableName: string) {
+  return createSupabaseServiceError(error, {
+    tableName,
+    setupSql: "supabase/schema.sql",
+    fallbackMessage: `Não foi possível concluir a operação em ${tableName}.`,
+  });
 }

@@ -2,6 +2,7 @@ import { getSupabaseClient, isSupabaseConfigured } from "@/lib/supabaseClient";
 import { isMapboxConfigured, mapboxAccessToken } from "@/lib/mapbox";
 import { buildFullAddress, buildShortAddress, type AddressLike } from "@/utils/address";
 import { detectGeographicPrecision, precisionConfidence } from "@/utils/geographicPrecision";
+import { createSupabaseServiceError } from "./supabaseErrors";
 
 export type GeocodingTableName = "leaders" | "supporters" | "electoral_zones" | "field_agenda" | "demands";
 export type GeocodingStatus = "pending" | "success" | "approximate" | "failed" | "manual" | "skipped";
@@ -181,7 +182,7 @@ export async function updateRecordCoordinates(tableName: GeocodingTableName, rec
     .eq("id", recordId);
 
   if (!error) return;
-  if (!isMissingGeocodingColumnError(error)) throw error;
+  if (!isMissingGeocodingColumnError(error)) throw createGeocodingTableError(error, tableName);
 
   const { error: fallbackError } = await supabase
     .from(tableName)
@@ -191,7 +192,7 @@ export async function updateRecordCoordinates(tableName: GeocodingTableName, rec
     } as never)
     .eq("id", recordId);
 
-  if (fallbackError) throw fallbackError;
+  if (fallbackError) throw createGeocodingTableError(fallbackError, tableName);
 }
 
 export async function markRecordSkipped(record: GeocodingRecord) {
@@ -200,7 +201,7 @@ export async function markRecordSkipped(record: GeocodingRecord) {
     geocoding_status: "skipped",
     geocoding_last_attempt_at: new Date().toISOString(),
   } as never).eq("id", record.id);
-  if (error) throw error;
+  if (error) throw createGeocodingTableError(error, record.tableName);
 }
 
 export async function geocodeRecord(record: GeocodingRecord) {
@@ -289,8 +290,16 @@ async function geocodeByTableAndId(tableName: GeocodingTableName, id: string) {
 async function listTable(tableName: GeocodingTableName) {
   const supabase = getSupabaseClient();
   const { data, error } = await supabase.from(tableName).select("*").limit(1000);
-  if (error) throw error;
+  if (error) throw createGeocodingTableError(error, tableName);
   return (data ?? []) as Array<Record<string, unknown>>;
+}
+
+function createGeocodingTableError(error: unknown, tableName: GeocodingTableName) {
+  return createSupabaseServiceError(error, {
+    tableName,
+    setupSql: "supabase/geocoding-schema-update.sql",
+    fallbackMessage: "Não foi possível atualizar a geocodificação no Supabase.",
+  });
 }
 
 function normalizeRecord(tableName: GeocodingTableName, item: Record<string, unknown>): GeocodingRecord {

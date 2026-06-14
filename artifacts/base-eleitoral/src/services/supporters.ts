@@ -1,6 +1,7 @@
 import { getSupabaseClient, isSupabaseConfigured } from "@/lib/supabaseClient";
 import type { Database, Leader, Supporter } from "@/types/database";
 import { DEFAULT_CAMPAIGN_ID, listLeaders } from "./leaders";
+import { createSupabaseServiceError } from "./supabaseErrors";
 
 type SupporterInsert = Database["public"]["Tables"]["supporters"]["Insert"];
 type SupporterUpdate = Database["public"]["Tables"]["supporters"]["Update"];
@@ -20,7 +21,7 @@ export async function listSupporters(): Promise<Supporter[]> {
     .select("*")
     .order("created_at", { ascending: false });
 
-  if (error) throw error;
+  if (error) throw createSupporterError(error);
   return data ?? [];
 }
 
@@ -32,7 +33,7 @@ export async function getSupporterById(id: string): Promise<Supporter | null> {
     .eq("id", id)
     .maybeSingle();
 
-  if (error) throw error;
+  if (error) throw createSupporterError(error);
   return data;
 }
 
@@ -44,7 +45,7 @@ export async function createSupporter(payload: SupporterInsert): Promise<Support
     .select("*")
     .single();
 
-  if (error) throw error;
+  if (error) throw createSupporterError(error);
   return data;
 }
 
@@ -57,14 +58,22 @@ export async function updateSupporter(id: string, payload: SupporterUpdate): Pro
     .select("*")
     .single();
 
-  if (error) throw error;
+  if (error) throw createSupporterError(error);
   return data;
 }
 
 export async function deleteSupporter(id: string): Promise<void> {
   const supabase = getSupabaseClient();
   const { error } = await supabase.from("supporters").delete().eq("id", id);
-  if (error) throw error;
+  if (error) throw createSupporterError(error);
+}
+
+function createSupporterError(error: unknown) {
+  return createSupabaseServiceError(error, {
+    tableName: "supporters",
+    setupSql: "supabase/schema.sql",
+    fallbackMessage: "Não foi possível salvar o apoiador no Supabase.",
+  });
 }
 
 export async function listSupportersWithLeaders(): Promise<{ supporters: SupporterWithLeader[]; leaders: Leader[] }> {

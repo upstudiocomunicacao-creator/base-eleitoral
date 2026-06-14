@@ -3,6 +3,7 @@ import type { Database, Demand, ElectoralZone, Leader, Supporter } from "@/types
 import { listElectoralZones } from "./electoralZones";
 import { DEFAULT_CAMPAIGN_ID, listLeaders } from "./leaders";
 import { listSupporters } from "./supporters";
+import { createSupabaseServiceError } from "./supabaseErrors";
 
 type DemandInsert = Database["public"]["Tables"]["demands"]["Insert"];
 type DemandUpdate = Database["public"]["Tables"]["demands"]["Update"];
@@ -38,7 +39,7 @@ export async function listDemands(): Promise<Demand[]> {
     .order("opening_date", { ascending: false })
     .order("created_at", { ascending: false });
 
-  if (error) throw error;
+  if (error) throw createDemandError(error);
   return data ?? [];
 }
 
@@ -50,7 +51,7 @@ export async function getDemandById(id: string): Promise<Demand | null> {
     .eq("id", id)
     .maybeSingle();
 
-  if (error) throw error;
+  if (error) throw createDemandError(error);
   return data;
 }
 
@@ -62,7 +63,7 @@ export async function createDemand(payload: DemandInsert): Promise<Demand> {
     .select("*")
     .single();
 
-  if (error) throw error;
+  if (error) throw createDemandError(error);
   return data;
 }
 
@@ -75,14 +76,22 @@ export async function updateDemand(id: string, payload: DemandUpdate): Promise<D
     .select("*")
     .single();
 
-  if (error) throw error;
+  if (error) throw createDemandError(error);
   return data;
 }
 
 export async function deleteDemand(id: string): Promise<void> {
   const supabase = getSupabaseClient();
   const { error } = await supabase.from("demands").delete().eq("id", id);
-  if (error) throw error;
+  if (error) throw createDemandError(error);
+}
+
+function createDemandError(error: unknown) {
+  return createSupabaseServiceError(error, {
+    tableName: "demands",
+    setupSql: "supabase/schema.sql",
+    fallbackMessage: "Não foi possível salvar a demanda no Supabase.",
+  });
 }
 
 export async function listDemandsWithRelations(): Promise<{

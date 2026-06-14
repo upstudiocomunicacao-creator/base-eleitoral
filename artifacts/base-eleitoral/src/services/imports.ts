@@ -4,6 +4,7 @@ import { DEFAULT_CAMPAIGN_ID } from "./leaders";
 import { parseSpreadsheetFile } from "@/utils/importParsers";
 import { buildAutoMapping, buildImportStats, mapRowsToFields, validateRows, type ColumnMapping, type ImportValidationRow } from "@/utils/importValidators";
 import { getImportModule, type ImportModuleKey } from "@/utils/importTemplates";
+import { createSupabaseServiceError } from "./supabaseErrors";
 
 export type DuplicateStrategy = "ignore" | "update" | "import" | "cancel";
 
@@ -68,13 +69,13 @@ export async function importRowsToSupabase(moduleKey: ImportModuleKey, rows: Imp
 
   if (insertRows.length) {
     const { error, data } = await supabase.from(moduleKey).insert(insertRows as InsertPayload<typeof moduleKey>[]).select("id");
-    if (error) throw error;
+    if (error) throw createImportError(error, moduleKey);
     importedRows += data?.length ?? insertRows.length;
   }
 
   for (const row of updateRows) {
     const { error } = await supabase.from(moduleKey).update(sanitizePayload(moduleKey, row.mapped) as never).eq("id", row.existingId as string);
-    if (error) throw error;
+    if (error) throw createImportError(error, moduleKey);
     importedRows += 1;
   }
 
@@ -114,14 +115,14 @@ export async function saveImportHistory(input: {
     .select("*")
     .single();
 
-  if (error) throw error;
+  if (error) throw createImportHistoryError(error);
   return data;
 }
 
 export async function listImportHistory(): Promise<ImportHistory[]> {
   const supabase = getSupabaseClient();
   const { data, error } = await supabase.from("import_history").select("*").order("created_at", { ascending: false });
-  if (error) throw error;
+  if (error) throw createImportHistoryError(error);
   return data ?? [];
 }
 
@@ -143,8 +144,24 @@ export function generateErrorCsv(rows: ImportValidationRow[]) {
 async function listExistingRows(moduleKey: ImportModuleKey): Promise<Array<Record<string, unknown>>> {
   const supabase = getSupabaseClient();
   const { data, error } = await supabase.from(moduleKey).select("*");
-  if (error) throw error;
+  if (error) throw createImportError(error, moduleKey);
   return (data ?? []) as Array<Record<string, unknown>>;
+}
+
+function createImportError(error: unknown, tableName: ImportModuleKey) {
+  return createSupabaseServiceError(error, {
+    tableName,
+    setupSql: "supabase/schema.sql",
+    fallbackMessage: "Não foi possível importar os registros para o Supabase.",
+  });
+}
+
+function createImportHistoryError(error: unknown) {
+  return createSupabaseServiceError(error, {
+    tableName: "import_history",
+    setupSql: "supabase/schema.sql",
+    fallbackMessage: "Não foi possível registrar o histórico da importação.",
+  });
 }
 
 function sanitizePayload(moduleKey: ImportModuleKey, payload: Record<string, string | number | boolean | null>) {

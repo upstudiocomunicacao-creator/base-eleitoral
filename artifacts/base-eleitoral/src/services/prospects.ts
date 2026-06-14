@@ -2,6 +2,7 @@ import { getSupabaseClient, isSupabaseConfigured } from "@/lib/supabaseClient";
 import type { Database, Leader, Prospect, Supporter } from "@/types/database";
 import { DEFAULT_CAMPAIGN_ID, listLeaders } from "./leaders";
 import { listSupporters } from "./supporters";
+import { createSupabaseServiceError } from "./supabaseErrors";
 
 type ProspectInsert = Database["public"]["Tables"]["prospects"]["Insert"];
 type ProspectUpdate = Database["public"]["Tables"]["prospects"]["Update"];
@@ -22,7 +23,7 @@ export async function listProspects(): Promise<Prospect[]> {
     .select("*")
     .order("created_at", { ascending: false });
 
-  if (error) throw error;
+  if (error) throw createProspectError(error);
   return data ?? [];
 }
 
@@ -34,7 +35,7 @@ export async function getProspectById(id: string): Promise<Prospect | null> {
     .eq("id", id)
     .maybeSingle();
 
-  if (error) throw error;
+  if (error) throw createProspectError(error);
   return data;
 }
 
@@ -46,7 +47,7 @@ export async function createProspect(payload: ProspectInsert): Promise<Prospect>
     .select("*")
     .single();
 
-  if (error) throw error;
+  if (error) throw createProspectError(error);
   return data;
 }
 
@@ -59,7 +60,7 @@ export async function updateProspect(id: string, payload: ProspectUpdate): Promi
     .select("*")
     .single();
 
-  if (error) throw error;
+  if (error) throw createProspectError(error);
   return data;
 }
 
@@ -70,7 +71,15 @@ export async function updateProspectStage(id: string, funnelStage: string): Prom
 export async function deleteProspect(id: string): Promise<void> {
   const supabase = getSupabaseClient();
   const { error } = await supabase.from("prospects").delete().eq("id", id);
-  if (error) throw error;
+  if (error) throw createProspectError(error);
+}
+
+function createProspectError(error: unknown) {
+  return createSupabaseServiceError(error, {
+    tableName: "prospects",
+    setupSql: "supabase/schema.sql",
+    fallbackMessage: "Não foi possível salvar a prospecção no Supabase.",
+  });
 }
 
 export async function listProspectsWithRelations(): Promise<{

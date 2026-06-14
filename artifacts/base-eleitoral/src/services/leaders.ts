@@ -1,5 +1,6 @@
 import { getSupabaseClient, isSupabaseConfigured } from "@/lib/supabaseClient";
 import type { Database, Leader } from "@/types/database";
+import { createSupabaseServiceError } from "./supabaseErrors";
 
 type LeaderInsert = Database["public"]["Tables"]["leaders"]["Insert"];
 type LeaderUpdate = Database["public"]["Tables"]["leaders"]["Update"];
@@ -18,7 +19,7 @@ export async function listLeaders(): Promise<Leader[]> {
     .select("*")
     .order("full_name", { ascending: true });
 
-  if (error) throw error;
+  if (error) throw createLeaderServiceError(error);
   return data ?? [];
 }
 
@@ -30,7 +31,7 @@ export async function getLeaderById(id: string): Promise<Leader | null> {
     .eq("id", id)
     .maybeSingle();
 
-  if (error) throw error;
+  if (error) throw createLeaderServiceError(error);
   return data;
 }
 
@@ -42,7 +43,7 @@ export async function createLeader(payload: LeaderInsert): Promise<Leader> {
     .select("*")
     .single();
 
-  if (error) throw error;
+  if (error) throw createLeaderServiceError(error);
   return data;
 }
 
@@ -55,14 +56,22 @@ export async function updateLeader(id: string, payload: LeaderUpdate): Promise<L
     .select("*")
     .single();
 
-  if (error) throw error;
+  if (error) throw createLeaderServiceError(error);
   return data;
 }
 
 export async function deleteLeader(id: string): Promise<void> {
   const supabase = getSupabaseClient();
   const { error } = await supabase.from("leaders").delete().eq("id", id);
-  if (error) throw error;
+  if (error) throw createLeaderServiceError(error);
+}
+
+function createLeaderServiceError(error: unknown) {
+  return createSupabaseServiceError(error, {
+    tableName: "leaders",
+    setupSql: "supabase/schema.sql",
+    fallbackMessage: "Não foi possível salvar o cadastro territorial no Supabase.",
+  });
 }
 
 function normalizeLeaderPayload<T extends LeaderInsert | LeaderUpdate>(payload: T): T {

@@ -2,6 +2,7 @@ import { getSupabaseClient, isSupabaseConfigured } from "@/lib/supabaseClient";
 import type { Campaign, Demand, ElectoralZone, FieldAgenda, Leader, LeaderMonthlyMetric, Municipality, Neighborhood, Prospect, Supporter } from "@/types/database";
 import { listLeaderMonthlyMetrics } from "./leaderMonthlyMetrics";
 import { listLeaders } from "./leaders";
+import { createSupabaseServiceError } from "./supabaseErrors";
 
 export type DashboardDataset = {
   campaigns: Campaign[];
@@ -313,22 +314,30 @@ export function computeDashboard(dataset: DashboardDataset = emptyDataset): Dash
 async function listCampaigns(): Promise<Campaign[]> {
   const supabase = getSupabaseClient();
   const { data, error } = await supabase.from("campaigns").select("*").order("created_at", { ascending: false });
-  if (error) throw error;
+  if (error) throw createDashboardTableError(error, "campaigns");
   return data ?? [];
 }
 
 async function listMunicipalities(): Promise<Municipality[]> {
   const supabase = getSupabaseClient();
   const { data, error } = await supabase.from("municipalities").select("*").order("name", { ascending: true });
-  if (error) throw error;
+  if (error) throw createDashboardTableError(error, "municipalities");
   return data ?? [];
 }
 
 async function listNeighborhoods(): Promise<Neighborhood[]> {
   const supabase = getSupabaseClient();
   const { data, error } = await supabase.from("neighborhoods").select("*").order("name", { ascending: true });
-  if (error) throw error;
+  if (error) throw createDashboardTableError(error, "neighborhoods");
   return data ?? [];
+}
+
+function createDashboardTableError(error: unknown, tableName: string) {
+  return createSupabaseServiceError(error, {
+    tableName,
+    setupSql: tableName === "campaigns" ? "supabase/add-campaign-settings.sql" : "supabase/schema.sql",
+    fallbackMessage: "Não foi possível carregar os dados auxiliares do painel.",
+  });
 }
 
 async function safeLoad<T>(label: string, promise: Promise<T[]>): Promise<{ data: T[]; warning: string | null }> {

@@ -1,5 +1,6 @@
 import { getSupabaseClient } from "@/lib/supabaseClient";
 import type { UserProfile } from "@/types/database";
+import { createSupabaseServiceError } from "./supabaseErrors";
 
 export async function getUserProfileByAuthUserId(authUserId: string): Promise<UserProfile | null> {
   const supabase = getSupabaseClient();
@@ -11,7 +12,7 @@ export async function getUserProfileByAuthUserId(authUserId: string): Promise<Us
     .limit(1)
     .maybeSingle();
 
-  if (error) throw error;
+  if (error) throw createUserProfileError(error);
 
   return data;
 }
@@ -23,7 +24,7 @@ export async function listUserProfiles(): Promise<UserProfile[]> {
     .select("*")
     .order("full_name", { ascending: true });
 
-  if (error) throw error;
+  if (error) throw createUserProfileError(error);
 
   return data ?? [];
 }
@@ -40,7 +41,15 @@ export async function updateUserProfile(
     .select("*")
     .single();
 
-  if (error) throw error;
+  if (error) throw createUserProfileError(error);
 
   return data;
+}
+
+function createUserProfileError(error: unknown) {
+  return createSupabaseServiceError(error, {
+    tableName: "users_profiles",
+    setupSql: "supabase/schema.sql",
+    fallbackMessage: "Não foi possível acessar o perfil do usuário no Supabase.",
+  });
 }

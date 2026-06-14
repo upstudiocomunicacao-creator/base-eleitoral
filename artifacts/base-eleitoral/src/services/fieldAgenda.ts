@@ -2,6 +2,7 @@ import { getSupabaseClient, isSupabaseConfigured } from "@/lib/supabaseClient";
 import type { Database, ElectoralZone, FieldAgenda, Leader } from "@/types/database";
 import { listElectoralZones } from "./electoralZones";
 import { DEFAULT_CAMPAIGN_ID, listLeaders } from "./leaders";
+import { createSupabaseServiceError } from "./supabaseErrors";
 
 type FieldAgendaInsert = Database["public"]["Tables"]["field_agenda"]["Insert"];
 type FieldAgendaUpdate = Database["public"]["Tables"]["field_agenda"]["Update"];
@@ -36,7 +37,7 @@ export async function listFieldAgenda(): Promise<FieldAgenda[]> {
     .order("action_date", { ascending: true })
     .order("start_time", { ascending: true, nullsFirst: false });
 
-  if (error) throw error;
+  if (error) throw createFieldAgendaError(error);
   return data ?? [];
 }
 
@@ -48,7 +49,7 @@ export async function getFieldAgendaById(id: string): Promise<FieldAgenda | null
     .eq("id", id)
     .maybeSingle();
 
-  if (error) throw error;
+  if (error) throw createFieldAgendaError(error);
   return data;
 }
 
@@ -60,7 +61,7 @@ export async function createFieldAgenda(payload: FieldAgendaInsert): Promise<Fie
     .select("*")
     .single();
 
-  if (error) throw error;
+  if (error) throw createFieldAgendaError(error);
   return data;
 }
 
@@ -73,14 +74,22 @@ export async function updateFieldAgenda(id: string, payload: FieldAgendaUpdate):
     .select("*")
     .single();
 
-  if (error) throw error;
+  if (error) throw createFieldAgendaError(error);
   return data;
 }
 
 export async function deleteFieldAgenda(id: string): Promise<void> {
   const supabase = getSupabaseClient();
   const { error } = await supabase.from("field_agenda").delete().eq("id", id);
-  if (error) throw error;
+  if (error) throw createFieldAgendaError(error);
+}
+
+function createFieldAgendaError(error: unknown) {
+  return createSupabaseServiceError(error, {
+    tableName: "field_agenda",
+    setupSql: "supabase/schema.sql",
+    fallbackMessage: "Não foi possível salvar a agenda de campo no Supabase.",
+  });
 }
 
 export async function listFieldAgendaWithRelations(): Promise<{

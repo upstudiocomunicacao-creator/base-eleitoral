@@ -45,11 +45,13 @@ export default defineConfig({
   build: {
     outDir: path.resolve(import.meta.dirname, "dist/public"),
     emptyOutDir: true,
+    chunkSizeWarningLimit: 1900,
     rollupOptions: {
       output: {
         manualChunks: {
           charts: ["recharts"],
-          exports: ["jspdf", "xlsx"],
+          pdf: ["jspdf"],
+          spreadsheet: ["xlsx"],
           maps: ["mapbox-gl"],
           motion: ["framer-motion"],
           react: ["react", "react-dom", "@tanstack/react-query", "wouter"],

@@ -1,7 +1,7 @@
-import { getMunicipalBaseByCity, getMunicipalNeighborhoods, getMunicipalSubdivisionForNeighborhood, municipalBaseCities, municipalBaseOptions, municipalBases } from "./municipalBases";
+import { getMunicipalBaseByCity, getMunicipalNeighborhoods, getMunicipalSubdivisionForNeighborhood, municipalBaseCities, municipalBaseOptions, municipalBases, type MunicipalBaseKey } from "./municipalBases";
 
-export type OperationalScope = "rj" | "marica";
-export type ForceRole = "coord_general" | "coord_rj" | "coord_marica" | "leader";
+export type OperationalScope = "rj" | MunicipalBaseKey;
+export type ForceRole = "coord_general" | "coord_rj" | "coord_marica" | "coord_sao_goncalo" | "coord_niteroi" | "leader";
 export type ForceStatus = "Ativo" | "Atenção" | "Prioritário" | "Pendente";
 
 export type MonthlyProjection = {
@@ -166,6 +166,15 @@ export const maricaNeighborhoods = maricaDistricts.flatMap((district) => distric
 
 export { getMunicipalBaseByCity, getMunicipalNeighborhoods, getMunicipalSubdivisionForNeighborhood, municipalBaseCities, municipalBaseOptions, municipalBases };
 
+export const operationalScopeOptions: Array<{ value: OperationalScope; label: string; territoryLabel: string }> = [
+  { value: "rj", label: "Estado do RJ por cidades", territoryLabel: "Cidade" },
+  ...municipalBaseOptions.map((base) => ({
+    value: base.key,
+    label: `${base.city} por bairros`,
+    territoryLabel: "Bairro",
+  })),
+];
+
 export const minimalFields = [
   "Nome",
   "Telefone/WhatsApp",
@@ -203,7 +212,7 @@ export const operationalActors: ForceActor[] = [
 function actor(
   id: string,
   name: string,
-  role: Extract<ForceRole, "coord_general" | "coord_rj" | "coord_marica">,
+  role: Exclude<ForceRole, "leader">,
   scope: OperationalScope,
   territory: string,
   minVotes: number,
@@ -215,7 +224,7 @@ function actor(
   latitude?: number,
   longitude?: number,
 ): ForceActor {
-  const isMarica = scope === "marica";
+  const territoryData = getScopeTerritoryData(scope, territory);
 
   return {
     id,
@@ -224,10 +233,10 @@ function actor(
     role,
     scope,
     territory,
-    city: isMarica ? "Maricá" : territory,
-    neighborhood: isMarica ? territory : undefined,
-    region: isMarica ? undefined : getRJRegionForCity(territory),
-    district: isMarica ? getMaricaDistrictForNeighborhood(territory) : undefined,
+    city: territoryData.city,
+    neighborhood: territoryData.neighborhood,
+    region: territoryData.region,
+    district: territoryData.district,
     status,
     latitude,
     longitude,
@@ -250,7 +259,7 @@ function leader(
   latitude?: number,
   longitude?: number,
 ): ForceActor {
-  const isMarica = scope === "marica";
+  const territoryData = getScopeTerritoryData(scope, territory);
 
   return {
     id,
@@ -259,10 +268,10 @@ function leader(
     role: "leader",
     scope,
     territory,
-    city: isMarica ? "Maricá" : territory,
-    neighborhood: isMarica ? territory : undefined,
-    region: isMarica ? undefined : getRJRegionForCity(territory),
-    district: isMarica ? getMaricaDistrictForNeighborhood(territory) : undefined,
+    city: territoryData.city,
+    neighborhood: territoryData.neighborhood,
+    region: territoryData.region,
+    district: territoryData.district,
     parentId,
     status,
     latitude,
@@ -296,7 +305,7 @@ export function computeOperationalSummary(actors: ForceActor[], month = operatio
 
   return {
     coordinatorsRJ: actors.filter((item) => item.role === "coord_rj").length,
-    coordinatorsMarica: actors.filter((item) => item.role === "coord_marica").length,
+    coordinatorsMarica: actors.filter((item) => item.role === "coord_marica" || item.role === "coord_sao_goncalo" || item.role === "coord_niteroi").length,
     leaders: actors.filter((item) => item.role === "leader").length,
     territories,
     estimatedSupporters,
@@ -320,12 +329,52 @@ export function getMonthly(actor: ForceActor, month: string) {
 export function getRoleLabel(role: ForceRole) {
   if (role === "coord_general") return "Coord. Geral";
   if (role === "coord_rj") return "Coord. RJ";
-  if (role === "coord_marica") return "Coord. Maricá";
-  return "Liderança";
+  if (role === "coord_marica") return "Coord. Maric\u00e1";
+  if (role === "coord_sao_goncalo") return "Coord. S\u00e3o Gon\u00e7alo";
+  if (role === "coord_niteroi") return "Coord. Niter\u00f3i";
+  return "Lideran\u00e7a";
 }
 
 export function getScopeLabel(scope: OperationalScope) {
-  return scope === "marica" ? "Maricá por bairros" : "RJ por cidades";
+  if (scope === "rj") return "Estado do RJ por cidades";
+  return `${getMunicipalBaseByKeySafe(scope)} por bairros`;
+}
+
+export function getScopeCity(scope: OperationalScope) {
+  return scope === "rj" ? null : getMunicipalBaseByKeySafe(scope);
+}
+
+export function getScopeTerritories(scope: OperationalScope) {
+  return scope === "rj" ? rjCities : getMunicipalNeighborhoods(getMunicipalBaseByKeySafe(scope));
+}
+
+export function getScopeTerritoryLabel(scope: OperationalScope) {
+  return scope === "rj" ? "Cidade" : "Bairro";
+}
+
+export function getDefaultTerritoryForScope(scope: OperationalScope) {
+  return getScopeTerritories(scope)[0] ?? (scope === "rj" ? "Niter\u00f3i" : "Centro");
+}
+
+export function getScopeFromCity(city: string): OperationalScope {
+  return getMunicipalBaseByCity(city)?.key ?? "rj";
+}
+
+export function getCoordinatorRoleForScope(scope: OperationalScope): ForceRole {
+  if (scope === "marica") return "coord_marica";
+  if (scope === "sao_goncalo") return "coord_sao_goncalo";
+  if (scope === "niteroi") return "coord_niteroi";
+  return "coord_rj";
+}
+
+export function getLeaderTypeForOperationalRole(role: ForceRole, scope: OperationalScope) {
+  if (role === "coord_general") return "Coordena\u00e7\u00e3o Geral";
+  if (role === "coord_rj") return "Coordena\u00e7\u00e3o RJ";
+  if (role === "coord_marica") return "Coordena\u00e7\u00e3o Maric\u00e1";
+  if (role === "coord_sao_goncalo") return "Coordena\u00e7\u00e3o S\u00e3o Gon\u00e7alo";
+  if (role === "coord_niteroi") return "Coordena\u00e7\u00e3o Niter\u00f3i";
+  const city = getScopeCity(scope);
+  return city ? `${city} - Lideran\u00e7a` : "Lideran\u00e7a RJ";
 }
 
 export function getRJRegionForCity(city: string) {
@@ -337,9 +386,9 @@ export function getMaricaDistrictForNeighborhood(neighborhood: string) {
 }
 
 export function getTerritoryGroup(actor: ForceActor) {
-  return actor.scope === "marica"
-    ? actor.district ?? getMaricaDistrictForNeighborhood(actor.territory)
-    : actor.region ?? getRJRegionForCity(actor.territory);
+  return actor.scope === "rj"
+    ? actor.region ?? getRJRegionForCity(actor.territory)
+    : actor.district ?? getMunicipalSubdivisionForNeighborhood(getMunicipalBaseByKeySafe(actor.scope), actor.territory);
 }
 
 export function groupTerritoryPerformance(actors: ForceActor[], month: string, scope: OperationalScope): TerritoryPerformance[] {
@@ -362,4 +411,28 @@ export function groupTerritoryPerformance(actors: ForceActor[], month: string, s
 
 function sum(rows: MonthlyProjection[], key: keyof MonthlyProjection) {
   return rows.reduce((total, item) => total + Number(item[key] ?? 0), 0);
+}
+
+
+export function getScopeTerritoryData(scope: OperationalScope, territory: string) {
+  if (scope === "rj") {
+    return {
+      city: territory,
+      neighborhood: undefined,
+      region: getRJRegionForCity(territory),
+      district: undefined,
+    };
+  }
+
+  const city = getMunicipalBaseByKeySafe(scope);
+  return {
+    city,
+    neighborhood: territory,
+    region: getRJRegionForCity(city),
+    district: getMunicipalSubdivisionForNeighborhood(city, territory),
+  };
+}
+
+function getMunicipalBaseByKeySafe(scope: MunicipalBaseKey) {
+  return municipalBases[scope]?.city ?? municipalBases.marica.city;
 }

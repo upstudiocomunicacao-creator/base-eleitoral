@@ -12,6 +12,7 @@ import {
   Users,
 } from "lucide-react";
 import type { Leader, LeaderMonthlyMetric } from "@/types/database";
+import { municipalBaseCities } from "@/services/municipalBases";
 import type { ForceNode } from "./types";
 
 export const forceMapLevels: ForceNode[][] = [
@@ -28,7 +29,7 @@ export const forceMapLevels: ForceNode[][] = [
       summary: "Visão consolidada da força territorial, separando o Estado do RJ por cidades e Maricá por bairros.",
       metrics: [
         { label: "Coordenações RJ", value: "4" },
-        { label: "Coordenações Maricá", value: "4" },
+        { label: "Coordenações bases", value: "4" },
         { label: "Lideranças", value: "5" },
         { label: "Apoio estimado", value: "6.603", helper: "Número auxiliar para conversão em voto, sem cadastro de pessoas." },
         { label: "Votos mínimos", value: "2.950" },
@@ -192,7 +193,7 @@ export const forceMapLevels: ForceNode[][] = [
       summary: "Os mapas usam as listas territoriais oficiais para exibir força, lacunas e prioridades.",
       metrics: [
         { label: "Mapa RJ", value: "Cidades" },
-        { label: "Mapa Maricá", value: "Bairros" },
+        { label: "Mapas municipais", value: "Bairros" },
         { label: "Geocodificação", value: "Latitude/longitude" },
         { label: "Mapbox", value: "Preparado" },
       ],
@@ -212,7 +213,7 @@ export const forceMapLevels: ForceNode[][] = [
       metrics: [
         { label: "Cidades RJ", value: "92" },
         { label: "Regiões RJ", value: "8" },
-        { label: "Bairros Maricá", value: "50" },
+        { label: "Bairros bases", value: "152" },
         { label: "Distritos Maricá", value: "4" },
       ],
       insights: ["A lista oficial padroniza cadastros e relatórios.", "O campo bairro fica como Todos quando a cidade não é Maricá."],
@@ -281,15 +282,15 @@ export function buildForceMapLevels({ leaders, monthlyMetrics }: RuntimeForceMap
   const ceilingCost = sum(monthMetrics, (metric) => metric.ceiling_cost);
   const extraCost = sum(monthMetrics, (metric) => metric.extra_cost);
   const totalCost = ceilingCost + extraCost;
-  const coordinatorsRJ = leaders.filter((leader) => isCoordinator(leader) && !isMaricaLeader(leader)).length;
-  const coordinatorsMarica = leaders.filter((leader) => isCoordinator(leader) && isMaricaLeader(leader)).length;
-  const leadersRJ = leaders.filter((leader) => isLeadership(leader) && !isMaricaLeader(leader)).length;
-  const leadersMarica = leaders.filter((leader) => isLeadership(leader) && isMaricaLeader(leader)).length;
-  const rjCitiesWithAction = uniqueCount(leaders.filter((leader) => !isMaricaLeader(leader)).map((leader) => leader.city));
-  const maricaNeighborhoodsWithAction = uniqueCount(leaders.filter(isMaricaLeader).map((leader) => leader.neighborhood));
-  const regionsWithAction = uniqueCount(leaders.filter((leader) => !isMaricaLeader(leader)).map((leader) => leader.territory_region));
-  const districtsWithAction = uniqueCount(leaders.filter(isMaricaLeader).map((leader) => leader.territory_region));
-  const territories = rjCitiesWithAction + maricaNeighborhoodsWithAction;
+  const coordinatorsRJ = leaders.filter((leader) => isCoordinator(leader) && !isMunicipalBaseLeader(leader)).length;
+  const coordinatorsMarica = leaders.filter((leader) => isCoordinator(leader) && isMunicipalBaseLeader(leader)).length;
+  const leadersRJ = leaders.filter((leader) => isLeadership(leader) && !isMunicipalBaseLeader(leader)).length;
+  const leadersMarica = leaders.filter((leader) => isLeadership(leader) && isMunicipalBaseLeader(leader)).length;
+  const rjCitiesWithAction = uniqueCount(leaders.map((leader) => leader.city));
+  const municipalNeighborhoodsWithAction = uniqueCount(leaders.filter(isMunicipalBaseLeader).map((leader) => leader.neighborhood ? leader.city + ':' + leader.neighborhood : null));
+  const regionsWithAction = uniqueCount(leaders.filter((leader) => !isMunicipalBaseLeader(leader)).map((leader) => leader.territory_region));
+  const districtsWithAction = uniqueCount(leaders.filter(isMunicipalBaseLeader).map((leader) => leader.territory_region));
+  const territories = rjCitiesWithAction + municipalNeighborhoodsWithAction;
   const costPerMinVote = minVotes > 0 ? totalCost / minVotes : 0;
 
   return forceMapLevels.map((level) =>
@@ -299,7 +300,7 @@ export function buildForceMapLevels({ leaders, monthlyMetrics }: RuntimeForceMap
           return patchNode(node, {
             metrics: [
               { label: "Coordenações RJ", value: formatNumber(coordinatorsRJ) },
-              { label: "Coordenações Maricá", value: formatNumber(coordinatorsMarica) },
+              { label: "Coordenações bases", value: formatNumber(coordinatorsMarica) },
               { label: "Lideranças", value: formatNumber(leadersRJ + leadersMarica) },
               { label: "Apoio estimado", value: formatNumber(totalSupporters), helper: "Número auxiliar para conversão em voto, sem cadastro de pessoas." },
               { label: "Votos mínimos", value: formatNumber(minVotes) },
@@ -317,7 +318,7 @@ export function buildForceMapLevels({ leaders, monthlyMetrics }: RuntimeForceMap
             countLabel: "coordenações",
             metrics: [
               { label: "Coordenações RJ", value: formatNumber(coordinatorsRJ) },
-              { label: "Coordenações Maricá", value: formatNumber(coordinatorsMarica) },
+              { label: "Coordenações bases", value: formatNumber(coordinatorsMarica) },
               { label: "Territórios cobertos", value: formatNumber(territories) },
               { label: "Atualização", value: latestMonth ? formatMonth(latestMonth) : "Cadastro base" },
             ],
@@ -338,14 +339,14 @@ export function buildForceMapLevels({ leaders, monthlyMetrics }: RuntimeForceMap
         case "coordenacao-marica":
           return patchNode(node, {
             count: formatNumber(coordinatorsMarica),
-            countLabel: "coordenações Maricá",
+            countLabel: "coordenações bases",
             metrics: [
-              { label: "Bairros com atuação", value: formatNumber(maricaNeighborhoodsWithAction) },
+              { label: "Bairros com atuação", value: formatNumber(municipalNeighborhoodsWithAction) },
               { label: "Distritos com atuação", value: formatNumber(districtsWithAction) },
               { label: "Recorte principal", value: "Bairro" },
               { label: "Mais de um por bairro", value: "Sim" },
             ],
-            progress: { label: "Cobertura municipal atual", value: clampProgress(maricaNeighborhoodsWithAction, 50) },
+            progress: { label: "Cobertura municipal atual", value: clampProgress(municipalNeighborhoodsWithAction, 50) },
           });
         case "liderancas-rj":
           return patchNode(node, {
@@ -362,9 +363,9 @@ export function buildForceMapLevels({ leaders, monthlyMetrics }: RuntimeForceMap
         case "liderancas-marica":
           return patchNode(node, {
             count: formatNumber(leadersMarica),
-            countLabel: "lideranças Maricá",
+            countLabel: "lideranças bases",
             metrics: [
-              { label: "Bairros atendidos", value: formatNumber(maricaNeighborhoodsWithAction) },
+              { label: "Bairros atendidos", value: formatNumber(municipalNeighborhoodsWithAction) },
               { label: "Vínculo à coordenação", value: "Opcional" },
               { label: "Distrito", value: "Automático" },
               { label: "Apoio estimado", value: formatNumber(totalSupporters) },
@@ -401,7 +402,7 @@ export function buildForceMapLevels({ leaders, monthlyMetrics }: RuntimeForceMap
             countLabel: "territórios com dados",
             metrics: [
               { label: "Mapa RJ", value: `${formatNumber(rjCitiesWithAction)} cidades` },
-              { label: "Mapa Maricá", value: `${formatNumber(maricaNeighborhoodsWithAction)} bairros` },
+              { label: "Mapas municipais", value: `${formatNumber(municipalNeighborhoodsWithAction)} bairros` },
               { label: "Geocodificação", value: "Latitude/longitude" },
               { label: "Mapbox", value: "Ativo" },
             ],
@@ -448,8 +449,10 @@ function isLeadership(leader: Leader) {
   return normalize(leader.leader_type).includes("lider");
 }
 
-function isMaricaLeader(leader: Leader) {
-  return normalize(leader.city) === "marica";
+const municipalBaseCityKeys = new Set(municipalBaseCities.map((city) => normalize(city)));
+
+function isMunicipalBaseLeader(leader: Leader) {
+  return municipalBaseCityKeys.has(normalize(leader.city));
 }
 
 function getLeaderSupporters(leader: Leader) {

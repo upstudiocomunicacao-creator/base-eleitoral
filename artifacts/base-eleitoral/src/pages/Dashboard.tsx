@@ -57,7 +57,7 @@ const emptyFilters: DashboardFilters = {
 const statCards = [
   { key: "totalLeaders", label: "Cadastros", icon: Users, tone: "blue" },
   { key: "coordinatorsRJ", label: "Coord. RJ", icon: Building2, tone: "indigo" },
-  { key: "coordinatorsMarica", label: "Coord. Maricá", icon: MapPin, tone: "emerald" },
+  { key: "coordinatorsMarica", label: "Coord. Bases", icon: MapPin, tone: "emerald" },
   { key: "territorialLeaders", label: "Lideranças", icon: ShieldCheck, tone: "cyan" },
   { key: "estimatedSupporters", label: "Apoio estim.", icon: BarChart2, tone: "violet" },
   { key: "minVotes", label: "Votos mín.", icon: CheckCircle2, tone: "green" },
@@ -65,7 +65,7 @@ const statCards = [
   { key: "ceilingCost", label: "Custo teto", icon: CircleDollarSign, tone: "orange" },
   { key: "costPerMinVote", label: "Custo/voto", icon: TrendingUp, tone: "cyan" },
   { key: "municipalitiesWithAction", label: "Cidades RJ", icon: Building2, tone: "indigo" },
-  { key: "coveredNeighborhoods", label: "Bairros Maricá", icon: MapPin, tone: "rose" },
+  { key: "coveredNeighborhoods", label: "Bairros Bases", icon: MapPin, tone: "rose" },
   { key: "priorityRegions", label: "Prioritárias", icon: AlertTriangle, tone: "red" },
 ] as const;
 
@@ -242,7 +242,7 @@ function ExecutivePulse({ computed, loading }: { computed: DashboardComputed | n
         <div className="text-xs font-bold uppercase tracking-[0.14em] text-slate-500">Próxima leitura</div>
         <div className="mt-3 grid grid-cols-2 gap-3">
           <MiniStat label="Cidades RJ" value={computed?.summary.municipalitiesWithAction ?? 0} />
-          <MiniStat label="Bairros Maricá" value={computed?.summary.coveredNeighborhoods ?? 0} />
+          <MiniStat label="Bairros Bases" value={computed?.summary.coveredNeighborhoods ?? 0} />
           <MiniStat label="Cadastros" value={computed?.summary.totalLeaders ?? 0} />
           <MiniStat label="Prioridades" value={computed?.summary.priorityRegions ?? 0} />
         </div>
@@ -332,7 +332,7 @@ function RankingCard({ title, description, items, loading, colorClass, valueClas
 function CoverageCard({ rows, loading }: { rows: Array<{ nome: string; cobertura: number; apoiadores: number; liderancas: number; eleitores: number }>; loading: boolean }) {
   return (
     <Card className="premium-card">
-      <CardHeader><CardTitle className="text-base">Ranking territorial por validação</CardTitle><p className="text-xs font-semibold text-slate-400">Cidades do RJ e bairros de Maricá por força validada</p></CardHeader>
+      <CardHeader><CardTitle className="text-base">Ranking territorial por validação</CardTitle><p className="text-xs font-semibold text-slate-400">Cidades do RJ e bairros das bases municipais</p></CardHeader>
       <CardContent className="space-y-3">
         {loading ? <SkeletonList /> : rows.length === 0 ? <EmptyState title="Sem cobertura calculada" description="Cadastre coordenações e lideranças para alimentar esta leitura." icon={MapPin} /> : rows.slice(0, 6).map((row) => (
           <div key={row.nome} className="rounded-lg bg-slate-50 p-3">

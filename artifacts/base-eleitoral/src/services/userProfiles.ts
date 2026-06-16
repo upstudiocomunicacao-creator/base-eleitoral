@@ -47,9 +47,11 @@ export async function updateUserProfile(
 }
 
 function createUserProfileError(error: unknown) {
+  const message = error && typeof error === "object" && "message" in error ? String((error as { message?: unknown }).message) : "";
+
   return createSupabaseServiceError(error, {
     tableName: "users_profiles",
-    setupSql: "supabase/schema.sql",
+    setupSql: message.includes("avatar_url") ? "supabase/add-user-profile-avatar.sql" : "supabase/schema.sql",
     fallbackMessage: "Não foi possível acessar o perfil do usuário no Supabase.",
   });
 }

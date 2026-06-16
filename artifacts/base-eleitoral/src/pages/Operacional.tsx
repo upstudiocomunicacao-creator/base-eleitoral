@@ -8,6 +8,7 @@ import {
   Loader2,
   MapPin,
   Network,
+  Pencil,
   Plus,
   RefreshCw,
   Target,
@@ -37,11 +38,17 @@ import { toast } from "@/hooks/use-toast";
 import { useCampaignSettings } from "@/hooks/useCampaignSettings";
 import {
   computeOperationalSummary,
-  getMaricaDistrictForNeighborhood,
+  getCoordinatorRoleForScope,
+  getDefaultTerritoryForScope,
+  getLeaderTypeForOperationalRole,
   getMonthly,
   getRJRegionForCity,
   getRoleLabel,
+  getScopeFromCity,
   getScopeLabel,
+  getScopeTerritories,
+  getScopeTerritoryData,
+  getScopeTerritoryLabel,
   getTerritoryGroup,
   groupTerritoryPerformance,
   maricaDistricts,
@@ -49,6 +56,7 @@ import {
   minimalFields,
   operationalActors,
   operationalMonths,
+  operationalScopeOptions,
   rjCities,
   rjRegions,
   type ForceActor,
@@ -56,7 +64,7 @@ import {
   type ForceStatus,
   type OperationalScope,
 } from "@/services/operational";
-import { createLeader, isLeadersSupabaseReady, listLeaders } from "@/services/leaders";
+import { createLeader, isLeadersSupabaseReady, listLeaders, updateLeader } from "@/services/leaders";
 import { listLeaderMonthlyMetrics, upsertLeaderMonthlyMetric } from "@/services/leaderMonthlyMetrics";
 import type { CampaignSettings } from "@/services/campaigns";
 import type { Leader, LeaderMonthlyMetric } from "@/types/database";
@@ -86,6 +94,7 @@ export default function Operacional() {
   const [loadingRealData, setLoadingRealData] = useState(false);
   const [savingMonthly, setSavingMonthly] = useState(false);
   const [addingActor, setAddingActor] = useState(false);
+  const [editingActorId, setEditingActorId] = useState<string | null>(null);
   const [dataMessage, setDataMessage] = useState("Dados mockados de referência");
   const [draft, setDraft] = useState({
     name: "",
@@ -107,7 +116,7 @@ export default function Operacional() {
   const rjPerformance = useMemo(() => groupTerritoryPerformance(actors, month, "rj"), [actors, month]);
   const maricaPerformance = useMemo(() => groupTerritoryPerformance(actors, month, "marica"), [actors, month]);
   const scopedActors = useMemo(() => actors.filter((item) => item.scope === scope), [actors, scope]);
-  const mapItems = scope === "marica" ? maricaPerformance : rjPerformance;
+  const mapItems = useMemo(() => groupTerritoryPerformance(actors, month, scope), [actors, month, scope]);
 
   async function loadRealLeaders() {
     if (!isLeadersSupabaseReady()) {
@@ -146,9 +155,9 @@ export default function Operacional() {
     void loadRealLeaders();
   }, []);
 
-  async function addActor() {
+  async function saveActor() {
     if (!draft.name.trim() || !draft.phone.trim() || !draft.territory.trim()) return;
-    const isMarica = draft.scope === "marica";
+    const territoryData = getScopeTerritoryData(draft.scope, draft.territory);
     const minVotes = Number(draft.minVotes) || 0;
     const maxVotes = Number(draft.maxVotes) || minVotes;
     const estimatedSupporters = Number(draft.estimatedSupporters) || Math.max(maxVotes, minVotes);
@@ -156,31 +165,6 @@ export default function Operacional() {
     const ceilingCost = Number(draft.ceilingCost) || baseCost;
     const extraCost = Number(draft.extraCost) || 0;
     const monthly = operationalMonths.map((item) => ({ month: item, estimatedSupporters, minVotes, maxVotes, baseCost, ceilingCost, extraCost }));
-
-    if (!isLeadersSupabaseReady()) {
-      setActors((current) => [
-        {
-          id: `local-${Date.now()}`,
-          name: draft.name.trim(),
-          phone: draft.phone.trim(),
-          role: draft.role,
-          scope: draft.scope,
-          territory: draft.territory,
-          city: isMarica ? "Maricá" : draft.territory,
-          neighborhood: isMarica ? draft.territory : undefined,
-          region: isMarica ? undefined : getRJRegionForCity(draft.territory),
-          district: isMarica ? getMaricaDistrictForNeighborhood(draft.territory) : undefined,
-          status: draft.status as ForceActor["status"],
-          parentId: draft.parentLeaderId || undefined,
-          notes: "Cadastro criado no modo operacional.",
-          monthly,
-        },
-        ...current,
-      ]);
-      setDataMessage("Cadastro local criado. Configure o Supabase para gravar dados reais.");
-      resetDraft();
-      return;
-    }
 
     if (maxVotes < minVotes) {
       toast({ title: "Revise os votos", description: "O voto máximo não pode ser menor que o voto mínimo.", variant: "destructive" });
@@ -192,19 +176,45 @@ export default function Operacional() {
       return;
     }
 
+    if (!isLeadersSupabaseReady()) {
+      const localActor: ForceActor = {
+        id: editingActorId ?? `local-${Date.now()}`,
+        name: draft.name.trim(),
+        phone: draft.phone.trim(),
+        role: draft.role,
+        scope: draft.scope,
+        territory: draft.territory,
+        city: territoryData.city,
+        neighborhood: territoryData.neighborhood,
+        region: territoryData.region,
+        district: territoryData.district,
+        status: draft.status as ForceActor["status"],
+        parentId: draft.parentLeaderId || undefined,
+        notes: "Cadastro criado no modo operacional.",
+        monthly,
+      };
+
+      setActors((current) => editingActorId
+        ? current.map((item) => item.id === editingActorId ? localActor : item)
+        : [localActor, ...current]);
+      setDataMessage(editingActorId ? "Cadastro local atualizado." : "Cadastro local criado. Configure o Supabase para gravar dados reais.");
+      resetDraft();
+      return;
+    }
+
     setAddingActor(true);
     try {
-      const savedLeader = await createLeader({
+      const leaderPayload = {
         full_name: draft.name.trim(),
         political_nickname: null,
         phone: draft.phone.trim(),
         email: null,
-        leader_type: getLeaderTypeForRole(draft.role),
+        leader_type: getLeaderTypeForOperationalRole(draft.role, draft.scope),
         status: draft.status,
-        neighborhood: isMarica ? draft.territory : "Todos",
-        city: isMarica ? "Maricá" : draft.territory,
+        neighborhood: territoryData.neighborhood ?? "Todos",
+        city: territoryData.city,
         state: "RJ",
-        territory_region: isMarica ? getMaricaDistrictForNeighborhood(draft.territory) : getRJRegionForCity(draft.territory),
+        territory_region: territoryData.district ?? territoryData.region,
         geographic_precision: "Baixa",
         parent_leader_id: draft.parentLeaderId || null,
         internal_responsible: "Modo Operacional",
@@ -219,7 +229,11 @@ export default function Operacional() {
         last_update: new Date().toISOString().slice(0, 10),
         next_action: "Acompanhar evolução mensal",
         notes: "Cadastro mínimo criado pelo modo operacional.",
-      });
+      };
+
+      const savedLeader = editingActorId
+        ? await updateLeader(editingActorId, leaderPayload)
+        : await createLeader(leaderPayload);
 
       const savedMetric = await upsertLeaderMonthlyMetric({
         leader_id: savedLeader.id,
@@ -233,12 +247,12 @@ export default function Operacional() {
       });
 
       setActors((current) => [leaderToOperationalActor(savedLeader, [savedMetric]), ...current.filter((item) => item.id !== savedLeader.id)]);
-      setDataMessage("Cadastro e métrica mensal salvos no Supabase.");
-      toast({ title: "Cadastro salvo", description: "O registro já entrou no modo operacional e nas métricas do mês." });
+      setDataMessage(editingActorId ? "Cadastro e métrica mensal atualizados no Supabase." : "Cadastro e métrica mensal salvos no Supabase.");
+      toast({ title: editingActorId ? "Cadastro atualizado" : "Cadastro salvo", description: "O registro já entrou no modo operacional e nas métricas do mês." });
       resetDraft();
     } catch (error) {
       const description = error instanceof Error ? error.message : "Não foi possível salvar o cadastro operacional.";
-      toast({ title: "Não foi possível cadastrar", description, variant: "destructive" });
+      toast({ title: "Não foi possível salvar", description, variant: "destructive" });
     } finally {
       setAddingActor(false);
     }
@@ -246,6 +260,27 @@ export default function Operacional() {
 
   function resetDraft() {
     setDraft((current) => ({ ...current, name: "", phone: "", estimatedSupporters: "0", minVotes: "0", maxVotes: "0", baseCost: "0", ceilingCost: "0", extraCost: "0", parentLeaderId: "" }));
+    setEditingActorId(null);
+  }
+
+  function startEditingActor(actor: ForceActor) {
+    const monthly = getMonthly(actor, month);
+    setEditingActorId(actor.id);
+    setDraft({
+      name: actor.name,
+      phone: actor.phone,
+      role: actor.role,
+      scope: actor.scope,
+      territory: actor.territory,
+      status: actor.status,
+      estimatedSupporters: String(monthly.estimatedSupporters),
+      minVotes: String(monthly.minVotes),
+      maxVotes: String(monthly.maxVotes),
+      baseCost: String(monthly.baseCost),
+      ceilingCost: String(monthly.ceilingCost),
+      extraCost: String(monthly.extraCost),
+      parentLeaderId: actor.parentId ?? "",
+    });
   }
 
   async function saveMonthlyMetric(actorId: string, values: MonthlyMetricDraft) {
@@ -338,7 +373,7 @@ export default function Operacional() {
 
       <div className="grid grid-cols-2 gap-4 md:grid-cols-4 xl:grid-cols-7">
         <MetricCard label="Coord. RJ" value={summary.coordinatorsRJ} icon={Building2} tone="blue" />
-        <MetricCard label="Coord. Maricá" value={summary.coordinatorsMarica} icon={MapPin} tone="emerald" />
+        <MetricCard label="Coord. Bases" value={summary.coordinatorsMarica} icon={MapPin} tone="emerald" />
         <MetricCard label="Lideranças" value={summary.leaders} icon={Users} tone="violet" />
         <MetricCard label="Apoio estimado" value={summary.estimatedSupporters} icon={ClipboardList} tone="blue" />
         <MetricCard label="Votos mín." value={summary.minVotes} icon={Target} tone="green" />
@@ -378,8 +413,16 @@ export default function Operacional() {
 
         <TabsContent value="cadastros">
           <div className="grid gap-5 xl:grid-cols-[360px_minmax(0,1fr)]">
-            <CadastroRapido draft={draft} setDraft={setDraft} parentOptions={buildOperationalParentOptions(leadersForHierarchy, draft)} onAdd={addActor} saving={addingActor} />
-            <ActorsTable actors={actors} month={month} />
+            <CadastroRapido
+              draft={draft}
+              setDraft={setDraft}
+              parentOptions={buildOperationalParentOptions(leadersForHierarchy, draft)}
+              onSave={saveActor}
+              onCancelEdit={resetDraft}
+              saving={addingActor}
+              editing={Boolean(editingActorId)}
+            />
+            <ActorsTable actors={actors} month={month} onEdit={startEditingActor} />
           </div>
         </TabsContent>
 
@@ -540,7 +583,7 @@ function ForceMap({ actors, month, campaign }: { actors: ForceActor[]; month: st
     <Card className="premium-card">
       <CardHeader>
         <CardTitle>Organograma territorial simplificado</CardTitle>
-        <p className="text-sm font-medium text-slate-500">Candidato → Coordenação Geral → Coordenações RJ/Maricá → Lideranças.</p>
+        <p className="text-sm font-medium text-slate-500">{"Candidato \u2192 Coordena\u00e7\u00e3o Geral \u2192 Coordena\u00e7\u00f5es RJ/Maric\u00e1/Niter\u00f3i/S\u00e3o Gon\u00e7alo \u2192 Lideran\u00e7as."}</p>
       </CardHeader>
       <CardContent className="space-y-5">
         <div className="mx-auto max-w-sm rounded-xl border border-blue-100 bg-blue-50 p-4 text-center shadow-sm">
@@ -559,9 +602,17 @@ function ForceMap({ actors, month, campaign }: { actors: ForceActor[]; month: st
           ) : null}
         </div>
         <Connector />
-        <div className="grid gap-4 lg:grid-cols-2">
-          <CoordinationColumn title="Coordenação RJ" subtitle="Coordenadores por município" actors={general.filter((item) => item.role === "coord_rj")} month={month} />
-          <CoordinationColumn title="Coordenação Maricá" subtitle="Coordenadores por bairro" actors={general.filter((item) => item.role === "coord_marica")} month={month} />
+        <div className="grid gap-4 lg:grid-cols-2 xl:grid-cols-4">
+          <CoordinationColumn title="Coordena\u00e7\u00e3o RJ" subtitle="Coordenadores por munic\u00edpio" actors={general.filter((item) => item.role === "coord_rj")} month={month} />
+          {operationalScopeOptions.filter((item) => item.value !== "rj").map((option) => (
+            <CoordinationColumn
+              key={option.value}
+              title={getRoleLabel(getCoordinatorRoleForScope(option.value))}
+              subtitle="Coordenadores por bairro"
+              actors={general.filter((item) => item.role === getCoordinatorRoleForScope(option.value))}
+              month={month}
+            />
+          ))}
         </div>
         <Connector />
         <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
@@ -613,23 +664,37 @@ function CadastroRapido({
   draft,
   setDraft,
   parentOptions,
-  onAdd,
+  onSave,
+  onCancelEdit,
   saving,
+  editing,
 }: {
   draft: Record<string, string>;
   setDraft: (value: any) => void;
   parentOptions: Array<{ value: string; label: string }>;
-  onAdd: () => void;
+  onSave: () => void;
+  onCancelEdit: () => void;
   saving: boolean;
+  editing: boolean;
 }) {
-  const territories = draft.scope === "marica" ? maricaNeighborhoods : rjCities;
+  const currentScope = draft.scope as OperationalScope;
+  const territories = getScopeTerritories(currentScope);
+  const territoryData = getScopeTerritoryData(currentScope, draft.territory);
   const setRole = (value: string) => {
-    const nextScope = value === "coord_rj" ? "rj" : value === "coord_marica" || value === "coord_general" ? "marica" : draft.scope;
+    const nextScope = value === "coord_rj"
+      ? "rj"
+      : value === "coord_marica"
+        ? "marica"
+        : value === "coord_sao_goncalo"
+          ? "sao_goncalo"
+          : value === "coord_niteroi"
+            ? "niteroi"
+            : currentScope;
     setDraft({
       ...draft,
       role: value,
       scope: nextScope,
-      territory: nextScope === "marica" ? "Centro" : "Niterói",
+      territory: getDefaultTerritoryForScope(nextScope as OperationalScope),
       parentLeaderId: "",
     });
   };
@@ -637,8 +702,8 @@ function CadastroRapido({
   return (
     <Card className="premium-card">
       <CardHeader>
-        <CardTitle>Cadastro mínimo</CardTitle>
-        <p className="text-sm font-medium text-slate-500">Focado em mapa, métricas e custos.</p>
+        <CardTitle>{editing ? "Editar cadastro" : "Cadastro m\u00ednimo"}</CardTitle>
+        <p className="text-sm font-medium text-slate-500">Focado em mapa, m\u00e9tricas e custos.</p>
       </CardHeader>
       <CardContent className="space-y-3">
         <Field label="Nome"><Input value={draft.name} onChange={(e) => setDraft({ ...draft, name: e.target.value })} /></Field>
@@ -650,31 +715,44 @@ function CadastroRapido({
               <SelectContent>
                 <SelectItem value="coord_general">Coord. Geral</SelectItem>
                 <SelectItem value="coord_rj">Coord. RJ</SelectItem>
-                <SelectItem value="coord_marica">Coord. Maricá</SelectItem>
-                <SelectItem value="leader">Liderança</SelectItem>
+                <SelectItem value="coord_marica">Coord. Maric\u00e1</SelectItem>
+                <SelectItem value="coord_sao_goncalo">Coord. S\u00e3o Gon\u00e7alo</SelectItem>
+                <SelectItem value="coord_niteroi">Coord. Niter\u00f3i</SelectItem>
+                <SelectItem value="leader">Lideran\u00e7a</SelectItem>
               </SelectContent>
             </Select>
           </Field>
           <Field label="Recorte">
-            <Select value={draft.scope} onValueChange={(value) => setDraft({ ...draft, scope: value, territory: value === "marica" ? "Centro" : "Niterói", role: value === "marica" && draft.role === "coord_rj" ? "coord_marica" : value === "rj" && (draft.role === "coord_marica" || draft.role === "coord_general") ? "coord_rj" : draft.role, parentLeaderId: "" })}>
+            <Select value={draft.scope} onValueChange={(value) => {
+              const nextScope = value as OperationalScope;
+              const shouldAdjustRole = draft.role !== "leader" && draft.role !== "coord_general";
+              setDraft({
+                ...draft,
+                scope: nextScope,
+                territory: getDefaultTerritoryForScope(nextScope),
+                role: shouldAdjustRole ? getCoordinatorRoleForScope(nextScope) : draft.role,
+                parentLeaderId: "",
+              });
+            }}>
               <SelectTrigger><SelectValue /></SelectTrigger>
               <SelectContent>
-                <SelectItem value="marica">Maricá</SelectItem>
-                <SelectItem value="rj">RJ</SelectItem>
+                {operationalScopeOptions.map((item) => (
+                  <SelectItem key={item.value} value={item.value}>{item.label}</SelectItem>
+                ))}
               </SelectContent>
             </Select>
           </Field>
         </div>
-        <Field label={draft.scope === "marica" ? "Bairro" : "Cidade"}>
+        <Field label={getScopeTerritoryLabel(currentScope)}>
           <Select value={draft.territory} onValueChange={(value) => setDraft({ ...draft, territory: value, parentLeaderId: "" })}>
             <SelectTrigger><SelectValue /></SelectTrigger>
             <SelectContent className="max-h-80">{territories.map((item) => <SelectItem key={item} value={item}>{item}</SelectItem>)}</SelectContent>
           </Select>
         </Field>
         <div className="rounded-lg border border-blue-100 bg-blue-50 px-3 py-2 text-xs font-bold text-blue-700">
-          {draft.scope === "marica"
-            ? `Distrito: ${getMaricaDistrictForNeighborhood(draft.territory)}`
-            : `Região: ${getRJRegionForCity(draft.territory)}`}
+          {currentScope === "rj"
+            ? "Regi\u00e3o: " + territoryData.region
+            : getScopeLabel(currentScope) + " \u00b7 " + territoryData.district}
         </div>
         {draft.role === "leader" ? (
           <Field label="Vinculado a / indicado por">
@@ -689,8 +767,8 @@ function CadastroRapido({
             <SelectTrigger><SelectValue /></SelectTrigger>
             <SelectContent>
               <SelectItem value="Ativo">Ativo</SelectItem>
-              <SelectItem value="Atenção">Atenção</SelectItem>
-              <SelectItem value="Prioritário">Prioritário</SelectItem>
+              <SelectItem value="Aten\u00e7\u00e3o">Aten\u00e7\u00e3o</SelectItem>
+              <SelectItem value="Priorit\u00e1rio">Priorit\u00e1rio</SelectItem>
               <SelectItem value="Pendente">Pendente</SelectItem>
             </SelectContent>
           </Select>
@@ -699,40 +777,47 @@ function CadastroRapido({
           <Input type="number" value={draft.estimatedSupporters} onChange={(e) => setDraft({ ...draft, estimatedSupporters: e.target.value })} />
         </Field>
         <div className="grid grid-cols-2 gap-3">
-          <Field label="Votos mín."><Input type="number" value={draft.minVotes} onChange={(e) => setDraft({ ...draft, minVotes: e.target.value })} /></Field>
-          <Field label="Votos máx."><Input type="number" value={draft.maxVotes} onChange={(e) => setDraft({ ...draft, maxVotes: e.target.value })} /></Field>
-          <Field label="Custo mín."><Input type="number" value={draft.baseCost} onChange={(e) => setDraft({ ...draft, baseCost: e.target.value })} /></Field>
-          <Field label="Custo máx."><Input type="number" value={draft.ceilingCost} onChange={(e) => setDraft({ ...draft, ceilingCost: e.target.value })} /></Field>
+          <Field label="Votos m\u00edn."><Input type="number" value={draft.minVotes} onChange={(e) => setDraft({ ...draft, minVotes: e.target.value })} /></Field>
+          <Field label="Votos m\u00e1x."><Input type="number" value={draft.maxVotes} onChange={(e) => setDraft({ ...draft, maxVotes: e.target.value })} /></Field>
+          <Field label="Custo m\u00edn."><Input type="number" value={draft.baseCost} onChange={(e) => setDraft({ ...draft, baseCost: e.target.value })} /></Field>
+          <Field label="Custo m\u00e1x."><Input type="number" value={draft.ceilingCost} onChange={(e) => setDraft({ ...draft, ceilingCost: e.target.value })} /></Field>
         </div>
         <Field label="Custo extra eventual"><Input type="number" value={draft.extraCost} onChange={(e) => setDraft({ ...draft, extraCost: e.target.value })} /></Field>
-        <Button className="w-full" onClick={onAdd} disabled={saving || !draft.name.trim() || !draft.phone.trim()}>
-          {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Plus className="h-4 w-4" />}
-          Salvar cadastro operacional
-        </Button>
+        <div className="grid gap-2 sm:grid-cols-2">
+          <Button className="w-full" onClick={onSave} disabled={saving || !draft.name.trim() || !draft.phone.trim()}>
+            {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : editing ? <Pencil className="h-4 w-4" /> : <Plus className="h-4 w-4" />}
+            {editing ? "Atualizar cadastro" : "Salvar cadastro"}
+          </Button>
+          {editing ? (
+            <Button type="button" variant="outline" className="w-full" onClick={onCancelEdit} disabled={saving}>
+              Cancelar edi\u00e7\u00e3o
+            </Button>
+          ) : null}
+        </div>
       </CardContent>
     </Card>
   );
 }
 
-function ActorsTable({ actors, month }: { actors: ForceActor[]; month: string }) {
+function ActorsTable({ actors, month, onEdit }: { actors: ForceActor[]; month: string; onEdit: (actor: ForceActor) => void }) {
   return (
     <Card className="premium-card overflow-hidden">
       <CardHeader>
         <CardTitle>Cadastros operacionais</CardTitle>
-        <p className="text-sm font-medium text-slate-500">Lista mínima para execução mensal.</p>
+        <p className="text-sm font-medium text-slate-500">Clique em um cadastro para editar dados, v\u00ednculos, votos e custos.</p>
       </CardHeader>
       <CardContent className="overflow-x-auto p-0">
-        <table className="w-full min-w-[900px] text-left text-sm">
+        <table className="w-full min-w-[980px] text-left text-sm">
           <thead className="bg-slate-50 text-xs font-black uppercase tracking-[0.08em] text-slate-500">
             <tr>
-              {["Nome", "Tipo", "Território", "Região/Distrito", "Status", "Apoio", "Votos mín.", "Votos máx.", "Custo mín.", "Custo máx.", "Mapa"].map((item) => <th key={item} className="px-4 py-3">{item}</th>)}
+              {["Nome", "Tipo", "Territ\u00f3rio", "Regi\u00e3o/Distrito", "Status", "Apoio", "Votos m\u00edn.", "Votos m\u00e1x.", "Custo m\u00edn.", "Custo m\u00e1x.", "Mapa", "A\u00e7\u00f5es"].map((item) => <th key={item} className="px-4 py-3">{item}</th>)}
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-100">
             {actors.map((actor) => {
               const monthly = getMonthly(actor, month);
               return (
-                <tr key={actor.id} className="bg-white">
+                <tr key={actor.id} className="cursor-pointer bg-white transition hover:bg-blue-50/50" onClick={() => onEdit(actor)}>
                   <td className="px-4 py-3 font-black text-slate-900">{actor.name}<div className="text-xs font-semibold text-slate-400">{actor.phone}</div></td>
                   <td className="px-4 py-3 font-bold text-slate-600">{getRoleLabel(actor.role)}</td>
                   <td className="px-4 py-3 font-bold text-slate-600">{actor.territory}<div className="text-xs font-semibold text-slate-400">{getScopeLabel(actor.scope)}</div></td>
@@ -744,6 +829,12 @@ function ActorsTable({ actors, month }: { actors: ForceActor[]; month: string })
                   <td className="px-4 py-3 font-bold">{currency(monthly.baseCost)}</td>
                   <td className="px-4 py-3 font-bold">{currency(monthly.ceilingCost + monthly.extraCost)}</td>
                   <td className="px-4 py-3">{actor.latitude && actor.longitude ? "Pronto" : "Pendente"}</td>
+                  <td className="px-4 py-3">
+                    <Button size="sm" variant="outline" onClick={(event) => { event.stopPropagation(); onEdit(actor); }}>
+                      <Pencil className="h-3.5 w-3.5" />
+                      Editar
+                    </Button>
+                  </td>
                 </tr>
               );
             })}
@@ -1041,16 +1132,16 @@ function Connector() {
 
 function leaderToOperationalActor(leader: Leader, monthlyMetrics: LeaderMonthlyMetric[] = []): ForceActor {
   const city = leader.city || "Maricá";
-  const isMarica = normalizeText(city) === "marica";
-  const scope: OperationalScope = isMarica ? "marica" : "rj";
-  const territory = isMarica ? leader.neighborhood || "Centro" : city;
+  const scope = getScopeFromCity(city);
+  const territory = scope === "rj" ? city : leader.neighborhood || getDefaultTerritoryForScope(scope);
   const type = normalizeText(leader.leader_type);
-  const role: ForceRole = type.includes("geral") ? "coord_general" : type.includes("coord") ? (isMarica ? "coord_marica" : "coord_rj") : "leader";
+  const role: ForceRole = type.includes("geral") ? "coord_general" : type.includes("coord") ? getCoordinatorRoleForScope(scope) : "leader";
   const estimatedSupporters = Number(leader.registered_supporters ?? 0) + Number(leader.estimated_direct_supporters ?? 0) + Number(leader.estimated_indirect_supporters ?? 0);
   const declaredVotes = Number(leader.declared_votes ?? 0);
   const validatedVotes = Number(leader.validated_votes ?? 0);
   const minVotes = validatedVotes || Math.round(declaredVotes * 0.6);
   const maxVotes = declaredVotes || estimatedSupporters;
+  const territoryData = getScopeTerritoryData(scope, territory);
 
   const metricsByMonth = monthlyMetrics.filter((item) => item.leader_id === leader.id);
 
@@ -1061,10 +1152,10 @@ function leaderToOperationalActor(leader: Leader, monthlyMetrics: LeaderMonthlyM
     role,
     scope,
     territory,
-    city,
-    neighborhood: isMarica ? territory : undefined,
-    region: isMarica ? undefined : getRJRegionForCity(city),
-    district: isMarica ? getMaricaDistrictForNeighborhood(territory) : undefined,
+    city: territoryData.city,
+    neighborhood: territoryData.neighborhood,
+    region: territoryData.region,
+    district: territoryData.district,
     status: toForceStatus(leader.status),
     parentId: leader.parent_leader_id ?? undefined,
     latitude: leader.latitude ?? undefined,
@@ -1085,18 +1176,12 @@ function leaderToOperationalActor(leader: Leader, monthlyMetrics: LeaderMonthlyM
   };
 }
 
-function getLeaderTypeForRole(role: ForceRole) {
-  if (role === "coord_general") return "Coordenação Geral";
-  if (role === "coord_rj") return "Coordenação RJ";
-  if (role === "coord_marica") return "Coordenação Maricá";
-  return "Liderança";
-}
-
 function buildOperationalParentOptions(leaders: Leader[], draft: Record<string, string>) {
   const options = [{ value: "none", label: "Nenhum" }];
   if (draft.role !== "leader") return options;
 
-  const isMarica = draft.scope === "marica";
+  const scope = draft.scope as OperationalScope;
+  const territoryData = getScopeTerritoryData(scope, draft.territory);
   const generalCoordinators = leaders.filter((leader) => {
     const type = normalizeText(leader.leader_type);
     return type.includes("coord") && type.includes("geral");
@@ -1104,16 +1189,16 @@ function buildOperationalParentOptions(leaders: Leader[], draft: Record<string, 
   const territoryCoordinators = leaders.filter((leader) => {
     const type = normalizeText(leader.leader_type);
     if (!type.includes("coord") || type.includes("geral")) return false;
-    if (isMarica) {
-      return normalizeText(leader.city) === "marica" && normalizeText(leader.neighborhood) === normalizeText(draft.territory);
+    if (scope === "rj") {
+      return normalizeText(leader.city) === normalizeText(draft.territory);
     }
-    return normalizeText(leader.city) === normalizeText(draft.territory);
+    return normalizeText(leader.city) === normalizeText(territoryData.city) && normalizeText(leader.neighborhood) === normalizeText(draft.territory);
   });
 
   return [
     ...options,
-    ...generalCoordinators.map((leader) => ({ value: leader.id, label: `${leader.full_name} - Coordenação Geral` })),
-    ...territoryCoordinators.map((leader) => ({ value: leader.id, label: `${leader.full_name} - ${isMarica ? leader.neighborhood : leader.city}` })),
+    ...generalCoordinators.map((leader) => ({ value: leader.id, label: leader.full_name + " - Coordena\u00e7\u00e3o Geral" })),
+    ...territoryCoordinators.map((leader) => ({ value: leader.id, label: leader.full_name + " - " + (scope === "rj" ? leader.city : leader.neighborhood) })),
   ];
 }
 

@@ -2,6 +2,7 @@ import { getSupabaseClient, isSupabaseConfigured } from "@/lib/supabaseClient";
 import type { Campaign, Demand, ElectoralZone, FieldAgenda, Leader, LeaderMonthlyMetric, Municipality, Neighborhood, Prospect, Supporter } from "@/types/database";
 import { listLeaderMonthlyMetrics } from "./leaderMonthlyMetrics";
 import { listLeaders } from "./leaders";
+import { municipalBaseCities } from "./municipalBases";
 import { createSupabaseServiceError } from "./supabaseErrors";
 
 export type DashboardDataset = {
@@ -255,12 +256,14 @@ export function computeDashboard(dataset: DashboardDataset = emptyDataset): Dash
   const totalCost = ceilingCost + extraCost;
   const mappedVoters = dataset.neighborhoods.reduce((total, item) => total + Number(item.estimated_voters ?? 0), 0);
   const generalVoteGoal = maxVotes || dataset.campaigns[0]?.general_vote_goal || declaredVotes || validatedVotes || 0;
-  const activeCitySet = unique(dataset.leaders.map((item) => item.city).filter((city) => normalize(city) !== "marica"));
-  const coveredNeighborhoods = unique(dataset.leaders.filter((item) => normalize(item.city) === "marica").map((item) => item.neighborhood));
+  const activeCitySet = unique(dataset.leaders.map((item) => item.city));
+  const coveredNeighborhoods = unique(dataset.leaders
+    .filter((item) => isMunicipalBaseCity(item.city))
+    .map((item) => item.neighborhood ? `${item.city}:${item.neighborhood}` : null));
   const estimatedSupporters = hasMonthlyMetrics ? sumMetric(currentMetrics, "estimated_supporters") : dataset.leaders.reduce((total, item) => total + Number(item.estimated_direct_supporters ?? 0) + Number(item.estimated_indirect_supporters ?? 0) + Number(item.registered_supporters ?? 0), 0);
   const confidenceIndex = dataset.leaders.length ? Math.round(dataset.leaders.reduce((total, item) => total + confidenceScore(item.confidence_level), 0) / dataset.leaders.length) : 0;
-  const coordinatorsRJ = dataset.leaders.filter((item) => isCoordinator(item) && normalize(item.city) !== "marica").length;
-  const coordinatorsMarica = dataset.leaders.filter((item) => isCoordinator(item) && normalize(item.city) === "marica").length;
+  const coordinatorsRJ = dataset.leaders.filter((item) => isCoordinator(item) && !isMunicipalBaseCity(item.city)).length;
+  const coordinatorsMarica = dataset.leaders.filter((item) => isCoordinator(item) && isMunicipalBaseCity(item.city)).length;
   const territorialLeaders = dataset.leaders.filter((item) => normalize(item.leader_type).includes("lider")).length;
   const priorityRegions = buildPriorityRegions(dataset);
 
@@ -415,7 +418,7 @@ function getUpcomingAgenda(actions: FieldAgenda[]) {
 function buildPriorityRegions(dataset: DashboardDataset): PriorityRegion[] {
   const metricMap = getCurrentMetricMap(dataset);
   return getLeanTerritoryGroups(dataset).map(({ name, city, leaders }) => {
-    const neighborhood = city === "Maricá" ? dataset.neighborhoods.find((item) => normalize(item.name) === normalize(name)) : null;
+    const neighborhood = isMunicipalBaseCity(city) ? dataset.neighborhoods.find((item) => normalize(item.name) === normalize(name) && normalize(item.city) === normalize(city)) : null;
     const estimatedVoters = Number(neighborhood?.estimated_voters ?? 0);
     const validatedVotes = leaders.reduce((total, item) => total + getMetricValue(item, metricMap, "min_votes", item.validated_votes ?? 0), 0);
     const declaredVotes = leaders.reduce((total, item) => total + getMetricValue(item, metricMap, "max_votes", item.declared_votes ?? 0), 0);
@@ -444,9 +447,9 @@ function buildPriorityRegions(dataset: DashboardDataset): PriorityRegion[] {
 function getLeanTerritoryGroups(dataset: DashboardDataset) {
   const groups = new Map<string, { name: string; city: string; leaders: Leader[] }>();
   dataset.leaders.forEach((leader) => {
-    const isMarica = normalize(leader.city) === "marica";
-    const name = isMarica ? (leader.neighborhood || "Bairro não definido") : (leader.city || "Cidade não definida");
-    const city = isMarica ? "Maricá" : name;
+    const isMunicipalBase = isMunicipalBaseCity(leader.city);
+    const name = isMunicipalBase ? (leader.neighborhood || "Bairro n?o definido") : (leader.city || "Cidade n?o definida");
+    const city = isMunicipalBase ? (leader.city || "Cidade n?o definida") : name;
     const key = `${city}:${name}`;
     const current = groups.get(key) ?? { name, city, leaders: [] };
     current.leaders.push(leader);
@@ -474,6 +477,12 @@ function confidenceScore(value: string) {
 
 function isCoordinator(leader: Leader) {
   return normalize(leader.leader_type).includes("coord");
+}
+
+const municipalBaseCityKeys = new Set(municipalBaseCities.map((city) => normalize(city)));
+
+function isMunicipalBaseCity(city: string | null | undefined) {
+  return municipalBaseCityKeys.has(normalize(city));
 }
 
 function getLatestMonth(metrics: LeaderMonthlyMetric[]) {

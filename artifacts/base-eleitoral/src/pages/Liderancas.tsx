@@ -308,7 +308,7 @@ export default function Liderancas() {
       <div className="grid grid-cols-2 gap-4 md:grid-cols-3 xl:grid-cols-9">
         <MetricCard label="Total" value={filtered.length} icon={Users} tone="blue" loading={loading} />
         <MetricCard label="Coord. RJ" value={summary.coordinatorsRJ} icon={MapPinned} tone="indigo" loading={loading} />
-        <MetricCard label="Coord. Maricá" value={summary.coordinatorsMarica} icon={MapPinned} tone="emerald" loading={loading} />
+        <MetricCard label="Coord. Bases" value={summary.coordinatorsMarica} icon={MapPinned} tone="emerald" loading={loading} />
         <MetricCard label="Lideranças" value={summary.leaders} icon={Users} tone="cyan" loading={loading} />
         <MetricCard label="Apoio estimado" value={summary.estimated} icon={TrendingUp} tone="violet" loading={loading} />
         <MetricCard label="Declarados" value={summary.declared} icon={UserRound} tone="amber" loading={loading} />

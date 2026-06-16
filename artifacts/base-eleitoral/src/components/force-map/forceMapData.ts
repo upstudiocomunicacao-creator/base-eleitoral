@@ -99,6 +99,44 @@ export const forceMapLevels: ForceNode[][] = [
       insights: ["Maricá pede leitura mais granular porque é a base eleitoral principal.", "Bairro e distrito viram chave de mapa, gráfico e custo."],
       progress: { label: "Cobertura municipal possível", value: 100 },
     },
+    {
+      id: "coordenacao-sao-goncalo",
+      title: "Coordenação São Gonçalo",
+      subtitle: "Coordenadores por bairro de São Gonçalo.",
+      icon: MapPin,
+      tone: "emerald",
+      count: "90",
+      countLabel: "bairros pré-listados",
+      status: "Ativo",
+      summary: "Cada coordenador de São Gonçalo é vinculado a um bairro. O distrito é preenchido automaticamente.",
+      metrics: [
+        { label: "Distritos", value: "5" },
+        { label: "Bairros", value: "90" },
+        { label: "Recorte principal", value: "Bairro" },
+        { label: "Mais de um por bairro", value: "Sim" },
+      ],
+      insights: ["São Gonçalo ganha leitura própria dentro do RJ.", "Bairro e distrito viram chave de mapa, gráfico e custo."],
+      progress: { label: "Cobertura municipal possível", value: 100 },
+    },
+    {
+      id: "coordenacao-niteroi",
+      title: "Coordenação Niterói",
+      subtitle: "Coordenadores por bairro de Niterói.",
+      icon: MapPin,
+      tone: "emerald",
+      count: "52",
+      countLabel: "bairros pré-listados",
+      status: "Ativo",
+      summary: "Cada coordenador de Niterói é vinculado a um bairro. A região administrativa é preenchida automaticamente.",
+      metrics: [
+        { label: "Regiões", value: "5" },
+        { label: "Bairros", value: "52" },
+        { label: "Recorte principal", value: "Bairro" },
+        { label: "Mais de um por bairro", value: "Sim" },
+      ],
+      insights: ["Niterói ganha leitura própria dentro do RJ.", "Bairro e região administrativa viram chave de mapa, gráfico e custo."],
+      progress: { label: "Cobertura municipal possível", value: 100 },
+    },
   ],
   [
     {
@@ -133,6 +171,44 @@ export const forceMapLevels: ForceNode[][] = [
       metrics: [
         { label: "Vínculo à coordenação", value: "Opcional" },
         { label: "Distrito", value: "Automático" },
+        { label: "Apoio estimado", value: "Número" },
+        { label: "Estimativa de votos", value: "Mensal" },
+      ],
+      insights: ["Bairros sem liderança ficam visíveis nos mapas.", "A estimativa de apoio serve apenas para calcular conversão em votos."],
+      progress: { label: "Simplicidade do cadastro", value: 88 },
+    },
+    {
+      id: "liderancas-sao-goncalo",
+      title: "Lideranças São Gonçalo",
+      subtitle: "Lideranças menores por bairro de São Gonçalo.",
+      icon: Users,
+      tone: "emerald",
+      count: "bairros",
+      countLabel: "recorte",
+      status: "Ativo",
+      summary: "Lideranças de São Gonçalo podem ser vinculadas a uma coordenação de bairro. O território principal é o bairro.",
+      metrics: [
+        { label: "Vínculo à coordenação", value: "Opcional" },
+        { label: "Distrito", value: "Automático" },
+        { label: "Apoio estimado", value: "Número" },
+        { label: "Estimativa de votos", value: "Mensal" },
+      ],
+      insights: ["Bairros sem liderança ficam visíveis nos mapas.", "A estimativa de apoio serve apenas para calcular conversão em votos."],
+      progress: { label: "Simplicidade do cadastro", value: 88 },
+    },
+    {
+      id: "liderancas-niteroi",
+      title: "Lideranças Niterói",
+      subtitle: "Lideranças menores por bairro de Niterói.",
+      icon: Users,
+      tone: "emerald",
+      count: "bairros",
+      countLabel: "recorte",
+      status: "Ativo",
+      summary: "Lideranças de Niterói podem ser vinculadas a uma coordenação de bairro. O território principal é o bairro.",
+      metrics: [
+        { label: "Vínculo à coordenação", value: "Opcional" },
+        { label: "Região", value: "Automática" },
         { label: "Apoio estimado", value: "Número" },
         { label: "Estimativa de votos", value: "Mensal" },
       ],
@@ -183,14 +259,14 @@ export const forceMapLevels: ForceNode[][] = [
   [
     {
       id: "mapas",
-      title: "Mapas RJ e Maricá",
-      subtitle: "RJ por cidade, Maricá por bairro.",
+      title: "Mapas RJ e bases municipais",
+      subtitle: "RJ por cidade; Maricá, São Gonçalo e Niterói por bairro.",
       icon: Map,
       tone: "blue",
-      count: "2",
+      count: "4",
       countLabel: "leituras",
       status: "Preparado",
-      summary: "Os mapas usam as listas territoriais oficiais para exibir força, lacunas e prioridades.",
+      summary: "Os mapas usam as listas territoriais oficiais para exibir força, lacunas e prioridades por cidade ou bairro.",
       metrics: [
         { label: "Mapa RJ", value: "Cidades" },
         { label: "Mapas municipais", value: "Bairros" },
@@ -206,17 +282,17 @@ export const forceMapLevels: ForceNode[][] = [
       subtitle: "Listas pré-carregadas e automáticas.",
       icon: Layers,
       tone: "cyan",
-      count: "142",
+      count: "284",
       countLabel: "territórios",
       status: "Ativo",
-      summary: "A base territorial traz 92 cidades do RJ e 50 bairros de Maricá, com região ou distrito calculado automaticamente.",
+      summary: "A base territorial traz 92 cidades do RJ e 192 bairros nas bases Maricá, São Gonçalo e Niterói, com região ou distrito calculado automaticamente.",
       metrics: [
         { label: "Cidades RJ", value: "92" },
         { label: "Regiões RJ", value: "8" },
-        { label: "Bairros bases", value: "152" },
-        { label: "Distritos Maricá", value: "4" },
+        { label: "Bairros bases", value: "192" },
+        { label: "Distritos/regiões", value: "14" },
       ],
-      insights: ["A lista oficial padroniza cadastros e relatórios.", "O campo bairro fica como Todos quando a cidade não é Maricá."],
+      insights: ["A lista oficial padroniza cadastros e relatórios.", "O campo bairro fica como Todos quando a cidade não é uma base municipal."],
       progress: { label: "Padronização territorial", value: 100 },
     },
   ],
@@ -282,6 +358,24 @@ export function buildForceMapLevels({ leaders, monthlyMetrics }: RuntimeForceMap
   const ceilingCost = sum(monthMetrics, (metric) => metric.ceiling_cost);
   const extraCost = sum(monthMetrics, (metric) => metric.extra_cost);
   const totalCost = ceilingCost + extraCost;
+
+  const cityIs = (city: string) => (leader: Leader) => normalize(leader.city) === normalize(city);
+  const countCoordinatorsInCity = (city: string) => leaders.filter((leader) => isCoordinator(leader) && cityIs(city)(leader)).length;
+  const countLeadersInCity = (city: string) => leaders.filter((leader) => isLeadership(leader) && cityIs(city)(leader)).length;
+  const countNeighborhoodsInCity = (city: string) => uniqueCount(leaders.filter(cityIs(city)).map((leader) => leader.neighborhood));
+  const countRegionsInCity = (city: string) => uniqueCount(leaders.filter(cityIs(city)).map((leader) => leader.territory_region));
+  const maricaCoordinators = countCoordinatorsInCity("Maricá");
+  const saoGoncaloCoordinators = countCoordinatorsInCity("São Gonçalo");
+  const niteroiCoordinators = countCoordinatorsInCity("Niterói");
+  const maricaLeaders = countLeadersInCity("Maricá");
+  const saoGoncaloLeaders = countLeadersInCity("São Gonçalo");
+  const niteroiLeaders = countLeadersInCity("Niterói");
+  const maricaNeighborhoodsWithAction = countNeighborhoodsInCity("Maricá");
+  const saoGoncaloNeighborhoodsWithAction = countNeighborhoodsInCity("São Gonçalo");
+  const niteroiNeighborhoodsWithAction = countNeighborhoodsInCity("Niterói");
+  const maricaDistrictsWithAction = countRegionsInCity("Maricá");
+  const saoGoncaloDistrictsWithAction = countRegionsInCity("São Gonçalo");
+  const niteroiRegionsWithAction = countRegionsInCity("Niterói");
   const coordinatorsRJ = leaders.filter((leader) => isCoordinator(leader) && !isMunicipalBaseLeader(leader)).length;
   const coordinatorsMarica = leaders.filter((leader) => isCoordinator(leader) && isMunicipalBaseLeader(leader)).length;
   const leadersRJ = leaders.filter((leader) => isLeadership(leader) && !isMunicipalBaseLeader(leader)).length;
@@ -338,15 +432,39 @@ export function buildForceMapLevels({ leaders, monthlyMetrics }: RuntimeForceMap
           });
         case "coordenacao-marica":
           return patchNode(node, {
-            count: formatNumber(coordinatorsMarica),
-            countLabel: "coordenações bases",
+            count: formatNumber(maricaCoordinators),
+            countLabel: "coordenações Maricá",
             metrics: [
-              { label: "Bairros com atuação", value: formatNumber(municipalNeighborhoodsWithAction) },
-              { label: "Distritos com atuação", value: formatNumber(districtsWithAction) },
+              { label: "Bairros com atuação", value: formatNumber(maricaNeighborhoodsWithAction) },
+              { label: "Distritos com atuação", value: formatNumber(maricaDistrictsWithAction) },
               { label: "Recorte principal", value: "Bairro" },
               { label: "Mais de um por bairro", value: "Sim" },
             ],
-            progress: { label: "Cobertura municipal atual", value: clampProgress(municipalNeighborhoodsWithAction, 50) },
+            progress: { label: "Cobertura municipal atual", value: clampProgress(maricaNeighborhoodsWithAction, 50) },
+          });
+        case "coordenacao-sao-goncalo":
+          return patchNode(node, {
+            count: formatNumber(saoGoncaloCoordinators),
+            countLabel: "coordenações São Gonçalo",
+            metrics: [
+              { label: "Bairros com atuação", value: formatNumber(saoGoncaloNeighborhoodsWithAction) },
+              { label: "Distritos com atuação", value: formatNumber(saoGoncaloDistrictsWithAction) },
+              { label: "Recorte principal", value: "Bairro" },
+              { label: "Mais de um por bairro", value: "Sim" },
+            ],
+            progress: { label: "Cobertura municipal atual", value: clampProgress(saoGoncaloNeighborhoodsWithAction, 90) },
+          });
+        case "coordenacao-niteroi":
+          return patchNode(node, {
+            count: formatNumber(niteroiCoordinators),
+            countLabel: "coordenações Niterói",
+            metrics: [
+              { label: "Bairros com atuação", value: formatNumber(niteroiNeighborhoodsWithAction) },
+              { label: "Regiões com atuação", value: formatNumber(niteroiRegionsWithAction) },
+              { label: "Recorte principal", value: "Bairro" },
+              { label: "Mais de um por bairro", value: "Sim" },
+            ],
+            progress: { label: "Cobertura municipal atual", value: clampProgress(niteroiNeighborhoodsWithAction, 52) },
           });
         case "liderancas-rj":
           return patchNode(node, {
@@ -362,15 +480,39 @@ export function buildForceMapLevels({ leaders, monthlyMetrics }: RuntimeForceMap
           });
         case "liderancas-marica":
           return patchNode(node, {
-            count: formatNumber(leadersMarica),
-            countLabel: "lideranças bases",
+            count: formatNumber(maricaLeaders),
+            countLabel: "lideranças Maricá",
             metrics: [
-              { label: "Bairros atendidos", value: formatNumber(municipalNeighborhoodsWithAction) },
+              { label: "Bairros atendidos", value: formatNumber(maricaNeighborhoodsWithAction) },
               { label: "Vínculo à coordenação", value: "Opcional" },
               { label: "Distrito", value: "Automático" },
               { label: "Apoio estimado", value: formatNumber(totalSupporters) },
             ],
-            progress: { label: "Base municipal cadastrada", value: clampProgress(leadersMarica, 35) },
+            progress: { label: "Base municipal cadastrada", value: clampProgress(maricaLeaders, 35) },
+          });
+        case "liderancas-sao-goncalo":
+          return patchNode(node, {
+            count: formatNumber(saoGoncaloLeaders),
+            countLabel: "lideranças São Gonçalo",
+            metrics: [
+              { label: "Bairros atendidos", value: formatNumber(saoGoncaloNeighborhoodsWithAction) },
+              { label: "Vínculo à coordenação", value: "Opcional" },
+              { label: "Distrito", value: "Automático" },
+              { label: "Apoio estimado", value: formatNumber(totalSupporters) },
+            ],
+            progress: { label: "Base municipal cadastrada", value: clampProgress(saoGoncaloLeaders, 35) },
+          });
+        case "liderancas-niteroi":
+          return patchNode(node, {
+            count: formatNumber(niteroiLeaders),
+            countLabel: "lideranças Niterói",
+            metrics: [
+              { label: "Bairros atendidos", value: formatNumber(niteroiNeighborhoodsWithAction) },
+              { label: "Vínculo à coordenação", value: "Opcional" },
+              { label: "Região", value: "Automática" },
+              { label: "Apoio estimado", value: formatNumber(totalSupporters) },
+            ],
+            progress: { label: "Base municipal cadastrada", value: clampProgress(niteroiLeaders, 35) },
           });
         case "estimativas":
           return patchNode(node, {

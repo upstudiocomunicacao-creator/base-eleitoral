@@ -57,7 +57,7 @@ export function ForceMapPage() {
       <PageHeader
         eyebrow="Inteligência Territorial"
         title="Mapa de Força"
-        description="Organograma enxuto da campanha: candidato, coordenação geral, coordenações RJ e Maricá, lideranças, votos estimados, custos e leitura territorial."
+        description="Organograma enxuto da campanha: candidato, coordenação geral, coordenação RJ, bases Maricá, São Gonçalo e Niterói, lideranças, votos estimados, custos e leitura territorial."
         actions={
           <div className="flex flex-wrap items-center gap-2">
             <span className="rounded-full border border-blue-100 bg-blue-50 px-3 py-2 text-xs font-extrabold uppercase tracking-[0.08em] text-blue-700">{sourceLabel}</span>
@@ -102,7 +102,7 @@ function applyCampaignSettingsToForceMap(levels: ForceNode[][], campaign: Campai
         ...node,
         title: campaign.candidateName || node.title,
         subtitle: `${campaign.office} - ${campaign.name}`,
-        summary: `Visão consolidada da campanha de ${campaign.candidateName} para ${campaign.office}, separando ${campaign.mainState} por cidades e ${campaign.mainCity} por bairros.`,
+        summary: `Visão consolidada da campanha de ${campaign.candidateName} para ${campaign.office}, separando ${campaign.mainState} por cidades e as bases municipais por bairros.`,
       };
     }
 
@@ -110,7 +110,7 @@ function applyCampaignSettingsToForceMap(levels: ForceNode[][], campaign: Campai
       return {
         ...node,
         title: campaign.generalResponsible || node.title,
-        subtitle: "Comando único das coordenações RJ e Maricá.",
+        subtitle: "Comando único das coordenações RJ e das bases municipais.",
       };
     }
 
@@ -134,11 +134,11 @@ function OperationalRules() {
   const rules = [
     {
       title: "Território obrigatório",
-      text: "RJ é analisado por cidade. Maricá é analisada por bairro e distrito.",
+      text: "RJ é analisado por cidade. Maricá, São Gonçalo e Niterói são analisados por bairro e distrito/região.",
     },
     {
       title: "Papel no organograma",
-      text: "Cada cadastro entra como coordenação geral, coordenação RJ, coordenação Maricá ou liderança.",
+      text: "Cada cadastro entra como coordenação geral, coordenação RJ, coordenação de base municipal ou liderança.",
     },
     {
       title: "Estimativa mensal",
@@ -177,7 +177,7 @@ function DesktopFlow({
   let nodeIndex = 0;
 
   return (
-    <div className="mx-auto flex min-w-[980px] flex-col items-center rounded-lg bg-[linear-gradient(180deg,#ffffff_0%,#f8fbff_100%)] px-5 py-7">
+    <div className="mx-auto flex min-w-[1180px] flex-col items-center rounded-lg bg-[linear-gradient(180deg,#ffffff_0%,#f8fbff_100%)] px-5 py-7">
       {levels.map((level, levelIndex) => (
         <div key={`desktop-level-${levelIndex}`} className="flex flex-col items-center">
           {levelIndex > 0 ? <FlowConnector branch={level.length > 1} /> : null}

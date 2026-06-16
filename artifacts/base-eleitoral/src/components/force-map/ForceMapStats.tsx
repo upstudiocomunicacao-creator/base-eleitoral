@@ -1,16 +1,22 @@
-import { maricaDistricts, maricaNeighborhoods, rjCities, rjRegions } from "@/services/operational";
+import { municipalBases } from "@/services/municipalBases";
+import { rjCities, rjRegions } from "@/services/operational";
 import type { ForceNode } from "./types";
 
 export function ForceMapStats({ nodes, levels }: { nodes: ForceNode[]; levels: ForceNode[][] }) {
   const active = nodes.filter((node) => node.status === "Ativo").length;
-  const alerts = nodes.filter((node) => node.status === "Atenção" || node.status === "Crítico").length;
+  const baseList = Object.values(municipalBases);
+  const municipalNeighborhoods = baseList.reduce(
+    (total, base) => total + base.groups.reduce((groupTotal, group) => groupTotal + group.neighborhoods.length, 0),
+    0,
+  );
+  const subdivisions = baseList.reduce((total, base) => total + base.groups.length, 0);
 
   return (
     <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
       <SummaryCard label="Cidades do RJ" value={rjCities.length.toString()} helper={`${rjRegions.length} regiões oficiais`} />
-      <SummaryCard label="Bairros de Maricá" value={maricaNeighborhoods.length.toString()} helper={`${maricaDistricts.length} distritos automáticos`} />
+      <SummaryCard label="Bases municipais" value={baseList.length.toString()} helper="Maricá, São Gonçalo e Niterói" />
+      <SummaryCard label="Bairros das bases" value={municipalNeighborhoods.toString()} helper={`${subdivisions} distritos/regiões pré-listados`} />
       <SummaryCard label="Camadas do fluxo" value={levels.length.toString()} helper={`${active} blocos operacionais ativos`} />
-      <SummaryCard label="Pontos de atenção" value={alerts.toString()} helper="Alertas aparecem quando houver risco" />
     </div>
   );
 }

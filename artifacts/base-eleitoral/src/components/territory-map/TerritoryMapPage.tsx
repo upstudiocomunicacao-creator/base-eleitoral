@@ -31,6 +31,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { isMapboxConfigured, mapboxAccessToken } from "@/lib/mapbox";
 import { listLeaderMonthlyMetrics } from "@/services/leaderMonthlyMetrics";
 import { isLeadersSupabaseReady, listLeaders } from "@/services/leaders";
 import type { MapDataFilters } from "@/services/mapData";
@@ -381,22 +382,30 @@ function MockMapContainer({
 }) {
   const isState = scope === "state";
   const title = isState ? "Estado do Rio de Janeiro" : "Munic\u00edpio de Maric\u00e1";
+  const mapBackground = getStrategicMapBackground(scope);
+  const strategicBackground = mapBackground
+    ? `linear-gradient(135deg,rgba(239,246,255,0.34),rgba(248,250,252,0.58) 44%,rgba(236,254,255,0.34)),url("${mapBackground}")`
+    : "radial-gradient(circle at 18% 20%,rgba(14,165,233,0.20),transparent 28%),radial-gradient(circle at 78% 10%,rgba(16,185,129,0.18),transparent 25%),linear-gradient(135deg,#eff6ff,#f8fafc 44%,#ecfeff)";
 
   return (
     <Card className="premium-card overflow-hidden">
       <CardHeader className="border-b border-slate-100">
         <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
           <CardTitle className="flex items-center gap-2 text-base"><Navigation className="h-4 w-4 text-blue-600" /> {isState ? "Mapa RJ estratégico" : "Mapa Maricá estratégico"}</CardTitle>
-          <StatusPill label="Visual estratégico" tone="blue" />
+          <StatusPill label={mapBackground ? "Base Mapbox + leitura" : "Visual estratégico"} tone="blue" />
         </div>
       </CardHeader>
       <CardContent className="p-4 sm:p-5">
-        <div className="relative min-h-[620px] overflow-hidden rounded-xl border border-blue-100 bg-[radial-gradient(circle_at_18%_20%,rgba(14,165,233,0.20),transparent_28%),radial-gradient(circle_at_78%_10%,rgba(16,185,129,0.18),transparent_25%),linear-gradient(135deg,#eff6ff,#f8fafc_44%,#ecfeff)] p-4 shadow-inner">
-          <div className="absolute inset-0 opacity-60 [background-image:linear-gradient(rgba(37,99,235,0.09)_1px,transparent_1px),linear-gradient(90deg,rgba(37,99,235,0.09)_1px,transparent_1px)] [background-size:38px_38px]" />
-          <div className="absolute -left-10 top-24 h-80 w-80 rounded-full bg-blue-300/20 blur-3xl" />
-          <div className="absolute bottom-2 right-4 h-96 w-96 rounded-full bg-emerald-300/20 blur-3xl" />
-          <div className="absolute left-[10%] top-[11%] h-[73%] w-[78%] rounded-[42%_58%_49%_51%/54%_36%_64%_46%] border border-blue-200/70 bg-white/28 shadow-inner" />
-          <div className="absolute left-[20%] top-[20%] h-[58%] w-[56%] rounded-[48%_42%_52%_36%/44%_52%_34%_58%] border border-emerald-200/70 bg-emerald-50/25" />
+        <div
+          className="relative min-h-[620px] overflow-hidden rounded-xl border border-blue-100 bg-slate-100 p-4 shadow-inner"
+          style={{ backgroundImage: strategicBackground, backgroundPosition: "center", backgroundSize: "cover" }}
+        >
+          <div className="absolute inset-0 bg-white/28" />
+          <div className="absolute inset-0 opacity-45 [background-image:linear-gradient(rgba(37,99,235,0.08)_1px,transparent_1px),linear-gradient(90deg,rgba(37,99,235,0.08)_1px,transparent_1px)] [background-size:38px_38px]" />
+          <div className="absolute -left-10 top-24 h-80 w-80 rounded-full bg-blue-300/15 blur-3xl" />
+          <div className="absolute bottom-2 right-4 h-96 w-96 rounded-full bg-emerald-300/14 blur-3xl" />
+          <div className="absolute left-[10%] top-[11%] h-[73%] w-[78%] rounded-[42%_58%_49%_51%/54%_36%_64%_46%] border border-blue-200/70 bg-white/18 shadow-inner" />
+          <div className="absolute left-[20%] top-[20%] h-[58%] w-[56%] rounded-[48%_42%_52%_36%/44%_52%_34%_58%] border border-emerald-200/70 bg-emerald-50/15" />
           <div className="absolute left-[16%] top-[36%] h-[3px] w-[66%] rotate-[-8deg] rounded-full bg-blue-500/20" />
           <div className="absolute left-[30%] top-[22%] h-[3px] w-[46%] rotate-[24deg] rounded-full bg-emerald-500/20" />
           <div className="absolute left-[12%] top-[70%] h-[3px] w-[58%] rotate-[10deg] rounded-full bg-violet-500/18" />
@@ -426,6 +435,15 @@ function MockMapContainer({
       </CardContent>
     </Card>
   );
+}
+
+function getStrategicMapBackground(scope: TerritoryScope) {
+  if (!isMapboxConfigured) return null;
+  const center = scope === "state"
+    ? { longitude: -42.75, latitude: -22.35, zoom: 6.3 }
+    : { longitude: -42.8186, latitude: -22.9196, zoom: 11.1 };
+  const accessToken = encodeURIComponent(mapboxAccessToken);
+  return `https://api.mapbox.com/styles/v1/mapbox/light-v11/static/${center.longitude},${center.latitude},${center.zoom},0/1280x820@2x?access_token=${accessToken}`;
 }
 
 function TerritoryBubble({ record, activeLayer, selected, compact, onSelect }: { record: EnrichedTerritoryRecord; activeLayer: HeatMode; selected: boolean; compact: boolean; onSelect: (record: EnrichedTerritoryRecord) => void }) {

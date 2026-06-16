@@ -64,7 +64,11 @@ export async function getRJMapData(filters: MapDataFilters = {}): Promise<MapDat
 }
 
 export async function getMaricaMapData(filters: MapDataFilters = {}): Promise<MapData> {
-  const scopedFilters = { ...filters, city: filters.city && filters.city !== "todos" ? filters.city : "Maricá" };
+  return getMunicipalMapData("Maricá", filters);
+}
+
+export async function getMunicipalMapData(city: string, filters: MapDataFilters = {}): Promise<MapData> {
+  const scopedFilters = { ...filters, city: filters.city && filters.city !== "todos" ? filters.city : city };
   const points = filterPointsByBounds(await getMapPoints(scopedFilters), "city");
   const withoutCoordinates = await getRecordsWithoutCoordinates(scopedFilters);
   return { points, withoutCoordinates, summary: buildMapSummary(points, withoutCoordinates) };
@@ -177,8 +181,8 @@ function filterPointsByBounds(points: MapPoint[], scope: MapScope) {
 
 const maricaBounds = {
   minLat: -23.08,
-  maxLat: -22.76,
-  minLng: -43.08,
+  maxLat: -22.72,
+  minLng: -43.24,
   maxLng: -42.55,
 };
 

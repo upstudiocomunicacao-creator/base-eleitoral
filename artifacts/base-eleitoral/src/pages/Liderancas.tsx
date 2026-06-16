@@ -28,7 +28,13 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "@/hooks/use-toast";
 import { createLeader, deleteLeader, DEFAULT_CAMPAIGN_ID, isLeadersSupabaseReady, listLeaders, updateLeader } from "@/services/leaders";
-import { getMaricaDistrictForNeighborhood, getRJRegionForCity, maricaNeighborhoods, rjCities } from "@/services/operational";
+import {
+  getMunicipalBaseByCity,
+  getMunicipalNeighborhoods,
+  getMunicipalSubdivisionForNeighborhood,
+  getRJRegionForCity,
+  rjCities,
+} from "@/services/operational";
 import { isMapboxConfigured, mapboxAccessToken } from "@/lib/mapbox";
 import type { Database, Leader } from "@/types/database";
 
@@ -37,13 +43,16 @@ type LeaderUpdate = Database["public"]["Tables"]["leaders"]["Update"];
 type AttentionLevel = "Crítico" | "Atenção" | "Estável" | "Forte";
 
 const rjCityOptions = [...rjCities] as string[];
-const maricaNeighborhoodOptions = [...maricaNeighborhoods] as string[];
 const leaderTypeOptions = [
   "Coordenação Geral",
   "Coordenação RJ",
   "Coordenação Maricá",
+  "Coordenação São Gonçalo",
+  "Coordenação Niterói",
   "Liderança RJ",
   "Liderança Maricá",
+  "Liderança São Gonçalo",
+  "Liderança Niterói",
 ];
 
 type Filters = {
@@ -554,22 +563,22 @@ function LeadershipFormSheet({
 
   function updateCity(city: string) {
     if (!record) return;
-    const isMarica = city === "Maricá";
-    const neighborhood = isMarica ? "Centro" : "Todos";
-    const territoryRegion = isMarica ? getMaricaDistrictForNeighborhood(neighborhood) : getRJRegionForCity(city);
-    const leaderType = normalizeLeadershipTypeForTerritory(record.leader_type, isMarica);
+    const neighborhoods = getMunicipalNeighborhoods(city);
+    const isMunicipalBase = neighborhoods.length > 0;
+    const neighborhood = isMunicipalBase ? neighborhoods[0] : "Todos";
+    const territoryRegion = getTerritoryRegion(city, neighborhood);
+    const leaderType = normalizeLeadershipTypeForTerritory(record.leader_type, city);
     setRecord({ ...record, city, state: "RJ", neighborhood, territory_region: territoryRegion, leader_type: leaderType, parent_leader_id: "" });
   }
 
-  function updateScope(scope: "rj" | "marica") {
+  function updateScope(city: string) {
     if (!record) return;
-    const city = scope === "marica" ? "Maricá" : "Niterói";
     updateCity(city);
   }
 
   function updateNeighborhood(neighborhood: string) {
     if (!record) return;
-    const territoryRegion = record.city === "Maricá" ? getMaricaDistrictForNeighborhood(neighborhood) : getRJRegionForCity(record.city);
+    const territoryRegion = getTerritoryRegion(record.city, neighborhood);
     setRecord({ ...record, neighborhood, territory_region: territoryRegion, parent_leader_id: "" });
   }
 
@@ -606,28 +615,34 @@ function LeadershipFormSheet({
 
             <FormSection title="Território de atuação">
               <div className="rounded-xl border border-blue-100 bg-blue-50 p-3 text-sm font-semibold leading-6 text-blue-950 md:col-span-2 xl:col-span-3">
-                RJ usa cidade e região de governo automática. Maricá usa bairro e distrito automático. Para cidades fora de Maricá, o bairro fica fixado como Todos.
+                RJ usa cidade e região de governo automática. Maricá, São Gonçalo e Niterói usam bairros pré-listados e distrito/região automática.
               </div>
               <div className="flex flex-wrap gap-2 md:col-span-2 xl:col-span-3">
-                <Button type="button" variant={record.city === "Maricá" ? "outline" : "default"} onClick={() => updateScope("rj")}>
+                <Button type="button" variant={!getMunicipalBaseByCity(record.city) ? "default" : "outline"} onClick={() => updateScope("Cabo Frio")}>
                   Atuação RJ
                 </Button>
-                <Button type="button" variant={record.city === "Maricá" ? "default" : "outline"} onClick={() => updateScope("marica")}>
+                <Button type="button" variant={record.city === "Maricá" ? "default" : "outline"} onClick={() => updateScope("Maricá")}>
                   Atuação Maricá
+                </Button>
+                <Button type="button" variant={record.city === "São Gonçalo" ? "default" : "outline"} onClick={() => updateScope("São Gonçalo")}>
+                  Atuação São Gonçalo
+                </Button>
+                <Button type="button" variant={record.city === "Niterói" ? "default" : "outline"} onClick={() => updateScope("Niterói")}>
+                  Atuação Niterói
                 </Button>
               </div>
               <TextField label="CEP" value={record.cep} onChange={(value) => update("cep", value)} />
               <TextField label="Rua" value={record.street} onChange={(value) => update("street", value)} />
               <TextField label="Número" value={record.number} onChange={(value) => update("number", value)} />
               <TextField label="Complemento" value={record.complement} onChange={(value) => update("complement", value)} />
-              {record.city === "Maricá" ? (
-                <SelectTextField required label="Bairro" value={record.neighborhood} values={maricaNeighborhoodOptions} onChange={updateNeighborhood} />
+              {getMunicipalNeighborhoods(record.city).length ? (
+                <SelectTextField required label="Bairro" value={record.neighborhood} values={getMunicipalNeighborhoods(record.city)} onChange={updateNeighborhood} />
               ) : (
                 <SelectTextField required label="Bairro" value="Todos" values={["Todos"]} onChange={updateNeighborhood} />
               )}
               <SelectTextField required label="Cidade" value={record.city} values={rjCityOptions} onChange={updateCity} />
               <TextField required label="Estado" value={record.state} onChange={(value) => update("state", value)} />
-              <TextField readOnly label={record.city === "Maricá" ? "Distrito automático" : "Região automática"} value={record.territory_region} onChange={() => undefined} />
+              <TextField readOnly label={getMunicipalBaseByCity(record.city)?.subdivisionLabel ?? "Região automática"} value={record.territory_region} onChange={() => undefined} />
               <SelectTextField required label="Precisão geográfica" value={record.geographic_precision} values={["Alta", "Média alta", "Média", "Baixa", "Muito baixa"]} onChange={(value) => update("geographic_precision", value)} />
               <TextField label="Latitude" value={record.latitude} onChange={(value) => update("latitude", value)} />
               <TextField label="Longitude" value={record.longitude} onChange={(value) => update("longitude", value)} />
@@ -933,9 +948,10 @@ function IconButton({ label, icon: Icon, onClick, danger = false }: { label: str
 
 function toFormState(leader: Leader): LeaderFormState {
   const city = rjCityOptions.includes(leader.city) ? leader.city : "Maricá";
-  const isMarica = city === "Maricá";
-  const neighborhood = isMarica
-    ? (maricaNeighborhoodOptions.includes(leader.neighborhood) ? leader.neighborhood : "Centro")
+  const municipalNeighborhoods = getMunicipalNeighborhoods(city);
+  const isMunicipalBase = municipalNeighborhoods.length > 0;
+  const neighborhood = isMunicipalBase
+    ? (municipalNeighborhoods.includes(leader.neighborhood) ? leader.neighborhood : municipalNeighborhoods[0])
     : "Todos";
 
   return {
@@ -944,7 +960,7 @@ function toFormState(leader: Leader): LeaderFormState {
     political_nickname: leader.political_nickname ?? "",
     phone: leader.phone,
     email: leader.email ?? "",
-    leader_type: normalizeLeadershipTypeForTerritory(leader.leader_type, isMarica),
+    leader_type: normalizeLeadershipTypeForTerritory(leader.leader_type, city),
     status: leader.status,
     cep: leader.cep ?? "",
     street: leader.street ?? "",
@@ -953,7 +969,7 @@ function toFormState(leader: Leader): LeaderFormState {
     neighborhood,
     city,
     state: leader.state,
-    territory_region: isMarica ? getMaricaDistrictForNeighborhood(neighborhood) : getRJRegionForCity(city),
+    territory_region: getTerritoryRegion(city, neighborhood),
     geographic_precision: leader.geographic_precision,
     latitude: leader.latitude?.toString() ?? "",
     longitude: leader.longitude?.toString() ?? "",
@@ -975,7 +991,7 @@ function toFormState(leader: Leader): LeaderFormState {
 
 function toInsertPayload(form: LeaderFormState): LeaderInsert {
   const territory = normalizeTerritory(form);
-  const leaderType = normalizeLeadershipTypeForTerritory(form.leader_type, territory.city === "Maricá");
+  const leaderType = normalizeLeadershipTypeForTerritory(form.leader_type, territory.city);
 
   return {
     campaign_id: DEFAULT_CAMPAIGN_ID,
@@ -1018,28 +1034,37 @@ function toUpdatePayload(form: LeaderFormState): LeaderUpdate {
 
 function normalizeTerritory(form: LeaderFormState) {
   const city = rjCityOptions.includes(form.city) ? form.city : "Maricá";
-  const isMarica = city === "Maricá";
-  const neighborhood = isMarica && maricaNeighborhoodOptions.includes(form.neighborhood) ? form.neighborhood : "Todos";
+  const municipalNeighborhoods = getMunicipalNeighborhoods(city);
+  const isMunicipalBase = municipalNeighborhoods.length > 0;
+  const neighborhood = isMunicipalBase && municipalNeighborhoods.includes(form.neighborhood) ? form.neighborhood : isMunicipalBase ? municipalNeighborhoods[0] : "Todos";
   return {
     city,
     neighborhood,
-    territory_region: isMarica ? getMaricaDistrictForNeighborhood(neighborhood) : getRJRegionForCity(city),
+    territory_region: getTerritoryRegion(city, neighborhood),
   };
 }
 
-function normalizeLeadershipTypeForTerritory(type: string, isMarica: boolean) {
+function getTerritoryRegion(city: string, neighborhood: string) {
+  return getMunicipalBaseByCity(city)
+    ? getMunicipalSubdivisionForNeighborhood(city, neighborhood)
+    : getRJRegionForCity(city);
+}
+
+function normalizeLeadershipTypeForTerritory(type: string, city: string) {
   if (type === "Coordenação Geral") return type;
   const normalizedType = normalize(type);
+  const base = getMunicipalBaseByCity(city);
+  const cityLabel = base?.city;
 
-  if (normalizedType.includes("coord")) return isMarica ? "Coordenação Maricá" : "Coordenação RJ";
-  if (normalizedType.includes("lider")) return isMarica ? "Liderança Maricá" : "Liderança RJ";
+  if (normalizedType.includes("coord")) return cityLabel ? `Coordenação ${cityLabel}` : "Coordenação RJ";
+  if (normalizedType.includes("lider")) return cityLabel ? `Liderança ${cityLabel}` : "Liderança RJ";
 
-  return isMarica ? "Liderança Maricá" : "Liderança RJ";
+  return cityLabel ? `Liderança ${cityLabel}` : "Liderança RJ";
 }
 
 function buildParentLeaderOptions(leaders: Leader[], record: LeaderFormState) {
   const normalizedType = normalize(record.leader_type);
-  const isMarica = normalize(record.city) === "marica";
+  const isMunicipalBase = Boolean(getMunicipalBaseByCity(record.city));
   const isGeneral = normalizedType.includes("geral");
   const isLeader = normalizedType.includes("lider");
   const options = [{ value: "none", label: "Nenhum" }];
@@ -1058,8 +1083,8 @@ function buildParentLeaderOptions(leaders: Leader[], record: LeaderFormState) {
     if (!type.includes("coord") || type.includes("geral")) return false;
     if (!isLeader) return false;
 
-    if (isMarica) {
-      return normalize(leader.city) === "marica" && normalize(leader.neighborhood) === normalize(record.neighborhood);
+    if (isMunicipalBase) {
+      return normalize(leader.city) === normalize(record.city) && normalize(leader.neighborhood) === normalize(record.neighborhood);
     }
 
     return normalize(leader.city) === normalize(record.city);
@@ -1068,7 +1093,7 @@ function buildParentLeaderOptions(leaders: Leader[], record: LeaderFormState) {
   return [
     ...options,
     ...generalCoordinators.map((leader) => ({ value: leader.id, label: `${leader.full_name} - Coordenação Geral` })),
-    ...territoryCoordinators.map((leader) => ({ value: leader.id, label: `${leader.full_name} - ${leader.city === "Maricá" ? leader.neighborhood : leader.city}` })),
+    ...territoryCoordinators.map((leader) => ({ value: leader.id, label: `${leader.full_name} - ${getMunicipalBaseByCity(leader.city) ? leader.neighborhood : leader.city}` })),
   ];
 }
 

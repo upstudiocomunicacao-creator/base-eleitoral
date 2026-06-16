@@ -1,6 +1,6 @@
 ﻿import type { EnrichedTerritoryRecord, HeatMode, TerritoryRecord } from "./types";
 
-import { getMaricaDistrictForNeighborhood, getRJRegionForCity } from "@/services/operational";
+import { getMunicipalBaseByCity, getMunicipalNeighborhoods, getMunicipalSubdivisionForNeighborhood, getRJRegionForCity } from "@/services/operational";
 import type { Leader, LeaderMonthlyMetric } from "@/types/database";
 import type { TerritoryScope } from "./types";
 
@@ -57,20 +57,27 @@ const citySeeds: Seed[] = [
 export const stateTerritories = complete(stateSeeds);
 export const cityTerritories = complete(citySeeds);
 
-export function buildOperationalTerritories(scope: TerritoryScope, leaders: Leader[], monthlyMetrics: LeaderMonthlyMetric[]): TerritoryRecord[] {
-  if (!leaders.length) return scope === "state" ? stateTerritories : cityTerritories;
+export function getCityTerritories(cityName = "Maricá"): TerritoryRecord[] {
+  return complete(getCitySeeds(cityName));
+}
+
+export function buildOperationalTerritories(scope: TerritoryScope, leaders: Leader[], monthlyMetrics: LeaderMonthlyMetric[], cityName = "Maricá"): TerritoryRecord[] {
+  const citySeedRecords = getCitySeeds(cityName);
+  const cityFallback = complete(citySeedRecords);
+  if (!leaders.length) return scope === "state" ? stateTerritories : cityFallback;
 
   const latestMonth = getLatestMonth(monthlyMetrics);
   const monthMetrics = latestMonth ? monthlyMetrics.filter((metric) => metric.month_ref === latestMonth) : [];
   const metricsByLeader = new Map(monthMetrics.map((metric) => [metric.leader_id, metric]));
-  const baseSeeds = scope === "state" ? stateSeeds : citySeeds;
+  const baseSeeds = scope === "state" ? stateSeeds : citySeedRecords;
   const baseByName = new Map(baseSeeds.map((record) => [normalizeText(record.name), record]));
   const grouped = new Map<string, Leader[]>();
+  const normalizedCityName = normalizeText(cityName);
 
   for (const leader of leaders) {
-    const isMarica = normalizeText(leader.city) === "marica";
-    if (scope === "state" && isMarica) continue;
-    if (scope === "city" && !isMarica) continue;
+    const isTargetCity = normalizeText(leader.city) === normalizedCityName;
+    if (scope === "state" && isTargetCity) continue;
+    if (scope === "city" && !isTargetCity) continue;
 
     const territory = scope === "state" ? leader.city : leader.neighborhood;
     if (!territory) continue;
@@ -82,7 +89,7 @@ export function buildOperationalTerritories(scope: TerritoryScope, leaders: Lead
   const records = baseSeeds.map((seedRecord, index) => {
     const key = normalizeText(seedRecord.name);
     return grouped.has(key)
-      ? buildRecordFromLeaders(scope, seedRecord.name, grouped.get(key) ?? [], metricsByLeader, seedRecord, index)
+      ? buildRecordFromLeaders(scope, seedRecord.name, grouped.get(key) ?? [], metricsByLeader, seedRecord, index, cityName)
       : buildEmptyRecord(scope, seedRecord, index);
   });
 
@@ -90,7 +97,7 @@ export function buildOperationalTerritories(scope: TerritoryScope, leaders: Lead
     if (baseByName.has(key)) continue;
     const name = scope === "state" ? group[0]?.city : group[0]?.neighborhood;
     if (!name) continue;
-    records.push(buildRecordFromLeaders(scope, name, group, metricsByLeader, undefined, records.length));
+    records.push(buildRecordFromLeaders(scope, name, group, metricsByLeader, undefined, records.length, cityName));
   }
 
   return complete(records);
@@ -134,6 +141,7 @@ function buildRecordFromLeaders(
   metricsByLeader: Map<string, LeaderMonthlyMetric>,
   seedRecord: Seed | undefined,
   index: number,
+  cityName = "Maricá",
 ): Seed {
   const isState = scope === "state";
   const metrics = leaders.map((leader) => metricsByLeader.get(leader.id)).filter((metric): metric is LeaderMonthlyMetric => Boolean(metric));
@@ -145,7 +153,7 @@ function buildRecordFromLeaders(
   const coverage = pct(validatedVotes, estimatedElectors);
   const status = getOperationalStatus(leaders.length, coverage, validatedVotes, target);
   const priority = getOperationalPriority(leaders.length, coverage, validatedVotes, target);
-  const region = isState ? getRJRegionForCity(name) : getMaricaDistrictForNeighborhood(name);
+  const region = isState ? getRJRegionForCity(name) : getMunicipalSubdivisionForNeighborhood(cityName, name);
   const nextActions = uniqueText(leaders.map((leader) => leader.next_action).filter(Boolean) as string[]);
 
   return {
@@ -210,6 +218,53 @@ function seed(id: number, name: string, region: string, type: TerritoryRecord["t
 
 function city(id: number, name: string, region: string, status: TerritoryRecord["status"], priority: TerritoryRecord["priority"], leaders: number, supporters: number, estimatedSupporters: number, declaredVotes: number, validatedVotes: number, target: number, estimatedElectors: number, undecided: number, demands: number, confidence: number, sections: string[], votingPlaces: string[], geoPrecision: TerritoryRecord["geoPrecision"], leadersLinked: string[], x: number, y: number): Seed {
   return seed(id, name, region, "Bairro", status, priority, region.includes("Litoral") ? "Cl\u00e1udia Menezes" : region.includes("Central") ? "Mariana Costa" : "Equipe Territorial", leaders, supporters, estimatedSupporters, declaredVotes, validatedVotes, target, estimatedElectors, undecided, demands, confidence, leaders > 0, ["55"], sections, votingPlaces, leadersLinked, leaders === 0 ? ["Cadastrar lideran\u00e7a local", "Definir coordenador de bairro"] : ["Reuni\u00e3o com coordena\u00e7\u00e3o local", "Atualizar estimativa mensal"], geoPrecision, x, y);
+}
+
+function getCitySeeds(cityName: string): Seed[] {
+  const base = getMunicipalBaseByCity(cityName);
+  if (!base || normalizeText(base.city) === "marica") return citySeeds;
+
+  const neighborhoods = getMunicipalNeighborhoods(base.city);
+  return neighborhoods.map((neighborhood, index) => {
+    const region = getMunicipalSubdivisionForNeighborhood(base.city, neighborhood);
+    const position = generatedPosition(index);
+    const estimatedElectors = 3600 + (index % 7) * 680 + Math.floor(index / 7) * 420;
+    const target = Math.round(estimatedElectors * 0.06);
+    const supporters = Math.round(target * 0.56);
+    const declaredVotes = Math.round(target * 0.42);
+    const validatedVotes = Math.round(target * 0.16);
+    const priority: TerritoryRecord["priority"] = index % 5 === 0 ? "Alta" : index % 7 === 0 ? "Crítica" : "Média";
+    const status: TerritoryRecord["status"] = index % 7 === 0 ? "Sem liderança" : index % 5 === 0 ? "Baixa cobertura" : "Em crescimento";
+
+    return seed(
+      3000 + index,
+      neighborhood,
+      region,
+      "Bairro",
+      status,
+      priority,
+      "Coordenação Territorial",
+      status === "Sem liderança" ? 0 : Math.max(1, index % 4),
+      supporters,
+      supporters,
+      declaredVotes,
+      validatedVotes,
+      Math.max(target, 1),
+      estimatedElectors,
+      Math.max(0, supporters - validatedVotes),
+      0,
+      status === "Sem liderança" ? 22 : 48 + (index % 5) * 7,
+      status !== "Sem liderança",
+      [],
+      [],
+      [],
+      [],
+      status === "Sem liderança" ? ["Cadastrar coordenação ou liderança local", "Definir estimativa mensal"] : ["Atualizar estimativa mensal", "Revisar centro de custos"],
+      "Média",
+      position.x,
+      position.y,
+    );
+  });
 }
 
 function complete(records: Seed[]): TerritoryRecord[] {

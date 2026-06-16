@@ -30,6 +30,8 @@ const navItems = [
   { href: "/liderancas", label: "Cadastros", icon: Users, group: "Território", module: "liderancas" },
   { href: "/mapa-rj", label: "Mapa RJ", icon: Map, group: "Mapas", module: "mapa_rj" },
   { href: "/mapa-marica", label: "Mapa Maricá", icon: MapPin, group: "Mapas", module: "mapa_marica" },
+  { href: "/mapa-sao-goncalo", label: "Mapa São Gonçalo", icon: MapPin, group: "Mapas", module: "mapa_marica" },
+  { href: "/mapa-niteroi", label: "Mapa Niterói", icon: MapPin, group: "Mapas", module: "mapa_marica" },
   { href: "/comparativo", label: "Análises", icon: BarChart3, group: "Inteligência", module: "comparativo" },
   { href: "/relatorios", label: "Relatórios", icon: FileText, group: "Gestão", module: "relatorios" },
   { href: "/importacao", label: "Importação", icon: UploadCloud, group: "Gestão", module: "importacao_dados" },

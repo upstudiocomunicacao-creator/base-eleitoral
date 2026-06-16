@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { isMapboxConfigured } from "@/lib/mapbox";
 import {
-  getMaricaMapData,
+  getMunicipalMapData,
   getRJMapData,
   type MapData,
   type MapDataFilters,
@@ -23,13 +23,14 @@ import { MapLegend } from "./MapLegend";
 
 type Props = {
   scope: MapScope;
+  city?: string;
   fallback: ReactNode;
   filters?: MapDataFilters;
 };
 
 const allPointTypes: MapPointType[] = ["leaders"];
 
-export function RealMapContainer({ scope, fallback, filters = {} }: Props) {
+export function RealMapContainer({ scope, city = "Maricá", fallback, filters = {} }: Props) {
   const [mode, setMode] = useState<RealMapMode>("pins");
   const [heatmapLayer, setHeatmapLayer] = useState<MapHeatmapLayerType>("leaders");
   const [visibleTypes, setVisibleTypes] = useState<MapPointType[]>(allPointTypes);
@@ -50,7 +51,7 @@ export function RealMapContainer({ scope, fallback, filters = {} }: Props) {
       setError(null);
       try {
         const activeFilters = JSON.parse(filterKey) as MapDataFilters;
-        const response = scope === "city" ? await getMaricaMapData(activeFilters) : await getRJMapData(activeFilters);
+        const response = scope === "city" ? await getMunicipalMapData(city, activeFilters) : await getRJMapData(activeFilters);
         if (!cancelled) setData(response);
       } catch (err) {
         if (!cancelled) {
@@ -73,7 +74,7 @@ export function RealMapContainer({ scope, fallback, filters = {} }: Props) {
   }, [data, visibleTypes]);
 
   const summary = data?.summary;
-  const title = scope === "city" ? "Mapa real de Maricá" : "Mapa real do Rio de Janeiro";
+  const title = scope === "city" ? `Mapa real de ${city}` : "Mapa real do Rio de Janeiro";
 
   const openPoint = (point: MapPoint) => {
     setSelectedPoint(point);
@@ -213,7 +214,7 @@ export function RealMapContainer({ scope, fallback, filters = {} }: Props) {
 function countActiveFilters(filters: MapDataFilters, scope: MapScope) {
   return Object.entries(filters).filter(([key, value]) => {
     if (!value || value === "todos") return false;
-    if (scope === "city" && key === "city" && value === "Maricá") return false;
+    if (scope === "city" && key === "city") return false;
     return true;
   }).length;
 }

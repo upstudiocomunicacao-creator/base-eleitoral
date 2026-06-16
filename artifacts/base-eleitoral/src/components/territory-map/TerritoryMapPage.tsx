@@ -32,10 +32,11 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { isMapboxConfigured, mapboxAccessToken } from "@/lib/mapbox";
+import { getMunicipalBaseByCity } from "@/services/operational";
 import { listLeaderMonthlyMetrics } from "@/services/leaderMonthlyMetrics";
 import { isLeadersSupabaseReady, listLeaders } from "@/services/leaders";
 import type { MapDataFilters } from "@/services/mapData";
-import { buildOperationalTerritories, cityTerritories, enrichTerritory, formatPercent, heatModes, stateTerritories } from "./territoryData";
+import { buildOperationalTerritories, enrichTerritory, formatPercent, getCityTerritories, heatModes, stateTerritories } from "./territoryData";
 import type { EnrichedTerritoryRecord, HeatMode, MapViewMode, TerritoryPriority, TerritoryScope, TerritoryStatus } from "./types";
 
 type Filters = {
@@ -83,9 +84,12 @@ const viewModes: Array<{ key: MapViewMode; label: string; icon: LucideIcon }> = 
   { key: "pins", label: "Pins", icon: MapPin },
 ];
 
-export function TerritoryMapPage({ scope }: { scope: TerritoryScope }) {
+export function TerritoryMapPage({ scope, city = "Maricá" }: { scope: TerritoryScope; city?: string }) {
   const isState = scope === "state";
-  const [baseRecords, setBaseRecords] = useState(() => (isState ? stateTerritories : cityTerritories));
+  const cityBase = getMunicipalBaseByCity(city);
+  const cityLabel = cityBase?.city ?? city;
+  const cityRecords = useMemo(() => getCityTerritories(cityLabel), [cityLabel]);
+  const [baseRecords, setBaseRecords] = useState(() => (isState ? stateTerritories : cityRecords));
   const [loadingData, setLoadingData] = useState(false);
   const [sourceLabel, setSourceLabel] = useState("Modelo demonstrativo");
   const [dataError, setDataError] = useState<string | null>(null);
@@ -100,7 +104,7 @@ export function TerritoryMapPage({ scope }: { scope: TerritoryScope }) {
     setDataError(null);
 
     if (!isLeadersSupabaseReady()) {
-      setBaseRecords(isState ? stateTerritories : cityTerritories);
+      setBaseRecords(isState ? stateTerritories : cityRecords);
       setSourceLabel("Modelo demonstrativo");
       setDataError("Supabase não está configurado. O mapa está usando dados demonstrativos.");
       return;
@@ -109,10 +113,10 @@ export function TerritoryMapPage({ scope }: { scope: TerritoryScope }) {
     setLoadingData(true);
     try {
       const [leaders, monthlyMetrics] = await Promise.all([listLeaders(), listLeaderMonthlyMetrics()]);
-      setBaseRecords(buildOperationalTerritories(scope, leaders, monthlyMetrics));
+      setBaseRecords(buildOperationalTerritories(scope, leaders, monthlyMetrics, cityLabel));
       setSourceLabel(leaders.length ? "Dados reais do Supabase" : "Sem cadastros reais ainda");
     } catch (err) {
-      setBaseRecords(isState ? stateTerritories : cityTerritories);
+      setBaseRecords(isState ? stateTerritories : cityRecords);
       setSourceLabel("Modelo demonstrativo");
       setDataError(err instanceof Error ? err.message : "Não foi possível carregar os dados reais do mapa.");
     } finally {
@@ -121,16 +125,16 @@ export function TerritoryMapPage({ scope }: { scope: TerritoryScope }) {
   }
 
   useEffect(() => {
-    setBaseRecords(isState ? stateTerritories : cityTerritories);
+    setBaseRecords(isState ? stateTerritories : cityRecords);
     void loadTerritoryData();
-  }, [scope, isState]);
+  }, [scope, isState, cityLabel, cityRecords]);
 
   const records = useMemo(() => baseRecords.map(enrichTerritory), [baseRecords]);
   const options = useMemo(() => buildOptions(records), [records]);
   const filtered = useMemo(() => records.filter((item) => matches(item, filters)), [records, filters]);
   const summary = useMemo(() => buildSummary(filtered, scope), [filtered, scope]);
   const rankings = useMemo(() => buildRankingGroups(filtered, scope), [filtered, scope]);
-  const realMapFilters = useMemo(() => buildRealMapFilters(filters, scope), [filters, scope]);
+  const realMapFilters = useMemo(() => buildRealMapFilters(filters, scope, cityLabel), [filters, scope, cityLabel]);
 
   const openDetails = (record: EnrichedTerritoryRecord) => {
     setSelected(record);
@@ -140,8 +144,8 @@ export function TerritoryMapPage({ scope }: { scope: TerritoryScope }) {
   return (
     <div className="space-y-6">
       <PageHeader
-        eyebrow={isState ? "Mapa RJ" : "Mapa Maric\u00e1"}
-        title={isState ? "Leitura territorial do Rio de Janeiro" : "Mapa estrat\u00e9gico de Maric\u00e1"}
+        eyebrow={isState ? "Mapa RJ" : `Mapa ${cityLabel}`}
+        title={isState ? "Leitura territorial do Rio de Janeiro" : `Mapa estrat\u00e9gico de ${cityLabel}`}
         description={
           isState
             ? "Leitura por cidade e região oficial, com cadastros, apoio estimado, votos e prioridade territorial."
@@ -171,13 +175,14 @@ export function TerritoryMapPage({ scope }: { scope: TerritoryScope }) {
         </CardContent>
       </Card>
 
-      <TerritoryStatsCards scope={scope} summary={summary} />
+      <TerritoryStatsCards scope={scope} city={cityLabel} summary={summary} />
       <MapFilters scope={scope} filters={filters} setFilters={setFilters} options={options} />
 
       <section className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_380px]">
         <div className="space-y-4">
           <RealMapContainer
             scope={scope}
+            city={cityLabel}
             filters={realMapFilters}
             fallback={(
               <div className="space-y-4">
@@ -192,6 +197,7 @@ export function TerritoryMapPage({ scope }: { scope: TerritoryScope }) {
                 />
                 <MockMapContainer
                   scope={scope}
+                  city={cityLabel}
                   records={filtered}
                   activeLayer={activeLayer}
                   viewMode={viewMode}
@@ -237,10 +243,10 @@ function MapDataWarning({ message }: { message: string }) {
   );
 }
 
-function buildRealMapFilters(filters: Filters, scope: TerritoryScope): MapDataFilters {
+function buildRealMapFilters(filters: Filters, scope: TerritoryScope, city: string): MapDataFilters {
   const active = (value: string) => value && value !== all ? value : undefined;
   const mapFilters: MapDataFilters = {
-    city: scope === "state" ? active(filters.area) : "Maricá",
+    city: scope === "state" ? active(filters.area) : city,
     neighborhood: scope === "city" ? active(filters.area) : undefined,
     status: active(filters.status),
     priority: active(filters.priority),
@@ -254,13 +260,13 @@ function buildRealMapFilters(filters: Filters, scope: TerritoryScope): MapDataFi
   return Object.fromEntries(Object.entries(mapFilters).filter(([, value]) => value !== undefined)) as MapDataFilters;
 }
 
-function TerritoryStatsCards({ scope, summary }: { scope: TerritoryScope; summary: ReturnType<typeof buildSummary> }) {
+function TerritoryStatsCards({ scope, city, summary }: { scope: TerritoryScope; city: string; summary: ReturnType<typeof buildSummary> }) {
   const isState = scope === "state";
   return (
     <section className="grid gap-3 [grid-template-columns:repeat(auto-fit,minmax(148px,1fr))]">
       <MetricCard label={isState ? "Munic\u00edpios com atua\u00e7\u00e3o" : "Bairros mapeados"} value={summary.activeAreas} icon={MapPin} tone="blue" />
       <MetricCard label={isState ? "Munic\u00edpios sem atua\u00e7\u00e3o" : "Bairros sem cobertura"} value={summary.inactiveAreas} icon={AlertTriangle} tone="amber" />
-      <MetricCard label={isState ? "Cadastros no RJ" : "Cadastros em Maric\u00e1"} value={summary.leaders} icon={RadioTower} tone="indigo" />
+      <MetricCard label={isState ? "Cadastros no RJ" : `Cadastros em ${city}`} value={summary.leaders} icon={RadioTower} tone="indigo" />
       <MetricCard label="Apoio estimado" value={summary.supporters} icon={Users} tone="emerald" />
       <MetricCard label="Votos declarados" value={summary.declaredVotes} icon={Vote} tone="violet" />
       <MetricCard label="Votos validados" value={summary.validatedVotes} icon={CheckCircle2} tone="green" />
@@ -365,6 +371,7 @@ function MapLayerToggle({
 
 function MockMapContainer({
   scope,
+  city,
   records,
   activeLayer,
   viewMode,
@@ -373,6 +380,7 @@ function MockMapContainer({
   onSelect,
 }: {
   scope: TerritoryScope;
+  city: string;
   records: EnrichedTerritoryRecord[];
   activeLayer: HeatMode;
   viewMode: MapViewMode;
@@ -381,8 +389,8 @@ function MockMapContainer({
   onSelect: (record: EnrichedTerritoryRecord) => void;
 }) {
   const isState = scope === "state";
-  const title = isState ? "Estado do Rio de Janeiro" : "Munic\u00edpio de Maric\u00e1";
-  const mapBackground = getStrategicMapBackground(scope);
+  const title = isState ? "Estado do Rio de Janeiro" : `Munic\u00edpio de ${city}`;
+  const mapBackground = getStrategicMapBackground(scope, city);
   const strategicBackground = mapBackground
     ? `linear-gradient(135deg,rgba(239,246,255,0.34),rgba(248,250,252,0.58) 44%,rgba(236,254,255,0.34)),url("${mapBackground}")`
     : "radial-gradient(circle at 18% 20%,rgba(14,165,233,0.20),transparent 28%),radial-gradient(circle at 78% 10%,rgba(16,185,129,0.18),transparent 25%),linear-gradient(135deg,#eff6ff,#f8fafc 44%,#ecfeff)";
@@ -391,7 +399,7 @@ function MockMapContainer({
     <Card className="premium-card overflow-hidden">
       <CardHeader className="border-b border-slate-100">
         <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-          <CardTitle className="flex items-center gap-2 text-base"><Navigation className="h-4 w-4 text-blue-600" /> {isState ? "Mapa RJ estratégico" : "Mapa Maricá estratégico"}</CardTitle>
+          <CardTitle className="flex items-center gap-2 text-base"><Navigation className="h-4 w-4 text-blue-600" /> {isState ? "Mapa RJ estratégico" : `Mapa ${city} estratégico`}</CardTitle>
           <StatusPill label={mapBackground ? "Base Mapbox + leitura" : "Visual estratégico"} tone="blue" />
         </div>
       </CardHeader>
@@ -437,11 +445,12 @@ function MockMapContainer({
   );
 }
 
-function getStrategicMapBackground(scope: TerritoryScope) {
+function getStrategicMapBackground(scope: TerritoryScope, city = "Maricá") {
   if (!isMapboxConfigured) return null;
+  const base = getMunicipalBaseByCity(city);
   const center = scope === "state"
     ? { longitude: -42.75, latitude: -22.35, zoom: 6.3 }
-    : { longitude: -42.8186, latitude: -22.9196, zoom: 11.1 };
+    : { longitude: base?.center.longitude ?? -42.8186, latitude: base?.center.latitude ?? -22.9196, zoom: base?.center.zoom ?? 11.1 };
   const accessToken = encodeURIComponent(mapboxAccessToken);
   return `https://api.mapbox.com/styles/v1/mapbox/light-v11/static/${center.longitude},${center.latitude},${center.zoom},0/1280x820@2x?access_token=${accessToken}`;
 }

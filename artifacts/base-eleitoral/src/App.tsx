@@ -18,6 +18,8 @@ const MapaForca = lazy(() => import("./pages/MapaForca"));
 const Liderancas = lazy(() => import("./pages/Liderancas"));
 const MapaRJ = lazy(() => import("./pages/MapaRJ"));
 const MapaMarica = lazy(() => import("./pages/MapaMarica"));
+const MapaSaoGoncalo = lazy(() => import("./pages/MapaSaoGoncalo"));
+const MapaNiteroi = lazy(() => import("./pages/MapaNiteroi"));
 const Comparativo = lazy(() => import("./pages/Comparativo"));
 const Relatorios = lazy(() => import("./pages/Relatorios"));
 const Importacao = lazy(() => import("./pages/Importacao"));
@@ -53,6 +55,8 @@ function Router() {
               <Route path="/prospeccao"><LegacyRedirect to="/operacional" /></Route>
               <Route path="/mapa-rj" component={MapaRJ} />
               <Route path="/mapa-marica" component={MapaMarica} />
+              <Route path="/mapa-sao-goncalo" component={MapaSaoGoncalo} />
+              <Route path="/mapa-niteroi" component={MapaNiteroi} />
               <Route path="/zonas"><LegacyRedirect to="/mapa-rj" /></Route>
               <Route path="/comparativo" component={Comparativo} />
               <Route path="/agenda"><LegacyRedirect to="/operacional" /></Route>

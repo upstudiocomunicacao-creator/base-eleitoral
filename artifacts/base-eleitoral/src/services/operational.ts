@@ -1,3 +1,5 @@
+import { getMunicipalBaseByCity, getMunicipalNeighborhoods, getMunicipalSubdivisionForNeighborhood, municipalBaseCities, municipalBaseOptions, municipalBases } from "./municipalBases";
+
 export type OperationalScope = "rj" | "marica";
 export type ForceRole = "coord_general" | "coord_rj" | "coord_marica" | "leader";
 export type ForceStatus = "Ativo" | "Atenção" | "Prioritário" | "Pendente";
@@ -161,6 +163,8 @@ export const maricaDistricts = [
 ] as const;
 
 export const maricaNeighborhoods = maricaDistricts.flatMap((district) => district.neighborhoods);
+
+export { getMunicipalBaseByCity, getMunicipalNeighborhoods, getMunicipalSubdivisionForNeighborhood, municipalBaseCities, municipalBaseOptions, municipalBases };
 
 export const minimalFields = [
   "Nome",
@@ -329,7 +333,7 @@ export function getRJRegionForCity(city: string) {
 }
 
 export function getMaricaDistrictForNeighborhood(neighborhood: string) {
-  return maricaDistricts.find((district) => (district.neighborhoods as readonly string[]).includes(neighborhood))?.name ?? "Sem distrito";
+  return getMunicipalSubdivisionForNeighborhood("Maricá", neighborhood);
 }
 
 export function getTerritoryGroup(actor: ForceActor) {

@@ -1,5 +1,5 @@
 import { TerritoryMapPage } from "@/components/territory-map/TerritoryMapPage";
 
 export default function MapaMarica() {
-  return <TerritoryMapPage scope="city" />;
+  return <TerritoryMapPage scope="city" city="Maricá" />;
 }

@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Textarea } from "@/components/ui/textarea";
+import { toast } from "@/hooks/use-toast";
 import { summarizeGeocodingAddress, updateRecordCoordinates, type GeocodingRecord } from "@/services/geocoding";
 
 export function GeocodingReviewDrawer({
@@ -32,19 +33,45 @@ export function GeocodingReviewDrawer({
 
   async function saveManual() {
     if (!record) return;
+    const normalizedLatitude = normalizeCoordinateInput(latitude);
+    const normalizedLongitude = normalizeCoordinateInput(longitude);
+    const normalizedConfidence = normalizeCoordinateInput(confidence);
+
+    if (!Number.isFinite(normalizedLatitude) || normalizedLatitude < -90 || normalizedLatitude > 90) {
+      toast({ title: "Latitude inválida", description: "Informe uma latitude entre -90 e 90.", variant: "destructive" });
+      return;
+    }
+
+    if (!Number.isFinite(normalizedLongitude) || normalizedLongitude < -180 || normalizedLongitude > 180) {
+      toast({ title: "Longitude inválida", description: "Informe uma longitude entre -180 e 180.", variant: "destructive" });
+      return;
+    }
+
+    if (!Number.isFinite(normalizedConfidence) || normalizedConfidence < 0 || normalizedConfidence > 1) {
+      toast({ title: "Confiança inválida", description: "Use um valor entre 0 e 1. Exemplo: 0.95.", variant: "destructive" });
+      return;
+    }
+
     setSaving(true);
     try {
       await updateRecordCoordinates(record.tableName, record.id, {
-        latitude: Number(latitude),
-        longitude: Number(longitude),
+        latitude: normalizedLatitude,
+        longitude: normalizedLongitude,
         geocoding_status: "manual",
         geocoding_source: "manual",
-        geocoding_confidence: Number(confidence),
+        geocoding_confidence: normalizedConfidence,
         geocoding_error: notes || null,
         geographic_precision: record.geographic_precision ?? "Alta",
       });
+      toast({ title: "Coordenadas salvas", description: "O cadastro foi atualizado e já pode alimentar os mapas." });
       onSaved();
       onOpenChange(false);
+    } catch (error) {
+      toast({
+        title: "Não foi possível salvar",
+        description: error instanceof Error ? error.message : "Revise os dados e tente novamente.",
+        variant: "destructive",
+      });
     } finally {
       setSaving(false);
     }
@@ -68,15 +95,15 @@ export function GeocodingReviewDrawer({
 
           <label className="block">
             <span className="mb-1 block text-xs font-bold uppercase text-slate-500">Latitude</span>
-            <Input value={latitude} onChange={(event) => setLatitude(event.target.value)} placeholder="-22.9196" />
+            <Input type="text" inputMode="decimal" value={latitude} onChange={(event) => setLatitude(event.target.value)} placeholder="-22.9196" />
           </label>
           <label className="block">
             <span className="mb-1 block text-xs font-bold uppercase text-slate-500">Longitude</span>
-            <Input value={longitude} onChange={(event) => setLongitude(event.target.value)} placeholder="-42.8186" />
+            <Input type="text" inputMode="decimal" value={longitude} onChange={(event) => setLongitude(event.target.value)} placeholder="-42.8186" />
           </label>
           <label className="block">
             <span className="mb-1 block text-xs font-bold uppercase text-slate-500">Confiança</span>
-            <Input value={confidence} onChange={(event) => setConfidence(event.target.value)} placeholder="0.95" />
+            <Input type="text" inputMode="decimal" value={confidence} onChange={(event) => setConfidence(event.target.value)} placeholder="0.95" />
           </label>
           <label className="block">
             <span className="mb-1 block text-xs font-bold uppercase text-slate-500">Observação</span>
@@ -90,4 +117,8 @@ export function GeocodingReviewDrawer({
       </SheetContent>
     </Sheet>
   );
+}
+
+function normalizeCoordinateInput(value: string) {
+  return Number(String(value).trim().replace(",", "."));
 }

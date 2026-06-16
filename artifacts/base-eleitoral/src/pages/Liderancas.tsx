@@ -29,6 +29,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { toast } from "@/hooks/use-toast";
 import { createLeader, deleteLeader, DEFAULT_CAMPAIGN_ID, isLeadersSupabaseReady, listLeaders, updateLeader } from "@/services/leaders";
 import { getMaricaDistrictForNeighborhood, getRJRegionForCity, maricaNeighborhoods, rjCities } from "@/services/operational";
+import { isMapboxConfigured, mapboxAccessToken } from "@/lib/mapbox";
 import type { Database, Leader } from "@/types/database";
 
 type LeaderInsert = Database["public"]["Tables"]["leaders"]["Insert"];
@@ -73,6 +74,8 @@ type LeaderFormState = {
   state: string;
   territory_region: string;
   geographic_precision: string;
+  latitude: string;
+  longitude: string;
   parent_leader_id: string;
   internal_responsible: string;
   registered_supporters: number;
@@ -116,6 +119,8 @@ const emptyForm: LeaderFormState = {
   state: "RJ",
   territory_region: "Sede / Maricá",
   geographic_precision: "Média",
+  latitude: "",
+  longitude: "",
   parent_leader_id: "",
   internal_responsible: "Coordenação Territorial",
   registered_supporters: 0,
@@ -334,6 +339,10 @@ export default function Liderancas() {
         open={detailsOpen}
         record={selected}
         leaders={leaders}
+        onEdit={(record) => {
+          setDetailsOpen(false);
+          openEdit(record);
+        }}
         onOpenChange={(open) => {
           setDetailsOpen(open);
           if (!open) setSelected(null);
@@ -620,6 +629,8 @@ function LeadershipFormSheet({
               <TextField required label="Estado" value={record.state} onChange={(value) => update("state", value)} />
               <TextField readOnly label={record.city === "Maricá" ? "Distrito automático" : "Região automática"} value={record.territory_region} onChange={() => undefined} />
               <SelectTextField required label="Precisão geográfica" value={record.geographic_precision} values={["Alta", "Média alta", "Média", "Baixa", "Muito baixa"]} onChange={(value) => update("geographic_precision", value)} />
+              <TextField label="Latitude" value={record.latitude} onChange={(value) => update("latitude", value)} />
+              <TextField label="Longitude" value={record.longitude} onChange={(value) => update("longitude", value)} />
             </FormSection>
 
             <FormSection title="Estimativas atuais">
@@ -649,7 +660,19 @@ function LeadershipFormSheet({
   );
 }
 
-function LeadershipDetailSheet({ open, record, leaders, onOpenChange }: { open: boolean; record: Leader | null; leaders: Leader[]; onOpenChange: (open: boolean) => void }) {
+function LeadershipDetailSheet({
+  open,
+  record,
+  leaders,
+  onEdit,
+  onOpenChange,
+}: {
+  open: boolean;
+  record: Leader | null;
+  leaders: Leader[];
+  onEdit: (record: Leader) => void;
+  onOpenChange: (open: boolean) => void;
+}) {
   if (!record) {
     return <Sheet open={open} onOpenChange={onOpenChange}><SheetContent /></Sheet>;
   }
@@ -663,10 +686,18 @@ function LeadershipDetailSheet({ open, record, leaders, onOpenChange }: { open: 
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent className="w-full overflow-y-auto border-l-0 bg-slate-50 p-0 sm:max-w-4xl">
         <SheetHeader className="bg-gradient-to-br from-blue-950 to-emerald-800 p-6 pb-8 text-white">
-          <SheetTitle className="flex items-center gap-3 text-2xl font-extrabold text-white">
-            <div className="flex h-11 w-11 items-center justify-center rounded-lg bg-white/15 text-sm font-extrabold ring-1 ring-white/20">{getInitials(record.full_name)}</div>
-            {record.full_name}
-          </SheetTitle>
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+            <SheetTitle className="flex items-center gap-3 text-2xl font-extrabold text-white">
+              <div className="flex h-11 w-11 items-center justify-center rounded-lg bg-white/15 text-sm font-extrabold ring-1 ring-white/20">{getInitials(record.full_name)}</div>
+              {record.full_name}
+            </SheetTitle>
+            <PermissionGate module="liderancas" action="edit">
+              <Button type="button" variant="secondary" onClick={() => onEdit(record)}>
+                <Edit className="h-4 w-4" />
+                Editar cadastro
+              </Button>
+            </PermissionGate>
+          </div>
           <SheetDescription className="text-sm font-medium leading-6 text-white/80">
             {record.political_nickname || "Sem apelido político"} - {record.neighborhood}, {record.city}
           </SheetDescription>
@@ -696,14 +727,7 @@ function LeadershipDetailSheet({ open, record, leaders, onOpenChange }: { open: 
             </DetailCard>
 
             <DetailCard title="Mapa/área de atuação">
-              <div className="relative h-56 overflow-hidden rounded-lg border border-blue-100 bg-[linear-gradient(135deg,#eff6ff_0%,#ecfeff_45%,#f0fdf4_100%)]">
-                <div className="absolute left-8 top-8 h-28 w-28 rounded-full border border-blue-300 bg-blue-400/15" />
-                <div className="absolute bottom-8 right-10 h-24 w-24 rounded-full border border-emerald-300 bg-emerald-400/20" />
-                <div className="absolute left-1/2 top-1/2 h-4 w-4 -translate-x-1/2 -translate-y-1/2 rounded-full bg-blue-700 shadow-[0_0_0_10px_rgba(37,99,235,0.14)]" />
-                <div className="absolute bottom-4 left-4 rounded-lg bg-white/85 px-3 py-2 text-xs font-bold text-slate-700 shadow-sm">
-                  {record.territory_region || `${record.neighborhood} e entorno`}
-                </div>
-              </div>
+              <LeaderMiniMap record={record} />
             </DetailCard>
           </div>
 
@@ -834,6 +858,44 @@ function DetailMetric({ label, value }: { label: string; value: string }) {
   );
 }
 
+function LeaderMiniMap({ record }: { record: Leader }) {
+  const latitude = Number(record.latitude);
+  const longitude = Number(record.longitude);
+  const hasCoordinates = Number.isFinite(latitude) && Number.isFinite(longitude);
+
+  if (!hasCoordinates) {
+    return (
+      <div className="rounded-lg border border-amber-200 bg-amber-50 p-4 text-sm font-semibold leading-6 text-amber-950">
+        Este cadastro ainda não tem latitude e longitude. Use a tela Geocodificação ou edite o cadastro para informar as coordenadas manualmente.
+      </div>
+    );
+  }
+
+  if (!isMapboxConfigured) {
+    return (
+      <div className="rounded-lg border border-blue-100 bg-blue-50 p-4 text-sm font-semibold leading-6 text-blue-950">
+        Coordenadas salvas: {latitude.toFixed(6)}, {longitude.toFixed(6)}. Configure o Mapbox para visualizar o mapa real.
+      </div>
+    );
+  }
+
+  const marker = `pin-s+2563eb(${longitude},${latitude})`;
+  const src = `https://api.mapbox.com/styles/v1/mapbox/light-v11/static/${marker}/${longitude},${latitude},12,0/640x320@2x?access_token=${encodeURIComponent(mapboxAccessToken)}`;
+  const mapsUrl = `https://www.google.com/maps?q=${latitude},${longitude}`;
+
+  return (
+    <div className="space-y-3">
+      <a href={mapsUrl} target="_blank" rel="noreferrer" className="block overflow-hidden rounded-lg border border-blue-100 bg-slate-100 shadow-inner">
+        <img src={src} alt={`Mapa de ${record.full_name}`} className="h-56 w-full object-cover" loading="lazy" />
+      </a>
+      <div className="grid gap-2 text-xs font-bold text-slate-600 sm:grid-cols-2">
+        <div className="rounded-lg bg-slate-50 px-3 py-2">Lat: {latitude.toFixed(6)}</div>
+        <div className="rounded-lg bg-slate-50 px-3 py-2">Lng: {longitude.toFixed(6)}</div>
+      </div>
+    </div>
+  );
+}
+
 function InfoGrid({ items }: { items: Array<[string, ReactNode]> }) {
   return (
     <div className="grid gap-3">
@@ -893,6 +955,8 @@ function toFormState(leader: Leader): LeaderFormState {
     state: leader.state,
     territory_region: isMarica ? getMaricaDistrictForNeighborhood(neighborhood) : getRJRegionForCity(city),
     geographic_precision: leader.geographic_precision,
+    latitude: leader.latitude?.toString() ?? "",
+    longitude: leader.longitude?.toString() ?? "",
     parent_leader_id: leader.parent_leader_id ?? "",
     internal_responsible: leader.internal_responsible ?? "",
     registered_supporters: leader.registered_supporters,
@@ -930,6 +994,8 @@ function toInsertPayload(form: LeaderFormState): LeaderInsert {
     state: form.state.trim(),
     territory_region: territory.territory_region,
     geographic_precision: form.geographic_precision,
+    latitude: nullableNumber(form.latitude),
+    longitude: nullableNumber(form.longitude),
     parent_leader_id: nullable(form.parent_leader_id),
     internal_responsible: nullable(form.internal_responsible),
     registered_supporters: Number(form.registered_supporters || 0),
@@ -1019,7 +1085,14 @@ function validateForm(form: LeaderFormState) {
   ];
 
   const missing = required.find(([key]) => !String(form[key] ?? "").trim());
-  return missing ? `Preencha o campo obrigatório: ${missing[1]}.` : null;
+  if (missing) return `Preencha o campo obrigatório: ${missing[1]}.`;
+
+  const latitude = nullableNumber(form.latitude);
+  const longitude = nullableNumber(form.longitude);
+  if (form.latitude.trim() && (latitude === null || latitude < -90 || latitude > 90)) return "Informe uma latitude válida entre -90 e 90.";
+  if (form.longitude.trim() && (longitude === null || longitude < -180 || longitude > 180)) return "Informe uma longitude válida entre -180 e 180.";
+
+  return null;
 }
 
 function buildSummary(items: Leader[]) {
@@ -1082,6 +1155,13 @@ function unique(values: Array<string | null | undefined>) {
 function nullable(value: string) {
   const trimmed = value.trim();
   return trimmed ? trimmed : null;
+}
+
+function nullableNumber(value: string) {
+  const normalized = value.trim().replace(",", ".");
+  if (!normalized) return null;
+  const parsed = Number(normalized);
+  return Number.isFinite(parsed) ? parsed : null;
 }
 
 function getStatusTone(status: string) {

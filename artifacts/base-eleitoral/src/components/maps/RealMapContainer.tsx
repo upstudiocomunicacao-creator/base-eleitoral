@@ -1,5 +1,6 @@
 ﻿import { Component, type ErrorInfo, type ReactNode, useEffect, useMemo, useState } from "react";
 import { AlertTriangle, Database, Loader2, MapPin, Navigation, Zap, type LucideIcon } from "lucide-react";
+import { lazy, Suspense } from "react";
 import { Link } from "wouter";
 import { EmptyState } from "@/components/common/EmptyState";
 import { Button } from "@/components/ui/button";
@@ -16,10 +17,11 @@ import {
   type MapScope,
 } from "@/services/mapData";
 import { getHeatmapLayerLabel, getPointLayerColor, getPointLayerLabel } from "@/utils/mapLayers";
-import { MapboxMap } from "./MapboxMap";
 import { MapDetailDrawer } from "./MapDetailDrawer";
 import { MapLayerControls, type RealMapMode } from "./MapLayerControls";
 import { MapLegend } from "./MapLegend";
+
+const MapboxMap = lazy(() => import("./MapboxMap").then((module) => ({ default: module.MapboxMap })));
 
 type Props = {
   scope: MapScope;
@@ -176,7 +178,9 @@ export function RealMapContainer({ scope, city = "Maricá", fallback, filters = 
             <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_280px]">
               <div className="space-y-3">
                 <RealMapSummary summary={summary} mode={mode} heatmapLayer={heatmapLayer} />
-                <MapboxMap scope={scope} points={visiblePoints} mode={mode} heatmapLayer={heatmapLayer} onSelect={openPoint} />
+                <Suspense fallback={<RealMapLoading label="Preparando mapa real" />}>
+                  <MapboxMap scope={scope} points={visiblePoints} mode={mode} heatmapLayer={heatmapLayer} onSelect={openPoint} />
+                </Suspense>
               </div>
               <aside className="space-y-3">
                 <MapLegend heatmapLayer={heatmapLayer} />
@@ -208,6 +212,17 @@ export function RealMapContainer({ scope, city = "Maricá", fallback, filters = 
         />
       </div>
     </MapRuntimeErrorBoundary>
+  );
+}
+
+function RealMapLoading({ label }: { label: string }) {
+  return (
+    <div className="flex min-h-[620px] items-center justify-center rounded-xl border border-slate-200 bg-white">
+      <div className="flex items-center gap-2 rounded-full border border-slate-200 bg-white px-4 py-2 text-sm font-bold text-slate-700 shadow-sm">
+        <Loader2 className="h-4 w-4 animate-spin text-blue-600" />
+        {label}
+      </div>
+    </div>
   );
 }
 

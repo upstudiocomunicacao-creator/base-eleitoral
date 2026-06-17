@@ -329,10 +329,10 @@ export function getMonthly(actor: ForceActor, month: string) {
 export function getRoleLabel(role: ForceRole) {
   if (role === "coord_general") return "Coord. Geral";
   if (role === "coord_rj") return "Coord. RJ";
-  if (role === "coord_marica") return "Coord. Maric\u00e1";
-  if (role === "coord_sao_goncalo") return "Coord. S\u00e3o Gon\u00e7alo";
-  if (role === "coord_niteroi") return "Coord. Niter\u00f3i";
-  return "Lideran\u00e7a";
+  if (role === "coord_marica") return "Coord. Maricá";
+  if (role === "coord_sao_goncalo") return "Coord. São Gonçalo";
+  if (role === "coord_niteroi") return "Coord. Niterói";
+  return "Liderança";
 }
 
 export function getScopeLabel(scope: OperationalScope) {
@@ -353,7 +353,7 @@ export function getScopeTerritoryLabel(scope: OperationalScope) {
 }
 
 export function getDefaultTerritoryForScope(scope: OperationalScope) {
-  return getScopeTerritories(scope)[0] ?? (scope === "rj" ? "Niter\u00f3i" : "Centro");
+  return getScopeTerritories(scope)[0] ?? (scope === "rj" ? "Niterói" : "Centro");
 }
 
 export function getScopeFromCity(city: string): OperationalScope {
@@ -368,13 +368,13 @@ export function getCoordinatorRoleForScope(scope: OperationalScope): ForceRole {
 }
 
 export function getLeaderTypeForOperationalRole(role: ForceRole, scope: OperationalScope) {
-  if (role === "coord_general") return "Coordena\u00e7\u00e3o Geral";
-  if (role === "coord_rj") return "Coordena\u00e7\u00e3o RJ";
-  if (role === "coord_marica") return "Coordena\u00e7\u00e3o Maric\u00e1";
-  if (role === "coord_sao_goncalo") return "Coordena\u00e7\u00e3o S\u00e3o Gon\u00e7alo";
-  if (role === "coord_niteroi") return "Coordena\u00e7\u00e3o Niter\u00f3i";
+  if (role === "coord_general") return "Coordenação Geral";
+  if (role === "coord_rj") return "Coordenação RJ";
+  if (role === "coord_marica") return "Coordenação Maricá";
+  if (role === "coord_sao_goncalo") return "Coordenação São Gonçalo";
+  if (role === "coord_niteroi") return "Coordenação Niterói";
   const city = getScopeCity(scope);
-  return city ? `${city} - Lideran\u00e7a` : "Lideran\u00e7a RJ";
+  return city ? `${city} - Liderança` : "Liderança RJ";
 }
 
 export function getRJRegionForCity(city: string) {

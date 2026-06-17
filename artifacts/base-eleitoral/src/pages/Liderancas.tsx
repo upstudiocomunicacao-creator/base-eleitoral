@@ -1084,17 +1084,28 @@ function buildParentLeaderOptions(leaders: Leader[], record: LeaderFormState) {
     if (!isLeader) return false;
 
     if (isMunicipalBase) {
-      return normalize(leader.city) === normalize(record.city) && normalize(leader.neighborhood) === normalize(record.neighborhood);
+      return normalize(leader.city) === normalize(record.city);
     }
 
     return normalize(leader.city) === normalize(record.city);
+  }).sort((first, second) => {
+    const firstSameNeighborhood = normalize(first.neighborhood) === normalize(record.neighborhood) ? 0 : 1;
+    const secondSameNeighborhood = normalize(second.neighborhood) === normalize(record.neighborhood) ? 0 : 1;
+    return firstSameNeighborhood - secondSameNeighborhood || first.full_name.localeCompare(second.full_name, "pt-BR");
   });
 
   return [
     ...options,
     ...generalCoordinators.map((leader) => ({ value: leader.id, label: `${leader.full_name} - Coordenação Geral` })),
-    ...territoryCoordinators.map((leader) => ({ value: leader.id, label: `${leader.full_name} - ${getMunicipalBaseByCity(leader.city) ? leader.neighborhood : leader.city}` })),
+    ...territoryCoordinators.map((leader) => ({ value: leader.id, label: `${leader.full_name} - ${formatParentTerritoryLabel(leader)}` })),
   ];
+}
+
+function formatParentTerritoryLabel(leader: Leader) {
+  const base = getMunicipalBaseByCity(leader.city);
+  if (!base) return leader.city;
+  const neighborhood = leader.neighborhood && normalize(leader.neighborhood) !== "todos" ? ` · ${leader.neighborhood}` : "";
+  return `${base.city}${neighborhood}`;
 }
 
 function validateForm(form: LeaderFormState) {

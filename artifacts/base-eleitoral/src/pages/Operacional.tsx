@@ -583,7 +583,7 @@ function ForceMap({ actors, month, campaign }: { actors: ForceActor[]; month: st
     <Card className="premium-card">
       <CardHeader>
         <CardTitle>Organograma territorial simplificado</CardTitle>
-        <p className="text-sm font-medium text-slate-500">{"Candidato \u2192 Coordena\u00e7\u00e3o Geral \u2192 Coordena\u00e7\u00f5es RJ/Maric\u00e1/Niter\u00f3i/S\u00e3o Gon\u00e7alo \u2192 Lideran\u00e7as."}</p>
+        <p className="text-sm font-medium text-slate-500">{"Candidato → Coordenação Geral → Coordenações RJ/Maricá/Niterói/São Gonçalo → Lideranças."}</p>
       </CardHeader>
       <CardContent className="space-y-5">
         <div className="mx-auto max-w-sm rounded-xl border border-blue-100 bg-blue-50 p-4 text-center shadow-sm">
@@ -603,7 +603,7 @@ function ForceMap({ actors, month, campaign }: { actors: ForceActor[]; month: st
         </div>
         <Connector />
         <div className="grid gap-4 lg:grid-cols-2 xl:grid-cols-4">
-          <CoordinationColumn title="Coordena\u00e7\u00e3o RJ" subtitle="Coordenadores por munic\u00edpio" actors={general.filter((item) => item.role === "coord_rj")} month={month} />
+          <CoordinationColumn title="Coordenação RJ" subtitle="Coordenadores por município" actors={general.filter((item) => item.role === "coord_rj")} month={month} />
           {operationalScopeOptions.filter((item) => item.value !== "rj").map((option) => (
             <CoordinationColumn
               key={option.value}
@@ -702,8 +702,8 @@ function CadastroRapido({
   return (
     <Card className="premium-card">
       <CardHeader>
-        <CardTitle>{editing ? "Editar cadastro" : "Cadastro m\u00ednimo"}</CardTitle>
-        <p className="text-sm font-medium text-slate-500">Focado em mapa, m\u00e9tricas e custos.</p>
+        <CardTitle>{editing ? "Editar cadastro" : "Cadastro mínimo"}</CardTitle>
+        <p className="text-sm font-medium text-slate-500">Focado em mapa, métricas e custos.</p>
       </CardHeader>
       <CardContent className="space-y-3">
         <Field label="Nome"><Input value={draft.name} onChange={(e) => setDraft({ ...draft, name: e.target.value })} /></Field>
@@ -715,10 +715,10 @@ function CadastroRapido({
               <SelectContent>
                 <SelectItem value="coord_general">Coord. Geral</SelectItem>
                 <SelectItem value="coord_rj">Coord. RJ</SelectItem>
-                <SelectItem value="coord_marica">Coord. Maric\u00e1</SelectItem>
-                <SelectItem value="coord_sao_goncalo">Coord. S\u00e3o Gon\u00e7alo</SelectItem>
-                <SelectItem value="coord_niteroi">Coord. Niter\u00f3i</SelectItem>
-                <SelectItem value="leader">Lideran\u00e7a</SelectItem>
+                <SelectItem value="coord_marica">Coord. Maricá</SelectItem>
+                <SelectItem value="coord_sao_goncalo">Coord. São Gonçalo</SelectItem>
+                <SelectItem value="coord_niteroi">Coord. Niterói</SelectItem>
+                <SelectItem value="leader">Liderança</SelectItem>
               </SelectContent>
             </Select>
           </Field>
@@ -751,8 +751,8 @@ function CadastroRapido({
         </Field>
         <div className="rounded-lg border border-blue-100 bg-blue-50 px-3 py-2 text-xs font-bold text-blue-700">
           {currentScope === "rj"
-            ? "Regi\u00e3o: " + territoryData.region
-            : getScopeLabel(currentScope) + " \u00b7 " + territoryData.district}
+            ? "Região: " + territoryData.region
+            : getScopeLabel(currentScope) + " · " + territoryData.district}
         </div>
         {draft.role === "leader" ? (
           <Field label="Vinculado a / indicado por">
@@ -767,8 +767,8 @@ function CadastroRapido({
             <SelectTrigger><SelectValue /></SelectTrigger>
             <SelectContent>
               <SelectItem value="Ativo">Ativo</SelectItem>
-              <SelectItem value="Aten\u00e7\u00e3o">Aten\u00e7\u00e3o</SelectItem>
-              <SelectItem value="Priorit\u00e1rio">Priorit\u00e1rio</SelectItem>
+              <SelectItem value="Atenção">Atenção</SelectItem>
+              <SelectItem value="Prioritário">Prioritário</SelectItem>
               <SelectItem value="Pendente">Pendente</SelectItem>
             </SelectContent>
           </Select>
@@ -777,10 +777,10 @@ function CadastroRapido({
           <Input type="number" value={draft.estimatedSupporters} onChange={(e) => setDraft({ ...draft, estimatedSupporters: e.target.value })} />
         </Field>
         <div className="grid grid-cols-2 gap-3">
-          <Field label="Votos m\u00edn."><Input type="number" value={draft.minVotes} onChange={(e) => setDraft({ ...draft, minVotes: e.target.value })} /></Field>
-          <Field label="Votos m\u00e1x."><Input type="number" value={draft.maxVotes} onChange={(e) => setDraft({ ...draft, maxVotes: e.target.value })} /></Field>
-          <Field label="Custo m\u00edn."><Input type="number" value={draft.baseCost} onChange={(e) => setDraft({ ...draft, baseCost: e.target.value })} /></Field>
-          <Field label="Custo m\u00e1x."><Input type="number" value={draft.ceilingCost} onChange={(e) => setDraft({ ...draft, ceilingCost: e.target.value })} /></Field>
+          <Field label="Votos mín."><Input type="number" value={draft.minVotes} onChange={(e) => setDraft({ ...draft, minVotes: e.target.value })} /></Field>
+          <Field label="Votos máx."><Input type="number" value={draft.maxVotes} onChange={(e) => setDraft({ ...draft, maxVotes: e.target.value })} /></Field>
+          <Field label="Custo mín."><Input type="number" value={draft.baseCost} onChange={(e) => setDraft({ ...draft, baseCost: e.target.value })} /></Field>
+          <Field label="Custo máx."><Input type="number" value={draft.ceilingCost} onChange={(e) => setDraft({ ...draft, ceilingCost: e.target.value })} /></Field>
         </div>
         <Field label="Custo extra eventual"><Input type="number" value={draft.extraCost} onChange={(e) => setDraft({ ...draft, extraCost: e.target.value })} /></Field>
         <div className="grid gap-2 sm:grid-cols-2">
@@ -790,7 +790,7 @@ function CadastroRapido({
           </Button>
           {editing ? (
             <Button type="button" variant="outline" className="w-full" onClick={onCancelEdit} disabled={saving}>
-              Cancelar edi\u00e7\u00e3o
+              Cancelar edição
             </Button>
           ) : null}
         </div>
@@ -804,13 +804,13 @@ function ActorsTable({ actors, month, onEdit }: { actors: ForceActor[]; month: s
     <Card className="premium-card overflow-hidden">
       <CardHeader>
         <CardTitle>Cadastros operacionais</CardTitle>
-        <p className="text-sm font-medium text-slate-500">Clique em um cadastro para editar dados, v\u00ednculos, votos e custos.</p>
+        <p className="text-sm font-medium text-slate-500">Clique em um cadastro para editar dados, vínculos, votos e custos.</p>
       </CardHeader>
       <CardContent className="overflow-x-auto p-0">
         <table className="w-full min-w-[980px] text-left text-sm">
           <thead className="bg-slate-50 text-xs font-black uppercase tracking-[0.08em] text-slate-500">
             <tr>
-              {["Nome", "Tipo", "Territ\u00f3rio", "Regi\u00e3o/Distrito", "Status", "Apoio", "Votos m\u00edn.", "Votos m\u00e1x.", "Custo m\u00edn.", "Custo m\u00e1x.", "Mapa", "A\u00e7\u00f5es"].map((item) => <th key={item} className="px-4 py-3">{item}</th>)}
+              {["Nome", "Tipo", "Território", "Região/Distrito", "Status", "Apoio", "Votos mín.", "Votos máx.", "Custo mín.", "Custo máx.", "Mapa", "Ações"].map((item) => <th key={item} className="px-4 py-3">{item}</th>)}
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-100">
@@ -1192,14 +1192,24 @@ function buildOperationalParentOptions(leaders: Leader[], draft: Record<string, 
     if (scope === "rj") {
       return normalizeText(leader.city) === normalizeText(draft.territory);
     }
-    return normalizeText(leader.city) === normalizeText(territoryData.city) && normalizeText(leader.neighborhood) === normalizeText(draft.territory);
+    return normalizeText(leader.city) === normalizeText(territoryData.city);
+  }).sort((first, second) => {
+    const firstSameTerritory = normalizeText(first.neighborhood) === normalizeText(draft.territory) ? 0 : 1;
+    const secondSameTerritory = normalizeText(second.neighborhood) === normalizeText(draft.territory) ? 0 : 1;
+    return firstSameTerritory - secondSameTerritory || first.full_name.localeCompare(second.full_name, "pt-BR");
   });
 
   return [
     ...options,
-    ...generalCoordinators.map((leader) => ({ value: leader.id, label: leader.full_name + " - Coordena\u00e7\u00e3o Geral" })),
-    ...territoryCoordinators.map((leader) => ({ value: leader.id, label: leader.full_name + " - " + (scope === "rj" ? leader.city : leader.neighborhood) })),
+    ...generalCoordinators.map((leader) => ({ value: leader.id, label: leader.full_name + " - Coordenação Geral" })),
+    ...territoryCoordinators.map((leader) => ({ value: leader.id, label: leader.full_name + " - " + formatOperationalParentTerritory(leader, scope) })),
   ];
+}
+
+function formatOperationalParentTerritory(leader: Leader, scope: OperationalScope) {
+  if (scope === "rj") return leader.city;
+  const neighborhood = leader.neighborhood && normalizeText(leader.neighborhood) !== "todos" ? " · " + leader.neighborhood : "";
+  return leader.city + neighborhood;
 }
 
 function toMonthlyDraft(monthly: ReturnType<typeof getMonthly> | null): MonthlyMetricDraft {
@@ -1239,7 +1249,7 @@ function toForceStatus(status: string): ForceStatus {
 }
 
 function normalizeText(value: string) {
-  return value.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
+  return value.normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase();
 }
 
 function currency(value: number) {

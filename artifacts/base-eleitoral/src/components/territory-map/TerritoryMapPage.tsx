@@ -79,7 +79,7 @@ const emptyFilters: Filters = {
 };
 
 const viewModes: Array<{ key: MapViewMode; label: string; icon: LucideIcon }> = [
-  { key: "estrategico", label: "Mapa estrat\u00e9gico", icon: Navigation },
+  { key: "estrategico", label: "Mapa estratégico", icon: Navigation },
   { key: "heatmap", label: "Heatmap", icon: Flame },
   { key: "pins", label: "Pins", icon: MapPin },
 ];
@@ -145,7 +145,7 @@ export function TerritoryMapPage({ scope, city = "Maricá" }: { scope: Territory
     <div className="space-y-6">
       <PageHeader
         eyebrow={isState ? "Mapa RJ" : `Mapa ${cityLabel}`}
-        title={isState ? "Leitura territorial do Rio de Janeiro" : `Mapa estrat\u00e9gico de ${cityLabel}`}
+        title={isState ? "Leitura territorial do Rio de Janeiro" : `Mapa estratégico de ${cityLabel}`}
         description={
           isState
             ? "Leitura por cidade e região oficial, com cadastros, apoio estimado, votos e prioridade territorial."
@@ -264,15 +264,15 @@ function TerritoryStatsCards({ scope, city, summary }: { scope: TerritoryScope; 
   const isState = scope === "state";
   return (
     <section className="grid gap-3 [grid-template-columns:repeat(auto-fit,minmax(148px,1fr))]">
-      <MetricCard label={isState ? "Munic\u00edpios com atua\u00e7\u00e3o" : "Bairros mapeados"} value={summary.activeAreas} icon={MapPin} tone="blue" />
-      <MetricCard label={isState ? "Munic\u00edpios sem atua\u00e7\u00e3o" : "Bairros sem cobertura"} value={summary.inactiveAreas} icon={AlertTriangle} tone="amber" />
+      <MetricCard label={isState ? "Municípios com atuação" : "Bairros mapeados"} value={summary.activeAreas} icon={MapPin} tone="blue" />
+      <MetricCard label={isState ? "Municípios sem atuação" : "Bairros sem cobertura"} value={summary.inactiveAreas} icon={AlertTriangle} tone="amber" />
       <MetricCard label={isState ? "Cadastros no RJ" : `Cadastros em ${city}`} value={summary.leaders} icon={RadioTower} tone="indigo" />
       <MetricCard label="Apoio estimado" value={summary.supporters} icon={Users} tone="emerald" />
       <MetricCard label="Votos declarados" value={summary.declaredVotes} icon={Vote} tone="violet" />
       <MetricCard label="Votos validados" value={summary.validatedVotes} icon={CheckCircle2} tone="green" />
       <MetricCard label={isState ? "Cobertura estadual" : "Cobertura municipal"} value={formatPercent(summary.coverage)} icon={BarChart3} tone="cyan" />
-      <MetricCard label={isState ? "Munic\u00edpios priorit\u00e1rios" : "Bairros priorit\u00e1rios"} value={summary.priorityAreas} icon={Target} tone="orange" />
-      <MetricCard label={isState ? "Munic\u00edpios cr\u00edticos" : "Bairros cr\u00edticos"} value={summary.criticalAreas} icon={Zap} tone="red" />
+      <MetricCard label={isState ? "Municípios prioritários" : "Bairros prioritários"} value={summary.priorityAreas} icon={Target} tone="orange" />
+      <MetricCard label={isState ? "Municípios críticos" : "Bairros críticos"} value={summary.criticalAreas} icon={Zap} tone="red" />
       <MetricCard label="Crescimento semanal" value={`+${summary.weeklyGrowth}`} icon={TrendingUp} tone="emerald" />
     </section>
   );
@@ -389,7 +389,7 @@ function MockMapContainer({
   onSelect: (record: EnrichedTerritoryRecord) => void;
 }) {
   const isState = scope === "state";
-  const title = isState ? "Estado do Rio de Janeiro" : `Munic\u00edpio de ${city}`;
+  const title = isState ? "Estado do Rio de Janeiro" : `Município de ${city}`;
   const mapBackground = getStrategicMapBackground(scope, city);
   const strategicBackground = mapBackground
     ? `linear-gradient(135deg,rgba(239,246,255,0.34),rgba(248,250,252,0.58) 44%,rgba(236,254,255,0.34)),url("${mapBackground}")`
@@ -436,7 +436,7 @@ function MockMapContainer({
 
           {!records.length ? (
             <div className="relative z-30 flex min-h-[560px] items-center justify-center">
-              <EmptyState title="Nenhum territ\u00f3rio encontrado" description="Ajuste os filtros para ampliar a leitura territorial." icon={MapPin} />
+              <EmptyState title="Nenhum território encontrado" description="Ajuste os filtros para ampliar a leitura territorial." icon={MapPin} />
             </div>
           ) : null}
         </div>
@@ -513,7 +513,7 @@ function HeatmapLayerMock({ records, activeLayer, onSelect }: { records: Enriche
 function MapLegend({ activeLayer }: { activeLayer: HeatMode }) {
   const items = [
     ["Alta intensidade", "70%+", "#ef4444"],
-    ["M\u00e9dia intensidade", "45% a 69%", "#f59e0b"],
+    ["Média intensidade", "45% a 69%", "#f59e0b"],
     ["Baixa intensidade", "20% a 44%", "#2563eb"],
     ["Sem intensidade", "0% a 19%", "#94a3b8"],
   ];
@@ -538,7 +538,7 @@ function StrategicMapPanel({ scope, records, onSelect }: { scope: TerritoryScope
   const isState = scope === "state";
   return (
     <Card className="premium-card overflow-hidden">
-      <CardHeader className="border-b border-slate-100"><CardTitle className="text-base">Painel de leitura estrat\u00e9gica</CardTitle></CardHeader>
+      <CardHeader className="border-b border-slate-100"><CardTitle className="text-base">Painel de leitura estratégica</CardTitle></CardHeader>
       <CardContent className="grid gap-3 p-4 md:grid-cols-2">
         {sorted.map((record) => (
           <button key={record.id} type="button" onClick={() => onSelect(record)} className="rounded-xl border border-slate-100 bg-white p-4 text-left shadow-sm transition hover:-translate-y-0.5 hover:border-blue-100 hover:shadow-md">
@@ -592,26 +592,26 @@ function TerritoryDetailDrawer({ scope, open, record, onOpenChange }: { scope: T
               <DetailMetric label="Cadastros" value={record.leaders.toLocaleString("pt-BR")} />
               <DetailMetric label="Apoio estimado" value={record.supporters.toLocaleString("pt-BR")} />
               <DetailMetric label="Validados" value={record.validatedVotes.toLocaleString("pt-BR")} />
-              <DetailMetric label="At\u00e9 a meta" value={record.distanceToTarget.toLocaleString("pt-BR")} />
+              <DetailMetric label="Até a meta" value={record.distanceToTarget.toLocaleString("pt-BR")} />
             </div>
             <Card className="premium-card">
               <CardHeader><CardTitle className="text-base">Resumo territorial</CardTitle></CardHeader>
               <CardContent className="grid gap-4 md:grid-cols-2">
-                <InfoBlock title="For\u00e7a e cobertura" rows={[
+                <InfoBlock title="Força e cobertura" rows={[
                   ["Apoio estimado", record.estimatedSupporters.toLocaleString("pt-BR")],
                   ["Votos declarados", record.declaredVotes.toLocaleString("pt-BR")],
                   ["Meta", record.target.toLocaleString("pt-BR")],
-                  ["Dist\u00e2ncia at\u00e9 a meta", record.distanceToTarget.toLocaleString("pt-BR")],
+                  ["Distância até a meta", record.distanceToTarget.toLocaleString("pt-BR")],
                   ["Cobertura", formatPercent(record.coverage)],
-                  ["For\u00e7a territorial", `${record.territorialStrength}%`],
+                  ["Força territorial", `${record.territorialStrength}%`],
                 ]} />
-                <InfoBlock title={scope === "state" ? "Atua\u00e7\u00e3o por cidade" : "Atua\u00e7\u00e3o por bairro"} rows={[
-                  [scope === "state" ? "Cidades/\u00e1reas" : "Bairro/distrito", scope === "state" ? record.areas.join(", ") : `${record.name} - ${record.region}`],
+                <InfoBlock title={scope === "state" ? "Atuação por cidade" : "Atuação por bairro"} rows={[
+                  [scope === "state" ? "Cidades/áreas" : "Bairro/distrito", scope === "state" ? record.areas.join(", ") : `${record.name} - ${record.region}`],
                   ["Votos declarados", record.declaredVotes.toLocaleString("pt-BR")],
                   ["Votos validados", record.validatedVotes.toLocaleString("pt-BR")],
                   ["Meta mensal", record.target.toLocaleString("pt-BR")],
-                  ["Precis\u00e3o geogr\u00e1fica", record.geoPrecision],
-                  ["Precis\u00e3o m\u00e9dia", `${record.averagePrecision}%`],
+                  ["Precisão geográfica", record.geoPrecision],
+                  ["Precisão média", `${record.averagePrecision}%`],
                 ]} />
               </CardContent>
             </Card>
@@ -629,8 +629,8 @@ function TerritoryDetailDrawer({ scope, open, record, onOpenChange }: { scope: T
             </Card>
             <div className="grid gap-4 md:grid-cols-2">
               <ListCard title="Cadastros vinculados" items={record.leadersLinked.length ? record.leadersLinked : ["Nenhum cadastro vinculado ainda"]} />
-              <ListCard title="Pr\u00f3ximas a\u00e7\u00f5es recomendadas" items={record.nextActions} />
-              <ListCard title="Observa\u00e7\u00f5es estrat\u00e9gicas" items={[record.analysis, record.notes]} />
+              <ListCard title="Próximas ações recomendadas" items={record.nextActions} />
+              <ListCard title="Observações estratégicas" items={[record.analysis, record.notes]} />
               <ListCard title="Camadas técnicas" items={["Mapbox/Google Maps", "Supabase/PostgreSQL/PostGIS", "Heatmap por cidade e bairro"]} />
             </div>
           </div>
@@ -676,12 +676,12 @@ function MapStat({ label, value }: { label: string; value: string }) {
 }
 
 function PriorityBadge({ priority }: { priority: TerritoryPriority }) {
-  const tone = priority === "Cr\u00edtica" ? "red" : priority === "Alta" ? "amber" : priority === "M\u00e9dia" ? "blue" : priority === "Manter" ? "emerald" : "slate";
+  const tone = priority === "Crítica" ? "red" : priority === "Alta" ? "amber" : priority === "Média" ? "blue" : priority === "Manter" ? "emerald" : "slate";
   return <StatusPill label={priority} tone={tone} />;
 }
 
 function StatusBadge({ status }: { status: TerritoryStatus }) {
-  const tone = status === "Forte" || status === "Em crescimento" ? "emerald" : status === "Priorit\u00e1rio" ? "blue" : status === "Cr\u00edtico" || status === "Sem lideran\u00e7a" || status === "Baixa cobertura" ? "red" : "slate";
+  const tone = status === "Forte" || status === "Em crescimento" ? "emerald" : status === "Prioritário" ? "blue" : status === "Crítico" || status === "Sem liderança" || status === "Baixa cobertura" ? "red" : "slate";
   return <StatusPill label={status} tone={tone} />;
 }
 
@@ -702,10 +702,10 @@ function matches(item: EnrichedTerritoryRecord, filters: Filters) {
   if ((filters.leaders === "Sem liderança" || filters.leaders === "Sem cadastro") && item.leaders !== 0) return false;
   if (filters.leaders === "1 a 3" && (item.leaders < 1 || item.leaders > 3)) return false;
   if (filters.leaders === "4 ou mais" && item.leaders < 4) return false;
-  if (filters.supporters === "At\u00e9 150" && item.supporters > 150) return false;
+  if (filters.supporters === "Até 150" && item.supporters > 150) return false;
   if (filters.supporters === "151 a 400" && (item.supporters < 151 || item.supporters > 400)) return false;
   if (filters.supporters === "Acima de 400" && item.supporters <= 400) return false;
-  if (filters.votes === "At\u00e9 100" && item.validatedVotes > 100) return false;
+  if (filters.votes === "Até 100" && item.validatedVotes > 100) return false;
   if (filters.votes === "101 a 300" && (item.validatedVotes < 101 || item.validatedVotes > 300)) return false;
   if (filters.votes === "Acima de 300" && item.validatedVotes <= 300) return false;
   return true;
@@ -717,14 +717,14 @@ function buildSummary(records: EnrichedTerritoryRecord[], scope: TerritoryScope)
   const validatedVotes = sum((record) => record.validatedVotes);
   return {
     activeAreas: scope === "state" ? records.filter((record) => record.campaignActive).length : records.length,
-    inactiveAreas: records.filter((record) => !record.campaignActive || record.status === "Sem lideran\u00e7a").length,
+    inactiveAreas: records.filter((record) => !record.campaignActive || record.status === "Sem liderança").length,
     leaders: sum((record) => record.leaders),
     supporters: sum((record) => record.supporters),
     declaredVotes: sum((record) => record.declaredVotes),
     validatedVotes,
     coverage: estimatedElectors > 0 ? (validatedVotes / estimatedElectors) * 100 : 0,
-    priorityAreas: records.filter((record) => record.priority === "Alta" || record.priority === "Cr\u00edtica").length,
-    criticalAreas: records.filter((record) => record.priority === "Cr\u00edtica" || record.status === "Cr\u00edtico").length,
+    priorityAreas: records.filter((record) => record.priority === "Alta" || record.priority === "Crítica").length,
+    criticalAreas: records.filter((record) => record.priority === "Crítica" || record.status === "Crítico").length,
     weeklyGrowth: sum((record) => record.weeklyGrowth),
   };
 }
@@ -735,9 +735,9 @@ function buildRankingGroups(records: EnrichedTerritoryRecord[], scope: Territory
     { title: isState ? "Top cidades por votos" : "Top bairros por votos", description: "Votos validados no recorte", icon: CheckCircle2, records: sortBy(records, (record) => record.validatedVotes), value: (record) => record.validatedVotes.toLocaleString("pt-BR") },
     { title: isState ? "Top por apoio estimado" : "Bairros por apoio estimado", description: "Apoio informado nos cadastros", icon: Users, records: sortBy(records, (record) => record.supporters), value: (record) => record.supporters.toLocaleString("pt-BR") },
     { title: "Maior oportunidade", description: "Muito eleitor e baixa cobertura", icon: Zap, records: sortBy(records, (record) => record.opportunity), value: (record) => `${record.opportunity}%` },
-    { title: isState ? "Sem cadastro territorial" : "Bairros sem cadastro", description: "Primeiro lugar para agir", icon: AlertTriangle, records: sortBy(records.filter((record) => record.leaders === 0 || record.status === "Sem lideran\u00e7a"), (record) => record.opportunity), value: (record) => `${record.supporters} apoio` },
-    { title: "Maior dist\u00e2ncia at\u00e9 a meta", description: "Meta menos votos validados", icon: Target, records: sortBy(records, (record) => record.distanceToTarget), value: (record) => record.distanceToTarget.toLocaleString("pt-BR") },
-    { title: isState ? "Munic\u00edpios cr\u00edticos" : "Bairros pr\u00f3ximos da meta", description: isState ? "Cobertura baixa e prioridade alta" : "Pouco esfor\u00e7o para fechar meta", icon: TrendingUp, records: isState ? records.filter((record) => record.priority === "Cr\u00edtica" || record.status === "Baixa cobertura") : records.filter((record) => record.distanceToTarget <= 140).sort((a, b) => a.distanceToTarget - b.distanceToTarget), value: (record) => isState ? record.priority : record.distanceToTarget.toLocaleString("pt-BR") },
+    { title: isState ? "Sem cadastro territorial" : "Bairros sem cadastro", description: "Primeiro lugar para agir", icon: AlertTriangle, records: sortBy(records.filter((record) => record.leaders === 0 || record.status === "Sem liderança"), (record) => record.opportunity), value: (record) => `${record.supporters} apoio` },
+    { title: "Maior distância até a meta", description: "Meta menos votos validados", icon: Target, records: sortBy(records, (record) => record.distanceToTarget), value: (record) => record.distanceToTarget.toLocaleString("pt-BR") },
+    { title: isState ? "Municípios críticos" : "Bairros próximos da meta", description: isState ? "Cobertura baixa e prioridade alta" : "Pouco esforço para fechar meta", icon: TrendingUp, records: isState ? records.filter((record) => record.priority === "Crítica" || record.status === "Baixa cobertura") : records.filter((record) => record.distanceToTarget <= 140).sort((a, b) => a.distanceToTarget - b.distanceToTarget), value: (record) => isState ? record.priority : record.distanceToTarget.toLocaleString("pt-BR") },
   ];
 }
 
@@ -764,9 +764,9 @@ function layerName(mode: HeatMode) {
 }
 
 function priorityColor(priority: TerritoryPriority) {
-  if (priority === "Cr\u00edtica") return "#ef4444";
+  if (priority === "Crítica") return "#ef4444";
   if (priority === "Alta") return "#f59e0b";
-  if (priority === "M\u00e9dia") return "#2563eb";
+  if (priority === "Média") return "#2563eb";
   if (priority === "Manter") return "#10b981";
   return "#64748b";
 }
@@ -780,7 +780,7 @@ function heatColor(value: number) {
 
 function heatLabel(value: number) {
   if (value >= 70) return "Alta intensidade";
-  if (value >= 45) return "M\u00e9dia intensidade";
+  if (value >= 45) return "Média intensidade";
   if (value >= 20) return "Baixa intensidade";
   return "Sem intensidade relevante";
 }

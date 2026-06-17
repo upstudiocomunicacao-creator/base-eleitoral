@@ -1,8 +1,8 @@
 import type { LucideIcon } from "lucide-react";
 
 export type TerritoryScope = "state" | "city";
-export type TerritoryPriority = "Baixa" | "M\u00e9dia" | "Alta" | "Cr\u00edtica" | "Manter";
-export type TerritoryStatus = "Forte" | "Em crescimento" | "Baixa cobertura" | "Sem lideran\u00e7a" | "Priorit\u00e1rio" | "Cr\u00edtico";
+export type TerritoryPriority = "Baixa" | "Média" | "Alta" | "Crítica" | "Manter";
+export type TerritoryStatus = "Forte" | "Em crescimento" | "Baixa cobertura" | "Sem liderança" | "Prioritário" | "Crítico";
 export type HeatMode = "forca" | "apoiadores" | "liderancas" | "votos" | "indecisos" | "demandas" | "oportunidade" | "sem_cobertura";
 export type MapViewMode = "estrategico" | "heatmap" | "pins";
 
@@ -16,7 +16,7 @@ export type TerritoryRecord = {
   id: number;
   name: string;
   region: string;
-  type: "Munic\u00edpio" | "Bairro";
+  type: "Município" | "Bairro";
   status: TerritoryStatus;
   priority: TerritoryPriority;
   responsible: string;
@@ -39,7 +39,7 @@ export type TerritoryRecord = {
   leadersLinked: string[];
   nextActions: string[];
   notes: string;
-  geoPrecision: "Alta" | "M\u00e9dia alta" | "M\u00e9dia" | "Baixa" | "Muito baixa";
+  geoPrecision: "Alta" | "Média alta" | "Média" | "Baixa" | "Muito baixa";
   position: { x: number; y: number };
 };
 

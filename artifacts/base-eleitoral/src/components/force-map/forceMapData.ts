@@ -26,7 +26,7 @@ export const forceMapLevels: ForceNode[][] = [
       count: "1",
       countLabel: "núcleo",
       status: "Ativo",
-      summary: "Visão consolidada da força territorial, separando o Estado do RJ por cidades e Maricá por bairros.",
+      summary: "Visão consolidada da força territorial, separando o Estado do RJ por cidades e as bases municipais por bairros.",
       metrics: [
         { label: "Coordenações RJ", value: "4" },
         { label: "Coordenações bases", value: "4" },
@@ -35,7 +35,7 @@ export const forceMapLevels: ForceNode[][] = [
         { label: "Votos mínimos", value: "2.950" },
         { label: "Votos máximos", value: "5.280" },
       ],
-      insights: ["Maricá permanece como domicílio eleitoral e base de leitura por bairro.", "O RJ deve ser acompanhado por cidade e região de governo."],
+      insights: ["Maricá permanece como domicílio eleitoral; São Gonçalo e Niterói entram como bases municipais de leitura por bairro.", "O RJ segue acompanhado por cidade e região de governo."],
       progress: { label: "Organização da força", value: 78 },
     },
   ],
@@ -43,7 +43,7 @@ export const forceMapLevels: ForceNode[][] = [
     {
       id: "coordenacao-geral",
       title: "Coordenação Geral",
-      subtitle: "Comando único das coordenações RJ e Maricá.",
+      subtitle: "Comando único das coordenações RJ e das bases municipais.",
       icon: Network,
       tone: "blue",
       count: "1",
@@ -51,7 +51,7 @@ export const forceMapLevels: ForceNode[][] = [
       status: "Ativo",
       summary: "Camada responsável por acompanhar coordenadores, metas mensais, custo de operação e prioridades de ação.",
       metrics: [
-        { label: "Base territorial", value: "RJ + Maricá" },
+        { label: "Base territorial", value: "RJ + bases" },
         { label: "Atualização", value: "Mensal" },
         { label: "Centro de custos", value: "Ativo" },
         { label: "Modelo de dados", value: "Enxuto" },
@@ -74,7 +74,7 @@ export const forceMapLevels: ForceNode[][] = [
       metrics: [
         { label: "Regiões oficiais", value: "8" },
         { label: "Municípios", value: "92" },
-        { label: "Bairro fora de Maricá", value: "Todos" },
+        { label: "Bairro fora das bases", value: "Todos" },
         { label: "Mais de um por cidade", value: "Sim" },
       ],
       insights: ["O cadastro por cidade reduz erro e deixa o mapa estadual limpo.", "Mais de um coordenador por cidade permite dividir operação sem mudar a métrica territorial."],
@@ -155,7 +155,7 @@ export const forceMapLevels: ForceNode[][] = [
         { label: "Região", value: "Automática" },
         { label: "Estimativa de votos", value: "Mensal" },
       ],
-      insights: ["O modelo evita microcadastro fora de Maricá.", "A análise estadual compara cidades e regiões, não bairros."],
+      insights: ["O modelo evita microcadastro fora das bases municipais.", "A análise estadual compara cidades e regiões, não bairros."],
       progress: { label: "Simplicidade do cadastro", value: 86 },
     },
     {
@@ -425,7 +425,7 @@ export function buildForceMapLevels({ leaders, monthlyMetrics }: RuntimeForceMap
             metrics: [
               { label: "Municípios com atuação", value: formatNumber(rjCitiesWithAction) },
               { label: "Regiões com atuação", value: formatNumber(regionsWithAction) },
-              { label: "Bairro fora de Maricá", value: "Todos" },
+              { label: "Bairro fora das bases", value: "Todos" },
               { label: "Mais de um por cidade", value: "Sim" },
             ],
             progress: { label: "Cobertura estadual atual", value: clampProgress(rjCitiesWithAction, 92) },

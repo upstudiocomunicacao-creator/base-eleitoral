@@ -19,6 +19,7 @@ artifacts/base-eleitoral/.env
 artifacts/base-eleitoral/.env.*
 !artifacts/base-eleitoral/.env.example
 artifacts/base-eleitoral/dev-*.log
+essencial-dev.log
 
 # IDEs and editors
 /.idea

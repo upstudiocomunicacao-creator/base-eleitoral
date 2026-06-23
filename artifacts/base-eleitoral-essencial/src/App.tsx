@@ -92,6 +92,9 @@ const roles: Role[] = [
 
 const statusList: Status[] = ["Ativo", "Atenção", "Pendente", "Inativo"];
 const scopes: BaseScope[] = ["RJ", "Maricá", "São Gonçalo", "Niterói"];
+const storagePeopleKey = "base-eleitoral-essencial.people";
+const storageVersionKey = "base-eleitoral-essencial.version";
+const currentDataVersion = "2";
 
 const seedPeople: Person[] = [
   {
@@ -232,6 +235,144 @@ const seedPeople: Person[] = [
     status: "Ativo",
     notes: "Boa entrada em região de classe média.",
   },
+  {
+    id: "p7",
+    code: "CAD-0007",
+    name: "Rafael Souza",
+    nickname: "Rafa SG",
+    createdAt: "2026-06-22",
+    phone: "(21) 94444-5555",
+    email: "",
+    scope: "São Gonçalo",
+    city: "São Gonçalo",
+    neighborhood: "Jardim Catarina",
+    area: "3º Distrito - Monjolos",
+    cep: "",
+    role: "Liderança São Gonçalo",
+    parentId: "p5",
+    votesMin: 90,
+    votesMax: 180,
+    costMin: 700,
+    costMax: 1200,
+    extraCost: 0,
+    status: "Ativo",
+    notes: "Liderança comunitária em expansão.",
+  },
+  {
+    id: "p8",
+    code: "CAD-0008",
+    name: "Patrícia Lima",
+    nickname: "Paty",
+    createdAt: "2026-06-22",
+    phone: "(21) 93333-6666",
+    email: "",
+    scope: "Niterói",
+    city: "Niterói",
+    neighborhood: "Fonseca",
+    area: "Norte",
+    cep: "",
+    role: "Liderança Niterói",
+    parentId: "p6",
+    votesMin: 75,
+    votesMax: 130,
+    costMin: 650,
+    costMax: 1000,
+    extraCost: 0,
+    status: "Pendente",
+    notes: "Precisa validar estimativa mínima.",
+  },
+  {
+    id: "p9",
+    code: "CAD-0009",
+    name: "Bruno Martins",
+    nickname: "Bruno",
+    createdAt: "2026-06-22",
+    phone: "(21) 92222-7777",
+    email: "",
+    scope: "RJ",
+    city: "Cabo Frio",
+    neighborhood: "Todos",
+    area: "Baixadas Litorâneas",
+    cep: "",
+    role: "Coordenação RJ",
+    parentId: "p2",
+    votesMin: 180,
+    votesMax: 320,
+    costMin: 1600,
+    costMax: 2600,
+    extraCost: 0,
+    status: "Ativo",
+    notes: "Base regional para Baixadas Litorâneas.",
+  },
+  {
+    id: "p10",
+    code: "CAD-0010",
+    name: "Luciana Reis",
+    nickname: "Lu",
+    createdAt: "2026-06-22",
+    phone: "(21) 91111-8888",
+    email: "",
+    scope: "RJ",
+    city: "Niterói",
+    neighborhood: "Todos",
+    area: "Metropolitana",
+    cep: "",
+    role: "Liderança RJ",
+    parentId: "p2",
+    votesMin: 110,
+    votesMax: 190,
+    costMin: 800,
+    costMax: 1300,
+    extraCost: 100,
+    status: "Ativo",
+    notes: "Apoio metropolitano complementar.",
+  },
+  {
+    id: "p11",
+    code: "CAD-0011",
+    name: "Sérgio Paiva",
+    nickname: "Sérgio",
+    createdAt: "2026-06-22",
+    phone: "(21) 90000-1111",
+    email: "",
+    scope: "Maricá",
+    city: "Maricá",
+    neighborhood: "Itaipuaçu",
+    area: "Itaipuaçu",
+    cep: "",
+    role: "Liderança Maricá",
+    parentId: "p3",
+    votesMin: 95,
+    votesMax: 160,
+    costMin: 700,
+    costMax: 1150,
+    extraCost: 0,
+    status: "Ativo",
+    notes: "Ponto forte no litoral norte.",
+  },
+  {
+    id: "p12",
+    code: "CAD-0012",
+    name: "Marta Oliveira",
+    nickname: "Marta",
+    createdAt: "2026-06-22",
+    phone: "(21) 90000-2222",
+    email: "",
+    scope: "Maricá",
+    city: "Maricá",
+    neighborhood: "Araçatiba",
+    area: "Sede / Maricá",
+    cep: "",
+    role: "Liderança Maricá",
+    parentId: "p3",
+    votesMin: 70,
+    votesMax: 120,
+    costMin: 500,
+    costMax: 900,
+    extraCost: 0,
+    status: "Atenção",
+    notes: "Boa capilaridade, mas custo precisa revisão.",
+  },
 ];
 
 const emptyPerson = (index: number): Person => ({
@@ -259,11 +400,17 @@ const emptyPerson = (index: number): Person => ({
 });
 
 function loadPeople() {
-  const raw = localStorage.getItem("base-eleitoral-essencial.people");
+  const raw = localStorage.getItem(storagePeopleKey);
   if (!raw) return seedPeople;
   try {
     const parsed = JSON.parse(raw) as Person[];
-    return Array.isArray(parsed) ? parsed : seedPeople;
+    if (!Array.isArray(parsed)) return seedPeople;
+    if (localStorage.getItem(storageVersionKey) !== currentDataVersion && parsed.length <= 6) {
+      localStorage.setItem(storagePeopleKey, JSON.stringify(seedPeople));
+      localStorage.setItem(storageVersionKey, currentDataVersion);
+      return seedPeople;
+    }
+    return parsed;
   } catch {
     return seedPeople;
   }
@@ -367,7 +514,8 @@ export function App() {
 
   const savePeople = (next: Person[]) => {
     setPeople(next);
-    localStorage.setItem("base-eleitoral-essencial.people", JSON.stringify(next));
+    localStorage.setItem(storagePeopleKey, JSON.stringify(next));
+    localStorage.setItem(storageVersionKey, currentDataVersion);
   };
 
   const metrics = useMemo(() => buildMetrics(people), [people]);
@@ -679,19 +827,44 @@ function ForceMap({ people }: { people: Person[] }) {
 function Maps({ people, scope, onScope }: { people: Person[]; scope: BaseScope; onScope: (scope: BaseScope) => void }) {
   const rows = buildTerritoryRows(people, scope);
   const max = Math.max(...rows.map((row) => row.min), 1);
+  const totals = rows.reduce(
+    (acc, row) => ({
+      records: acc.records + row.count,
+      votes: acc.votes + row.min,
+      ceiling: acc.ceiling + row.max,
+      cost: acc.cost + row.cost,
+      coordinations: acc.coordinations + row.coord,
+      leaders: acc.leaders + row.leaders,
+    }),
+    { records: 0, votes: 0, ceiling: 0, cost: 0, coordinations: 0, leaders: 0 },
+  );
+  const leadingArea = rows[0]?.name ?? "Sem dados";
 
   return (
     <section className="map-layout">
-      <div className="tabs">
+      <div className="map-tabs">
         {scopes.map((item) => (
           <button className={item === scope ? "active" : ""} key={item} onClick={() => onScope(item)}>{item}</button>
         ))}
+      </div>
+      <div className="map-stats">
+        <Metric icon={<MapIcon />} label="Territórios" value={rows.length} />
+        <Metric icon={<Users />} label="Cadastros" value={totals.records} />
+        <Metric icon={<Network />} label="Coordenações" value={totals.coordinations} />
+        <Metric icon={<Landmark />} label="Lideranças" value={totals.leaders} />
+        <Metric icon={<BarChart3 />} label="Votos mín." value={totals.votes.toLocaleString("pt-BR")} />
+        <Metric icon={<CircleDollarSign />} label="Custo teto" value={money(totals.cost)} />
       </div>
       <div className="map-card">
         <PanelTitle
           title={`Mapa estratégico - ${scope}`}
           subtitle={scope === "RJ" ? "Análise por cidade e região de governo" : "Análise por bairros e região/distrito"}
         />
+        <div className="map-toolbar">
+          <span>Camada ativa</span>
+          <strong>Força territorial</strong>
+          <small>Região forte: {leadingArea}</small>
+        </div>
         <div className="strategic-map">
           {rows.length === 0 && <div className="empty">Sem cadastros nesta base territorial.</div>}
           {rows.map((row, index) => (
@@ -699,10 +872,10 @@ function Maps({ people, scope, onScope }: { people: Person[]; scope: BaseScope; 
               className="map-bubble"
               key={row.name}
               style={{
-                width: `${82 + (row.min / max) * 92}px`,
-                height: `${82 + (row.min / max) * 92}px`,
-                left: `${8 + ((index * 23) % 72)}%`,
-                top: `${12 + ((index * 31) % 62)}%`,
+                width: `${74 + (row.min / max) * 74}px`,
+                height: `${74 + (row.min / max) * 74}px`,
+                left: `${16 + ((index * 29) % 68)}%`,
+                top: `${18 + ((index * 23) % 58)}%`,
                 background: colorForScope(scope),
               }}
             >
@@ -713,11 +886,19 @@ function Maps({ people, scope, onScope }: { people: Person[]; scope: BaseScope; 
           ))}
         </div>
       </div>
-      <div className="panel">
-        <PanelTitle title="Ranking territorial" subtitle="Onde agir primeiro" />
-        {rows.slice(0, 8).map((row, index) => (
-          <SummaryLine key={row.name} label={`${index + 1}. ${row.name}`} value={`${row.min} votos · ${money(row.cost)}`} />
-        ))}
+      <div className="map-side">
+        <div className="panel">
+          <PanelTitle title="Ranking territorial" subtitle="Onde agir primeiro" />
+          {rows.slice(0, 8).map((row, index) => (
+            <SummaryLine key={row.name} label={`${index + 1}. ${row.name}`} value={`${row.min} votos · ${money(row.cost)}`} />
+          ))}
+        </div>
+        <div className="panel">
+          <PanelTitle title="Leitura rápida" subtitle="Base selecionada" />
+          <SummaryLine label="Votos máximos" value={totals.ceiling.toLocaleString("pt-BR")} />
+          <SummaryLine label="Custo por voto mín." value={totals.votes ? money(totals.cost / totals.votes) : "-"} />
+          <SummaryLine label="Território forte" value={leadingArea} />
+        </div>
       </div>
       <div className="panel wide">
         <PanelTitle title="Custo x votos" subtitle="Correlação simples por território" />

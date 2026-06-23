@@ -10,6 +10,7 @@ if (Number.isNaN(port) || port <= 0) {
 }
 
 export default defineConfig({
+  base: process.env.BASE_PATH ?? "/",
   plugins: [react()],
   root: path.resolve(import.meta.dirname),
   build: {

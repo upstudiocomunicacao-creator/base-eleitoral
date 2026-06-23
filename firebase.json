@@ -8,6 +8,14 @@
     ],
     "rewrites": [
       {
+        "source": "/essencial",
+        "destination": "/essencial/index.html"
+      },
+      {
+        "source": "/essencial/**",
+        "destination": "/essencial/index.html"
+      },
+      {
         "source": "**",
         "destination": "/index.html"
       }
@@ -33,7 +41,7 @@
       }
     ],
     "predeploy": [
-      "corepack pnpm --dir artifacts/base-eleitoral run build"
+      "node scripts/build-firebase-hosting.mjs"
     ]
   }
 }
